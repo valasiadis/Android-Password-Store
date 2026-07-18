@@ -23,7 +23,8 @@
   <string name="title_activity_git_log">Commit log</string>
 
   <!-- Password Store -->
-  <string name="creation_dialog_text">Please clone or create a new repository below before trying to add a password or running any synchronisation operation.</string>
+  <string name="creation_dialog_text">Password Store is not fully initialised. Please clone or create a new repository below before you add a password or run a synchronisation operation.</string>
+  <string name="delete_dialog_title">Confirm deletion</string>
   <plurals name="delete_dialog_text">
     <item quantity="one">Are you sure you want to delete the selected item?</item>
     <item quantity="other">Are you sure you want to delete the %d selected items?</item>
@@ -107,8 +108,10 @@
   <string name="username">Username</string>
   <string name="otp_label_format">OTP (expires in %ds)</string>
   <string name="edit_password">Edit password</string>
+  <string name="edit_passkey">Edit passkey</string>
   <string name="copy_password">Copy password</string>
   <string name="share_as_plaintext">Share as plaintext</string>
+  <string name="created_date">created on %s</string>
 
   <!-- Preferences -->
   <string name="pref_category_repository_title">Repository</string>
@@ -270,11 +273,12 @@
   <string name="oreo_autofill_flaky_fill_support">Fill passwords (may require restarting the browser from time to time)</string>
   <string name="oreo_autofill_no_support">No support</string>
   <string name="oreo_autofill_enable_dialog_description">Password Store can offer to fill login forms and even save credentials you enter in apps or on websites.</string>
-  <string name="oreo_autofill_enable_dialog_instructions">To enable this feature, tap OK to go to Autofill settings. There, select Password Store from the list and confirm the confirmation prompt with OK.</string>
+  <string name="oreo_autofill_enable_dialog_instructions">To enable this feature, tap OK to go to Autofill settings. There, select Password Store from the list and confirm the confirmation prompt with OK.\n\nIn some browsers, the option “Autofill using another service” or similar must also be enabled.</string>
   <string name="oreo_autofill_enable_dialog_installed_browsers">Autofill support with installed browsers: </string>
 
   <string name="ssh_key_does_not_exist">Unable to open the ssh private key, please check that the file exists</string>
   <string name="new_password_title">New password</string>
+  <string name="new_passkey_title">New passkey</string>
   <string name="git_tools">Utilities</string>
   <string name="abort_rebase">Abort rebase and push new branch</string>
   <string name="reset_to_remote">Hard reset to remote branch</string>
@@ -340,13 +344,13 @@
   <string name="preference_custom_public_suffixes_hint">company.com\npersonal.com</string>
 
   <!-- Password creation/edit -->
-  <string name="password_creation_edit_file_encryption_success_title">Password item edited</string>
-  <string name="password_creation_new_file_encryption_success_title">New password item</string>
+  <string name="password_creation_edit_file_encryption_success_title">Entry edited</string>
+  <string name="password_creation_new_file_encryption_success_title">New Entry</string>
   <string name="password_creation_file_encryption_partial_success_title">Encryption partially failed</string>
-  <string name="password_creation_file_encryption_succeeded_ids_message">Password item successfully encrypted for %1$s</string>
+  <string name="password_creation_file_encryption_succeeded_ids_message">Entry successfully encrypted for %1$s</string>
   <string name="password_creation_file_encryption_failed_ids_message">\n\nEncryption failed for%1$s</string>
   <string name="password_creation_file_encryption_failed_expired_key">expired key</string>
-  <string name="password_creation_file_write_fail_message">Failed to write password file to the store, please try again.</string>
+  <string name="password_creation_file_write_fail_message">Failed to write encrypted file to the store, please try again.</string>
   <string name="password_creation_unusable_encryption_key_error_message">Encryption failure. Check expiration date and revocation status of the PGP key(s) using an external utility.</string>
   <string name="password_creation_no_keys_provided_message">No matching PGP keys found.</string>
   <string name="password_creation_duplicate_error">File already exists, please use a different name.</string>
@@ -511,7 +515,7 @@
   <string name="pgp_new_passphrase">New passphrase</string>
   <string name="pgp_new_passphrase_repeated">Repeat new passphrase</string>
   <string name="git_utils_reset_remote_branch_title">Remote branch name</string>
-  <string name="pgp_key_manager_no_keys_guidance">Add a key using the \"+\" button below</string>
+  <string name="pgp_key_manager_no_keys_guidance">Add a key using the “+” button below</string>
   <string name="pgp_key_hardware_indicator">Hardware-backed key</string>
   <string name="pgp_key_software_indicator">Software-backed key</string>
   <string name="pgp_key_info_title">Key information</string>
@@ -559,4 +563,17 @@
   <string name="pin_entry_title">PIN verification</string>
   <string name="pin_entry_description">Enter your PIN code to show this entry</string>
   <string name="pin_entry_wrong_input">Wrong input</string>
+
+  <!-- Passkeys -->
+  <string name="passkey">Passkey</string>
+  <string name="cred_id_hint">WebAuthn credential ID</string>
+  <string name="cred_algorithm_hint">Type</string>
+  <string name="rp_name_hint">Relying party ID</string>
+  <string name="fullname_hint">Real username</string>
+  <string name="reveal_passkey_username">Reveal username on passkey selector</string>
+  <string name="passkey_authentication_error_title">Passkey authentication failure</string>
+  <string name="passkey_parse_error_message">Failed to parse\n\n%1$s\n\nThe file does not appear to contain valid passkey data.</string>
+  <string name="passkey_sign_error_message">The signature could not be generated:\n\n%1$s</string>
+  <string name="passkey_request_error_message">No authentication request received from relying party</string>
+
 </resources>

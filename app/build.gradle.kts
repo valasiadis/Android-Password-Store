@@ -13,6 +13,7 @@ plugins {
   alias(libs.plugins.hilt)
   alias(libs.plugins.kotlin.composeCompiler)
   alias(libs.plugins.ksp)
+  alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -29,7 +30,10 @@ android {
 
   androidResources { generateLocaleConfig = true }
 
-  packaging { resources.excludes.add("META-INF/versions/**") }
+  packaging {
+    resources.excludes.add("META-INF/versions/**")
+    resources.excludes.add("META-INF/LICENSE.md")
+  }
 }
 
 dependencies {
@@ -51,6 +55,7 @@ dependencies {
   implementation(libs.androidx.biometricKtx)
   implementation(libs.androidx.constraintlayout)
   implementation(libs.androidx.core.ktx)
+  implementation(libs.androidx.credentials)
   implementation(libs.androidx.documentfile)
   implementation(libs.androidx.fragment.ktx)
   implementation(libs.androidx.work.runtime.ktx)
@@ -68,6 +73,7 @@ dependencies {
   implementation(libs.kotlinx.collections.immutable)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
+  implementation(libs.kotlinx.serialization.json)
 
   implementation(libs.aps.sublimeFuzzy)
   implementation(libs.aps.zxingAndroidEmbedded)
@@ -81,6 +87,7 @@ dependencies {
   implementation(libs.thirdparty.logcat)
   implementation(libs.thirdparty.modernAndroidPrefs)
   implementation(libs.thirdparty.sshj)
+  implementation(libs.thirdparty.bouncycastle.bcpkix)
   implementation(libs.thirdparty.bouncycastle.bcprov)
   implementation(libs.thirdparty.bouncycastle.bcutil)
   implementation(libs.thirdparty.bouncycastle.bcpg)

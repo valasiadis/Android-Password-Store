@@ -5,8 +5,8 @@
 
 package app.passwordstore.ui.crypto
 
-import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
@@ -33,6 +33,7 @@ import app.passwordstore.data.passfile.splitToCharArrayListAt
 import app.passwordstore.data.passfile.trimEnd
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.PasswordCreationActivityBinding
+import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.dialogs.DicewarePasswordGeneratorDialogFragment
 import app.passwordstore.ui.dialogs.OtpImportDialogFragment
 import app.passwordstore.ui.dialogs.PasswordGeneratorDialogFragment
@@ -90,6 +91,8 @@ import org.eclipse.jgit.api.errors.CanceledException
 @AndroidEntryPoint
 class PasswordCreationActivity : BasePGPActivity() {
 
+  @PasswordHistory @Inject lateinit var passwordHistory: SharedPreferences
+
   private val binding by viewBinding(PasswordCreationActivityBinding::inflate)
   @Inject lateinit var passwordEntryFactory: PasswordEntry.Factory
 
@@ -139,16 +142,16 @@ class PasswordCreationActivity : BasePGPActivity() {
 
       val reader = QRCodeReader()
       runCatching {
-          val result = reader.decode(binaryBitmap)
-          val text = result.text
-          binding.extraContent.text?.let { currentExtras ->
-            if (currentExtras.isNotEmpty() && currentExtras.last() != '\n')
-              binding.extraContent.append("\n$text")
-            else binding.extraContent.append(text)
-          }
-          snackbar(message = getString(R.string.otp_import_success))
-          binding.otpImportButton.isVisible = false
+        val result = reader.decode(binaryBitmap)
+        val text = result.text
+        binding.extraContent.text?.let { currentExtras ->
+          if (currentExtras.isNotEmpty() && currentExtras.last() != '\n')
+            binding.extraContent.append("\n$text")
+          else binding.extraContent.append(text)
         }
+        snackbar(message = getString(R.string.otp_import_success))
+        binding.otpImportButton.isVisible = false
+      }
         .onErr { snackbar(message = getString(R.string.otp_import_failure_generic)) }
     }
 
@@ -324,6 +327,16 @@ class PasswordCreationActivity : BasePGPActivity() {
   }
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
+    val initBefore =
+      MaterialAlertDialogBuilder(this)
+        .setCancelable(false)
+        .setTitle(R.string.error)
+        .setIcon(R.drawable.ic_warning_red_24dp)
+        .setMessage(R.string.creation_dialog_text)
+        .setPositiveButton(R.string.dialog_ok) { _, _ ->
+          setResult(RESULT_CANCELED)
+          finish()
+        }
     when (item.itemId) {
       android.R.id.home -> {
         setResult(RESULT_CANCELED)
@@ -331,14 +344,22 @@ class PasswordCreationActivity : BasePGPActivity() {
       }
       R.id.save_password -> {
         copy = false
-        requireKeysExist {
-          requireEncryptionKeysExist(binding.directory.text.toString()) { ids -> encrypt(ids) }
+        if (PasswordRepository.isEmpty()) {
+          initBefore.show()
+        } else {
+          requireKeysExist {
+            requireEncryptionKeysExist(binding.directory.text.toString()) { ids -> encrypt(ids) }
+          }
         }
       }
       R.id.save_and_copy_password -> {
         copy = true
-        requireKeysExist {
-          requireEncryptionKeysExist(binding.directory.text.toString()) { ids -> encrypt(ids) }
+        if (PasswordRepository.isEmpty()) {
+          initBefore.show()
+        } else {
+          requireKeysExist {
+            requireEncryptionKeysExist(binding.directory.text.toString()) { ids -> encrypt(ids) }
+          }
         }
       }
       else -> return super.onOptionsItemSelected(item)
@@ -443,172 +464,170 @@ class PasswordCreationActivity : BasePGPActivity() {
 
       lifecycleScope.launch(dispatcherProvider.main()) {
         runCatching {
-            val contentChars = (editPass + editUsername + '\n' + editExtra)
-            val contentBytes = contentChars.toByteArray()
-            contentChars.wipe()
+          val contentChars = (editPass + editUsername + '\n' + editExtra)
+          val contentBytes = contentChars.toByteArray()
+          contentChars.wipe()
 
-            val (succeededUserEmails, result) =
-              withContext(dispatcherProvider.io()) {
-                repository.encrypt(
-                  identifiers,
-                  ByteArrayInputStream(contentBytes),
-                  ByteArrayOutputStream(),
-                )
-              }
-            contentBytes.wipe()
-
-            if (result.isErr) throw result.unwrapError()
-            if (succeededUserEmails.isNullOrEmpty()) throw UnusableKeyException
-
-            var unknownKeyCount = 0
-            val failedUserEmails =
-              identifiers
-                .map { id ->
-                  repository.getEmailFromKeyId(id)
-                    ?: run {
-                      if (!repository.hasKey(id))
-                        "\n${id}: ${getString(R.string.pgp_unknown_key_identifier)}"
-                      else
-                        "\n${id}: ${getString(R.string.password_creation_file_encryption_failed_expired_key)}"
-                    }
-                }
-                .distinct()
-                .filter { it !in succeededUserEmails ?: emptyList() }
-
-            val passwordFile = Paths.get(path)
-            // If we're not editing, this file should not already exist!
-            // Additionally, if we were editing and the incoming and outgoing
-            // file paths differ, it means we renamed. Ensure that the target
-            // doesn't already exist to prevent an accidental overwrite.
-            if (
-              (!editing ||
-                (editing &&
-                  "${fullPath.trimEnd('/')}/$suggestedName.gpg" !=
-                    passwordFile.absolutePathString())) && passwordFile.exists()
-            ) {
-              snackbar(message = getString(R.string.password_creation_duplicate_error))
-              return@runCatching
-            }
-
-            if (!passwordFile.toFile().isInsideRepository()) {
-              snackbar(message = getString(R.string.message_error_destination_outside_repo))
-              return@runCatching
-            }
-
-            val passwordFileExisted = passwordFile.exists()
-            val previousPasswordBytes =
-              withContext(dispatcherProvider.io()) {
-                if (passwordFileExisted) passwordFile.toFile().readBytes() else null
-              }
-            val newFilePathHash = passwordFile.absolutePathString().base64()
-            val oldFilePathHash = suggestedName?.let { oldFile ->
-              "${fullPath.trimEnd('/')}/$oldFile.gpg".base64()
-            }
-            val preference = getSharedPreferences("recent_password_history", Context.MODE_PRIVATE)
-            val previousNewHistory = preference.getString(newFilePathHash, null)
-            val previousOldHistory = oldFilePathHash?.let { preference.getString(it, null) }
-
+          val (succeededUserEmails, result) =
             withContext(dispatcherProvider.io()) {
-              passwordFile.writeBytes(result.getOrThrow().toByteArray())
-            }
-
-            // create/update timestamp on the current password file
-            preference.edit {
-              oldFilePathHash?.let(::remove)
-              putString(newFilePathHash, System.currentTimeMillis().toString())
-            }
-
-            val returnIntent = Intent()
-            returnIntent.putExtra(RETURN_EXTRA_CREATED_FILE, path)
-            returnIntent.putExtra(RETURN_EXTRA_NAME, editName)
-            returnIntent.putExtra(
-              RETURN_EXTRA_LONG_NAME,
-              PasswordRepository.getLongName(fullPath, repoPath, editName),
-            )
-
-            if (shouldGeneratePassword) {
-              val directoryStructure = AutofillPreferences.directoryStructure(applicationContext)
-              val entry = passwordEntryFactory.create(editPass + editUsername + '\n' + editExtra)
-
-              entry.password?.let {
-                val password = it.copyOf(it.size)
-                returnIntent.putExtra(RETURN_EXTRA_PASSWORD, password)
-              }
-
-              val username =
-                entry.username?.let { it.copyOf(it.size) }
-                  ?: directoryStructure.getUsernameFor(passwordFile.toFile())
-              returnIntent.putExtra(RETURN_EXTRA_USERNAME, username)
-
-              entry.clear()
-            }
-
-            val commitMessageRes =
-              if (editing) R.string.git_commit_edit_text else R.string.git_commit_add_text
-            commitChange(
-                resources.getString(
-                  commitMessageRes,
-                  PasswordRepository.getLongName(fullPath, repoPath, editName),
-                )
+              repository.encrypt(
+                identifiers,
+                ByteArrayInputStream(contentBytes),
+                ByteArrayOutputStream(),
               )
-              .onOk {
-                editPass?.wipe()
-                editUsername?.wipe()
-                editExtra?.wipe()
-                setResult(RESULT_OK, returnIntent)
-                val dialog =
-                  MaterialAlertDialogBuilder(this@PasswordCreationActivity)
-                    .setCancelable(false)
-                    .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
-                var messageText =
-                  getString(
-                    R.string.password_creation_file_encryption_succeeded_ids_message,
-                    succeededUserEmails.joinToString(),
-                  )
-                if (!failedUserEmails.isEmpty()) {
-                  dialog.setTitle(R.string.password_creation_file_encryption_partial_success_title)
-                  messageText +=
-                    getString(
-                      R.string.password_creation_file_encryption_failed_ids_message,
-                      failedUserEmails.joinToString(),
-                    )
-                } else {
-                  val title =
-                    if (editing)
-                      getString(R.string.password_creation_edit_file_encryption_success_title)
-                    else getString(R.string.password_creation_new_file_encryption_success_title)
-                  dialog.setTitle(title)
-                }
-                dialog.setMessage(messageText)
-                dialog.show()
-              }
-              .onErr { e ->
-                logcat(ERROR) { e.asLog("Failed to commit password changes") }
-                withContext(dispatcherProvider.io()) {
-                  if (passwordFileExisted && previousPasswordBytes != null) {
-                    passwordFile.writeBytes(previousPasswordBytes)
-                  } else {
-                    passwordFile.toFile().delete()
+            }
+          contentBytes.wipe()
+
+          if (result.isErr) throw result.unwrapError()
+          if (succeededUserEmails.isNullOrEmpty()) throw UnusableKeyException
+
+          val failedUserEmails =
+            identifiers
+              .map { id ->
+                repository.getEmailFromKeyId(id)
+                  ?: run {
+                    if (!repository.hasKey(id))
+                      "\n${id}: ${getString(R.string.pgp_unknown_key_identifier)}"
+                    else
+                      "\n${id}: ${getString(R.string.password_creation_file_encryption_failed_expired_key)}"
                   }
-                }
-                preference.edit {
-                  if (previousNewHistory == null) remove(newFilePathHash)
-                  else putString(newFilePathHash, previousNewHistory)
-                  oldFilePathHash?.let { key ->
-                    if (previousOldHistory == null) remove(key)
-                    else putString(key, previousOldHistory)
-                  }
-                }
-                // Don't nag with a bar when the user cancelled signing, or when the failure was
-                // already shown in a dialog (e.g. a blocked smartcard PIN).
-                if (
-                  !OpenPgpCardPrompt.isHandled(e) &&
-                    generateSequence(e) { it.cause }.none { it is CanceledException }
-                ) {
-                  snackbar(message = ErrorMessages[e])
-                }
               }
+              .distinct()
+              .filter { it !in succeededUserEmails ?: emptyList() }
+
+          val passwordFile = Paths.get(path)
+          // If we're not editing, this file should not already exist!
+          // Additionally, if we were editing and the incoming and outgoing
+          // file paths differ, it means we renamed. Ensure that the target
+          // doesn't already exist to prevent an accidental overwrite.
+          if (
+            (!editing ||
+              (editing &&
+                "${fullPath.trimEnd('/')}/$suggestedName.gpg" !=
+                  passwordFile.absolutePathString())) && passwordFile.exists()
+          ) {
+            snackbar(message = getString(R.string.password_creation_duplicate_error))
+            return@runCatching
           }
+
+          if (!passwordFile.toFile().isInsideRepository()) {
+            snackbar(message = getString(R.string.message_error_destination_outside_repo))
+            return@runCatching
+          }
+
+          val passwordFileExisted = passwordFile.exists()
+          val previousPasswordBytes =
+            withContext(dispatcherProvider.io()) {
+              if (passwordFileExisted) passwordFile.toFile().readBytes() else null
+            }
+          val newFilePathHash = passwordFile.absolutePathString().base64()
+          val oldFilePathHash = suggestedName?.let { oldFile ->
+            "${fullPath.trimEnd('/')}/$oldFile.gpg".base64()
+          }
+          val previousNewHistory = passwordHistory.getString(newFilePathHash, null)
+          val previousOldHistory = oldFilePathHash?.let { passwordHistory.getString(it, null) }
+
+          withContext(dispatcherProvider.io()) {
+            passwordFile.writeBytes(result.getOrThrow().toByteArray())
+          }
+
+          // create/update timestamp on the current password file
+          passwordHistory.edit {
+            oldFilePathHash?.let(::remove)
+            putString(newFilePathHash, System.currentTimeMillis().toString())
+          }
+
+          val returnIntent = Intent()
+          returnIntent.putExtra(RETURN_EXTRA_CREATED_FILE, path)
+          returnIntent.putExtra(RETURN_EXTRA_NAME, editName)
+          returnIntent.putExtra(
+            RETURN_EXTRA_LONG_NAME,
+            PasswordRepository.getLongName(fullPath, repoPath, editName),
+          )
+
+          if (shouldGeneratePassword) {
+            val directoryStructure = AutofillPreferences.directoryStructure(applicationContext)
+            val entry = passwordEntryFactory.create(editPass + editUsername + '\n' + editExtra)
+
+            entry.password?.let {
+              val password = it.copyOf(it.size)
+              returnIntent.putExtra(RETURN_EXTRA_PASSWORD, password)
+            }
+
+            val username =
+              entry.username?.let { it.copyOf(it.size) }
+                ?: directoryStructure.getUsernameFor(passwordFile.toFile())
+            returnIntent.putExtra(RETURN_EXTRA_USERNAME, username)
+
+            entry.clear()
+          }
+
+          val commitMessageRes =
+            if (editing) R.string.git_commit_edit_text else R.string.git_commit_add_text
+          commitChange(
+              resources.getString(
+                commitMessageRes,
+                PasswordRepository.getLongName(fullPath, repoPath, editName),
+              )
+            )
+            .onOk {
+              editPass?.wipe()
+              editUsername?.wipe()
+              editExtra?.wipe()
+              setResult(RESULT_OK, returnIntent)
+              val dialog =
+                MaterialAlertDialogBuilder(this@PasswordCreationActivity)
+                  .setCancelable(false)
+                  .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
+              var messageText =
+                getString(
+                  R.string.password_creation_file_encryption_succeeded_ids_message,
+                  succeededUserEmails.joinToString(),
+                )
+              if (!failedUserEmails.isEmpty()) {
+                dialog.setTitle(R.string.password_creation_file_encryption_partial_success_title)
+                messageText +=
+                  getString(
+                    R.string.password_creation_file_encryption_failed_ids_message,
+                    failedUserEmails.joinToString(),
+                  )
+              } else {
+                val title =
+                  if (editing)
+                    getString(R.string.password_creation_edit_file_encryption_success_title)
+                  else getString(R.string.password_creation_new_file_encryption_success_title)
+                dialog.setTitle(title)
+              }
+              dialog.setMessage(messageText)
+              dialog.show()
+            }
+            .onErr { e ->
+              logcat(ERROR) { e.asLog("Failed to commit password changes") }
+              withContext(dispatcherProvider.io()) {
+                if (passwordFileExisted && previousPasswordBytes != null) {
+                  passwordFile.writeBytes(previousPasswordBytes)
+                } else {
+                  passwordFile.toFile().delete()
+                }
+              }
+              passwordHistory.edit {
+                if (previousNewHistory == null) remove(newFilePathHash)
+                else putString(newFilePathHash, previousNewHistory)
+                oldFilePathHash?.let { key ->
+                  if (previousOldHistory == null) remove(key)
+                  else putString(key, previousOldHistory)
+                }
+              }
+              // Don't nag with a bar when the user cancelled signing, or when the failure was
+              // already shown in a dialog (e.g. a blocked smartcard PIN).
+              if (
+                !OpenPgpCardPrompt.isHandled(e) &&
+                  generateSequence(e) { it.cause }.none { it is CanceledException }
+              ) {
+                snackbar(message = ErrorMessages[e])
+              }
+            }
+        }
           .onErr { e ->
             logcat(ERROR) { e.asLog() }
             setResult(RESULT_CANCELED)

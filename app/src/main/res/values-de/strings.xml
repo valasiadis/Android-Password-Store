@@ -22,7 +22,8 @@
   <string name="title_activity_git_log">Commit-Log</string>
 
   <!-- Password Store -->
-  <string name="creation_dialog_text">Bitte klonen oder erstellen Sie ein neues Repository, bevor Sie ein Passwort hinzufügen oder eine Synchronisations-Operation durchführen wollen.</string>
+  <string name="creation_dialog_text">Password Store ist nicht vollständig eingerichtet. Bitte klonen oder erstellen Sie ein neues Repository, bevor Sie ein Passwort hinzufügen oder eine Synchronisations-Operation durchführen.</string>
+  <string name="delete_dialog_title">Löschen bestätigen</string>
   <plurals name="delete_dialog_text">
     <item quantity="one">Möchten Sie das ausgewählte Element wirklich löschen?</item>
     <item quantity="other">Möchten Sie die %d ausgewählten Elemente wirklich löschen?</item>
@@ -91,8 +92,10 @@
   <string name="username">Benutzername</string>
   <string name="otp_label_format">OTP (läuft in %ds ab)</string>
   <string name="edit_password">Passwort bearbeiten</string>
+  <string name="edit_passkey">Passkey bearbeiten</string>
   <string name="copy_password">Passwort kopieren</string>
   <string name="share_as_plaintext">Als Klartext teilen</string>
+  <string name="created_date">erstellt am %s</string>
 
   <!-- Preferences -->
   <string name="pref_category_repository_title">Repository</string>
@@ -129,7 +132,7 @@
   <string name="pref_file_first_sort_order">Dateien zuerst</string>
   <string name="pref_type_independent_sort_order">typunabhängig</string>
   <string name="pref_recently_used_sort_order">Zuletzt verwendet</string>
-  <string name="pref_category_autofill_title">Automatisch ausfüllen</string>
+  <string name="pref_category_autofill_title">Automatisches Ausfüllen</string>
   <string name="pref_autofill_enable_title">Autofill aktivieren</string>
   <string name="pref_category_misc_title">Verschiedenes</string>
   <string name="pref_clear_clipboard_title">Zwischenablagenverlauf umgehen</string>
@@ -253,11 +256,12 @@
   <string name="oreo_autofill_flaky_fill_support">Passwörter ausfüllen (manchmal kann ein Neustart des Browsers erforderlich sein)</string>
   <string name="oreo_autofill_no_support">Kein Support</string>
   <string name="oreo_autofill_enable_dialog_description">Password Store kann das Ausfüllen von Anmeldeformularen und sogar das Speichern von Anmeldedaten in Apps oder auf Webseiten übernehmen.</string>
-  <string name="oreo_autofill_enable_dialog_instructions">Tippen Sie auf OK, um diese Funktion zu aktivieren und um zu den Autofill-Einstellungen zu gelangen. Dort wählen Sie \"Password Store\" aus der Liste und bestätigen mit \"OK\".</string>
+  <string name="oreo_autofill_enable_dialog_instructions">Tippen Sie auf OK, um diese Funktion zu aktivieren und um zu den Autofill-Einstellungen zu gelangen. Dort wählen Sie „Password Store“ aus der Liste und bestätigen mit „OK“.\n\nIn einigen Browsern muss zudem die Option „Autofill mit einem anderen Dienst“ oder Ähnliches aktiviert werden.</string>
   <string name="oreo_autofill_enable_dialog_installed_browsers">Autofill-Unterstützung mit installierten Browsern: </string>
 
   <string name="ssh_key_does_not_exist">Der private SSH-Schlüssel konnte nicht geöffnet werden. Bitte überprüfen Sie, ob die Datei existiert.</string>
   <string name="new_password_title">Neues Passwort</string>
+  <string name="new_passkey_title">Neuer Passkey</string>
   <string name="git_tools">Hilfsmittel</string>
   <string name="abort_rebase">Rebase abbrechen und neuen Branch pushen</string>
   <string name="reset_to_remote">Hard Reset auf Remote-Branch</string>
@@ -328,8 +332,8 @@
   <string name="password_creation_file_encryption_succeeded_ids_message">Eintrag erfolgreich verschlüsselt für\n%1$s</string>
   <string name="password_creation_file_encryption_failed_ids_message">\n\nVerschlüsselung fehlgeschlagen für%1$s</string>
   <string name="password_creation_file_encryption_failed_expired_key">Schlüssel abgelaufen</string>
-  <string name="password_creation_file_write_fail_message">Fehler beim Speichern der Passwortdatei im Password Store, bitte versuchen Sie es erneut.</string>
-  <string name="password_creation_unusable_encryption_key_error_message">Verschlüsseln fehlgeschlagen. Überprüfen Sie Ablaufdatum und Widerrufstatus der PGP-Schlüssel mithilfe eines externen Programms.</string>
+  <string name="password_creation_file_write_fail_message">Fehler beim Speichern der verschlüsselten Datei im Password Store, bitte versuchen Sie es erneut.</string>
+  <string name="password_creation_unusable_encryption_key_error_message">Verschlüsseln fehlgeschlagen. Überprüfen Sie Ablaufdatum und Widerrufsstatus der PGP-Schlüssel mithilfe eines externen Programms.</string>
   <string name="password_creation_no_keys_provided_message">Keine passenden PGP-Schlüssel gefunden.</string>
   <string name="password_creation_duplicate_error">Datei existiert bereits, bitte verwenden Sie einen anderen Dateinamen.</string>
   <string name="add_otp">OTP hinzufügen</string>
@@ -350,10 +354,10 @@
 
   <!-- GitException messages -->
   <string name="git_unknown_error">Unbekannter Fehler</string>
-  <string name="git_pull_rebase_fail_error">Pull fehlgeschlagen. Sie befinden sich in einem abgelösten Head. Speichern Sie die Änderungen in \"Einstellungen &gt; Lokale Git-Konfiguration &amp; Dienstprogramme\" auf das Remote-Repository in einem neuen Branch und lösen Sie den Konflikt auf Ihrem Computer auf.</string>
+  <string name="git_pull_rebase_fail_error">Pull fehlgeschlagen. Sie befinden sich in einem abgelösten Head. Speichern Sie die Änderungen in „Einstellungen &gt; Lokale Git-Konfiguration &amp; Dienstprogramme“ auf das Remote-Repository in einem neuen Branch und lösen Sie den Konflikt auf Ihrem Computer auf.</string>
   <string name="git_pull_merge_fail_error">Merge fehlgeschlagen. Sie befinden sich in einem Konflikt. TODO: Wiederherstellungsmethode hinzufügen.</string>
 
-  <string name="git_push_nff_error">Push wurde vom Remote abgelehnt. Führen Sie den Pull vor dem Push aus. Sie können \"Synchronisieren\" statt Pull/Push nutzen, da es beides implementiert.</string>
+  <string name="git_push_nff_error">Push wurde vom Remote abgelehnt. Führen Sie den Pull vor dem Push aus. Sie können „Synchronisieren“ statt Pull/Push nutzen, da es beides implementiert.</string>
   <string name="git_push_generic_error">Push wurde von Remote abgelehnt, Grund: %1$s</string>
   <string name="git_push_other_error">Remote hat den Push abgelehnt. Prüfen Sie die Variable receive.denyNonFastForwards in der Konfigurationsdatei des Ziel-Repositorys.</string>
   <string name="git_unknown_host">Unbekannter Host: %1$s</string>
@@ -456,7 +460,7 @@
   <string name="pgp_new_passphrase">Neuer Kennwortsatz</string>
   <string name="pgp_new_passphrase_repeated">Neuen Kennwortsatz wiederholen</string>
   <string name="git_utils_reset_remote_branch_title">Name des Remote-Branchs</string>
-  <string name="pgp_key_manager_no_keys_guidance">Fügen Sie einen Schlüssel über die Schaltfläche \"+\" hinzu.</string>
+  <string name="pgp_key_manager_no_keys_guidance">Fügen Sie einen Schlüssel über die Schaltfläche „+“ hinzu.</string>
   <string name="no_keys_selected_dialog_title">Kein Schlüssel ausgewählt</string>
   <string name="no_keys_imported_dialog_title">Keine Schlüssel vorhanden</string>
   <string name="no_keys_imported_dialog_message">Es wurden noch keine PGP-Schlüssel der App hinzugefügt. Importieren Sie eine Schlüsseldatei oder erstellen Sie einen neuen Schlüssel im PGP-Schlüsselmanager.</string>
@@ -493,4 +497,17 @@
   <string name="pin_entry_title">PIN-Verifizierung</string>
   <string name="pin_entry_description">Geben Sie Ihren PIN-Code ein, um den Eintrag anzuzeigen.</string>
   <string name="pin_entry_wrong_input">Falsche Eingabe</string>
+
+  <!-- Passkeys -->
+
+  <string name="cred_id_hint">WebAuthn-Anmeldedaten-ID</string>
+  <string name="cred_algorithm_hint">Typ</string>
+  <string name="rp_name_hint">Gegenstellen-ID</string>
+  <string name="fullname_hint">Vollständiger Benutzername</string>
+  <string name="reveal_passkey_username">Benutzernamen in der Passkey-Auswahl anzeigen</string>
+  <string name="passkey_authentication_error_title">Fehler bei der Passkey-Authentifizierung</string>
+  <string name="passkey_parse_error_message">Fehler beim Lesen von\n\n%1$s\n\nDie Datei scheint keine gültigen Passkey-Daten zu enthalten.</string>
+  <string name="passkey_sign_error_message">Die Signatur konnte nicht erzeugt werden:\n\n%1$s</string>
+  <string name="passkey_request_error_message">Keine Aufforderung zum Authentisieren von der Gegenstelle empfangen</string>
+
 </resources>

@@ -15,6 +15,12 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.name
+import kotlin.streams.asSequence
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.BranchTrackingStatus
 import org.eclipse.jgit.lib.Constants
@@ -64,40 +70,40 @@ object PasswordRepository {
 
     if (!remotes.contains(name)) {
       runCatching {
-          val uri = URIish(url)
-          val refSpec = RefSpec("+refs/head/*:refs/remotes/$name/*")
+        val uri = URIish(url)
+        val refSpec = RefSpec("+refs/head/*:refs/remotes/$name/*")
 
-          val remoteConfig = RemoteConfig(storedConfig, name)
-          remoteConfig.addFetchRefSpec(refSpec)
-          remoteConfig.addPushRefSpec(refSpec)
-          remoteConfig.addURI(uri)
-          remoteConfig.addPushURI(uri)
+        val remoteConfig = RemoteConfig(storedConfig, name)
+        remoteConfig.addFetchRefSpec(refSpec)
+        remoteConfig.addPushRefSpec(refSpec)
+        remoteConfig.addURI(uri)
+        remoteConfig.addPushURI(uri)
 
-          remoteConfig.update(storedConfig)
+        remoteConfig.update(storedConfig)
 
-          storedConfig.save()
-        }
+        storedConfig.save()
+      }
         .onErr { e -> e.printStackTrace() }
     } else if (replace) {
       runCatching {
-          val uri = URIish(url)
+        val uri = URIish(url)
 
-          val remoteConfig = RemoteConfig(storedConfig, name)
-          // remove the first and eventually the only uri
-          if (remoteConfig.urIs.size > 0) {
-            remoteConfig.removeURI(remoteConfig.urIs[0])
-          }
-          if (remoteConfig.pushURIs.size > 0) {
-            remoteConfig.removePushURI(remoteConfig.pushURIs[0])
-          }
-
-          remoteConfig.addURI(uri)
-          remoteConfig.addPushURI(uri)
-
-          remoteConfig.update(storedConfig)
-
-          storedConfig.save()
+        val remoteConfig = RemoteConfig(storedConfig, name)
+        // remove the first and eventually the only uri
+        if (remoteConfig.urIs.size > 0) {
+          remoteConfig.removeURI(remoteConfig.urIs[0])
         }
+        if (remoteConfig.pushURIs.size > 0) {
+          remoteConfig.removePushURI(remoteConfig.pushURIs[0])
+        }
+
+        remoteConfig.addURI(uri)
+        remoteConfig.addPushURI(uri)
+
+        remoteConfig.update(storedConfig)
+
+        storedConfig.save()
+      }
         .onErr { e -> e.printStackTrace() }
     }
   }
@@ -163,7 +169,7 @@ object PasswordRepository {
         putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true)
       }
     }
-    // Create the repository static variable in PasswordRepository
+    // Create the `repository` static variable in PasswordRepository
     initializeRepository(dir.resolve(".git"))
 
     return repository
@@ -193,18 +199,17 @@ object PasswordRepository {
   }
 
   /** If repo is tracking a remote branch, return commit count to be pushed, zero otherwise */
-  fun getAheadCount(): Int =
-    runCatching {
-        repository?.let { repo ->
-          getCurrentBranch()?.let { branch ->
-            BranchTrackingStatus.of(repo, branch)?.getAheadCount()
-          }
-        } ?: 0
+  fun getAheadCount(): Int = runCatching {
+    repository?.let { repo ->
+      getCurrentBranch()?.let { branch ->
+        BranchTrackingStatus.of(repo, branch)?.getAheadCount()
       }
-      .getOrElse { e ->
-        e.printStackTrace()
-        0
-      }
+    } ?: 0
+  }
+    .getOrElse { e ->
+      e.printStackTrace()
+      0
+    }
 
   /**
    * Gets the .gpg files in a directory
@@ -255,5 +260,38 @@ object PasswordRepository {
     }
     passwordList.sortWith(sortOrder.comparator)
     return passwordList
+  }
+
+  fun findFilesByName(
+    rootPath: String,
+    fileName: String,
+    ignoreCase: Boolean = false,
+  ): List<String> {
+    return Files.walk(Paths.get(rootPath)).use { stream ->
+      stream
+        .asSequence()
+        .filter { Files.isRegularFile(it) }
+        .filter { it.name.equals(fileName, ignoreCase = ignoreCase) }
+        .map { it.absolutePathString() }
+        .toList()
+    }
+  }
+
+  fun findFilesByParentName(
+    rootPath: String,
+    parentName: String,
+    ignoreCase: Boolean = false,
+  ): List<String> {
+    return Files.walk(Paths.get(rootPath)).use { stream ->
+      stream
+        .asSequence()
+        .filter { Files.isRegularFile(it) }
+        .filter { path ->
+          val parent: Path? = path.parent
+          parent != null && parent.name.equals(parentName, ignoreCase = ignoreCase)
+        }
+        .map { it.absolutePathString() }
+        .toList()
+    }
   }
 }

@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file
 
 ### Added
 
+- **Passkey support:** ES256, Ed25519 and RS256 credential types, selection upon passkey creation based on the relying party's preference order
+- Android Credential Manager integration: handling passkey creation and authentication requests from browsers and native apps
+
+## [1.16.4] - 2026-07-10
+
+### Added
+
 - Search result filter options "exact match" and "fuzzy" in Settings --> General
 - PGP Manager now imports all keys from multi-key backups, such as those produced with OpenKeychain (previously, only the first key was imported)
 - Option to generate Ed25519 SSH keys restored
@@ -18,6 +25,7 @@ All notable changes to this project will be documented in this file
 ### Fixed
 
 - Accidental overwriting of existing password items of same file name after editing
+- Empty preference value after fresh install for PIN/biometrics expiration timeout may cause the app to crash
 
 ## [1.16.3] - 2026-04-15
 
@@ -664,7 +672,8 @@ All notable changes to this project will be documented in this file
 
 - Fix elements overlapping.
 
-[unreleased]: https://github.com/agrahn/Android-Password-Store/compare/v1.16.3...HEAD
+[unreleased]: https://github.com/agrahn/Android-Password-Store/compare/v1.16.4...HEAD
+[1.16.4]: https://github.com/agrahn/Android-Password-Store/compare/v1.16.3...v1.16.4
 [1.16.3]: https://github.com/agrahn/Android-Password-Store/compare/v1.16.2...v1.16.3
 [1.16.2]: https://github.com/agrahn/Android-Password-Store/compare/v1.16.1...v1.16.2
 [1.16.1]: https://github.com/agrahn/Android-Password-Store/compare/v1.16.0...v1.16.1

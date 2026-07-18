@@ -5,8 +5,8 @@
 package app.passwordstore.ui.passwords
 
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.Menu
@@ -28,6 +28,8 @@ import app.passwordstore.R
 import app.passwordstore.data.password.PasswordItem
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityPwdstoreBinding
+import app.passwordstore.injection.prefs.CredentialUsernames
+import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.crypto.BasePGPActivity
 import app.passwordstore.ui.crypto.DecryptActivity
 import app.passwordstore.ui.crypto.PasswordCreationActivity
@@ -67,7 +69,9 @@ import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import java.lang.Character.UnicodeBlock
+import java.nio.file.Paths
 import javax.inject.Inject
+import kotlin.io.path.nameWithoutExtension
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -85,6 +89,8 @@ const val PASSWORD_FRAGMENT_TAG = "PasswordsList"
 @AndroidEntryPoint
 class PasswordStore : BaseGitActivity() {
 
+  @Inject @PasswordHistory lateinit var passwordHistory: SharedPreferences
+  @Inject @CredentialUsernames lateinit var credentialUsernames: SharedPreferences
   @Inject lateinit var shortcutHandler: ShortcutHandler
   private lateinit var searchItem: MenuItem
   private val settings by lazy { sharedPrefs }
@@ -158,9 +164,9 @@ class PasswordStore : BaseGitActivity() {
             logcat(ERROR) { "Trying to move a file that already exists." }
             withContext(dispatcherProvider.main()) {
               MaterialAlertDialogBuilder(this@PasswordStore)
-                .setTitle(resources.getString(R.string.password_exists_title))
+                .setTitle(R.string.password_exists_title)
                 .setMessage(
-                  resources.getString(
+                  getString(
                     R.string.password_exists_message,
                     destinationLongName,
                     sourceLongName,
@@ -190,7 +196,7 @@ class PasswordStore : BaseGitActivity() {
               PasswordRepository.getLongName(target.absolutePath, repositoryPath, basename)
             withContext(dispatcherProvider.main()) {
               commitChange(
-                resources.getString(
+                getString(
                   R.string.git_commit_move_text,
                   sourceLongName,
                   destinationLongName,
@@ -204,9 +210,7 @@ class PasswordStore : BaseGitActivity() {
             val relativePath =
               PasswordRepository.getRelativePath("${target.absolutePath}/", repoPath)
             withContext(dispatcherProvider.main()) {
-              commitChange(
-                resources.getString(R.string.git_commit_move_multiple_text, relativePath)
-              )
+              commitChange(getString(R.string.git_commit_move_multiple_text, relativePath))
               updateFabSync()
             }
           }
@@ -348,8 +352,11 @@ class PasswordStore : BaseGitActivity() {
     val id = item.itemId
     val initBefore =
       MaterialAlertDialogBuilder(this)
-        .setMessage(resources.getString(R.string.creation_dialog_text))
-        .setPositiveButton(resources.getString(R.string.dialog_ok), null)
+        .setCancelable(false)
+        .setTitle(R.string.error)
+        .setIcon(R.drawable.ic_warning_red_24dp)
+        .setMessage(R.string.creation_dialog_text)
+        .setPositiveButton(R.string.dialog_ok, null)
     when (id) {
       R.id.user_pref -> {
         runCatching { launchActivity(SettingsActivity::class.java) }
@@ -446,8 +453,8 @@ class PasswordStore : BaseGitActivity() {
   private fun validateState(): Boolean {
     if (!PasswordRepository.isInitialized) {
       MaterialAlertDialogBuilder(this)
-        .setMessage(resources.getString(R.string.creation_dialog_text))
-        .setPositiveButton(resources.getString(R.string.dialog_ok), null)
+        .setMessage(R.string.creation_dialog_text)
+        .setPositiveButton(R.string.dialog_ok, null)
         .show()
       return false
     }
@@ -484,14 +491,14 @@ class PasswordStore : BaseGitActivity() {
       return
     }
     MaterialAlertDialogBuilder(this)
+      .setTitle(R.string.delete_dialog_title)
       .setMessage(resources.getQuantityString(R.plurals.delete_dialog_text, size, size))
-      .setPositiveButton(resources.getString(R.string.dialog_yes)) { _, _ ->
+      .setPositiveButton(R.string.dialog_yes) { _, _ ->
         val filesToDelete = arrayListOf<File>()
         selectedItems.forEach { item ->
           if (item.file.isDirectory) filesToDelete.addAll(item.file.listFilesRecursively())
           else filesToDelete.add(item.file)
         }
-        val preference = getSharedPreferences("recent_password_history", Context.MODE_PRIVATE)
         val fmt =
           selectedItems.joinToString(separator = ", ") { item ->
             item.file.toRelativeString(PasswordRepository.getRepositoryDirectory())
@@ -504,8 +511,17 @@ class PasswordStore : BaseGitActivity() {
           commitChange(resources.getString(R.string.git_commit_remove_text, fmt))
             .onOk {
               // The deletion is committed (and signed, if requested): finalise the bookkeeping.
-              preference.edit {
+              // remove to-be-deleted files from history
+              passwordHistory.edit {
                 filesToDelete.forEach { file -> remove(file.absolutePath.base64()) }
+              }
+              // remove cached passkey hex ID (filename without extension) <--> webauthn username
+              // associations
+              credentialUsernames.edit {
+                filesToDelete.forEach { file ->
+                  val fileBasename = Paths.get(file.absolutePath).nameWithoutExtension
+                  if (fileBasename.matches("[a-fA-F0-9]{64}".toRegex())) remove(fileBasename)
+                }
               }
               AutofillMatcher.updateMatches(applicationContext, delete = filesToDelete)
               shortcutHandler.pruneDynamicShortcuts()
@@ -545,7 +561,7 @@ class PasswordStore : BaseGitActivity() {
           updateFabSync()
         }
       }
-      .setNegativeButton(resources.getString(R.string.dialog_no), null)
+      .setNegativeButton(R.string.dialog_no, null)
       .show()
   }
 
@@ -635,11 +651,9 @@ class PasswordStore : BaseGitActivity() {
 
                 // associate the new category with the last category's timestamp in
                 // history
-                val preference =
-                  getSharedPreferences("recent_password_history", Context.MODE_PRIVATE)
-                val timestamp = preference.getString(oldCategory.file.absolutePath.base64())
+                val timestamp = passwordHistory.getString(oldCategory.file.absolutePath.base64())
                 if (timestamp != null) {
-                  preference.edit {
+                  passwordHistory.edit {
                     remove(oldCategory.file.absolutePath.base64())
                     putString(newCategory.absolutePath.base64(), timestamp)
                   }
@@ -647,7 +661,7 @@ class PasswordStore : BaseGitActivity() {
 
                 withContext(dispatcherProvider.main()) {
                   commitChange(
-                    resources.getString(
+                    getString(
                       R.string.git_commit_move_text,
                       oldCategory.name,
                       newCategory.name,
@@ -736,11 +750,10 @@ class PasswordStore : BaseGitActivity() {
       }
     } else {
       // update timestamp cache with the new file locations
-      val preference = getSharedPreferences("recent_password_history", Context.MODE_PRIVATE)
-      preference.edit {
+      passwordHistory.edit {
         sourceDestinationMap.forEach { (src, dest) ->
           val srcPathHash = src.absolutePath.base64()
-          val timestamp = preference.getString(srcPathHash)
+          val timestamp = passwordHistory.getString(srcPathHash)
           remove(srcPathHash)
           putString(dest.absolutePath.base64(), timestamp)
         }

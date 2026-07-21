@@ -95,6 +95,12 @@ constructor(
       settings.edit { putBoolean(PreferenceKeys.GIT_SHOW_SSH_SERVER_RESPONSE, value) }
     }
 
+  var signCommits
+    get() = settings.getBoolean(PreferenceKeys.GIT_CONFIG_SIGN_COMMITS, false)
+    set(value) {
+      settings.edit { putBoolean(PreferenceKeys.GIT_CONFIG_SIGN_COMMITS, value) }
+    }
+
   var useMultiplexing
     get() = settings.getBoolean(PreferenceKeys.GIT_REMOTE_USE_MULTIPLEXING, true)
     set(value) {

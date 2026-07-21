@@ -29,6 +29,7 @@ object PreferenceKeys {
   const val GIT_CONFIG_AUTHOR_EMAIL = "git_config_user_email"
   const val GIT_CONFIG_AUTHOR_NAME = "git_config_user_name"
   const val GIT_SHOW_SSH_SERVER_RESPONSE = "git_show_ssh_server_response"
+  const val GIT_CONFIG_SIGN_COMMITS = "git_config_sign_commits"
 
   const val PREF_SHARED_REPO = "pref_shared_repo"
 

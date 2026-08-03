@@ -80,11 +80,13 @@ open class PasswordItemRecyclerAdapter(
         0,
       )
       name.text = spannable
+      // State-list drawables: each shows the item's type normally and a check while the row is
+      // selected, so the icon doubles as the selection indicator during multi-select.
       typeIcon.setImageResource(
         when (item.type) {
-          PasswordItem.TYPE_CATEGORY -> R.drawable.ic_action_new_folder
-          PasswordItem.TYPE_GPG_ID -> R.drawable.ic_action_new_pgp_key
-          else -> R.drawable.ic_password_24px
+          PasswordItem.TYPE_CATEGORY -> R.drawable.password_row_icon_folder
+          PasswordItem.TYPE_GPG_ID -> R.drawable.password_row_icon_gpg_id
+          else -> R.drawable.password_row_icon_password
         }
       )
       if (item.type == PasswordItem.TYPE_CATEGORY) {

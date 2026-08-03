@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
@@ -148,43 +149,30 @@ class PGPKeyListActivity : AppCompatActivity() {
                 } else stringResource(R.string.activity_label_pgp_key_manager),
               navigationIcon = painterResource(R.drawable.ic_arrow_back_24dp),
               onNavigationIconClick = {
+                // Up/back dismisses without applying anything. Committing a selection is the
+                // job of the explicit confirm action, so leaving the screen can never change
+                // the user's keys behind their back.
                 val result = Intent()
-                if (isSelectingKeys) {
-                  if (selectedKeyIds.isNotEmpty()) {
-                    result.putExtra(
-                      EXTRA_SELECTED_KEY,
-                      selectedKeyIds.joinToString(separator = "\n"),
-                    )
-                    val gpgIdDest = intent.getStringExtra("SUB_PATH")
-                    gpgIdDest?.let { result.putExtra("SUB_PATH", it) }
-                    setResult(RESULT_OK, result)
-                    finish()
-                  } else {
-                    val okButtonText =
-                      if (singleSelection) resources.getString(R.string.gpg_key_single_select)
-                      else resources.getString(R.string.gpg_key_select)
-                    MaterialAlertDialogBuilder(this)
-                      .setTitle(R.string.no_keys_selected_dialog_title)
-                      .setPositiveButton(okButtonText, null)
-                      .setNegativeButton(
-                        R.string.pgp_key_insecure_passphrase_warning_confirm // continue anyway
-                      ) { _, _ ->
-                        if (singleSelection && SshKey.pgpLongKeyId != 0L) SshKey.delete()
-                        setResult(RESULT_CANCELED)
-                        finish()
-                      }
-                      .setCancelable(false)
-                      .show()
-                  }
-                } else if (isAddingKeys && keysAdded) {
+                if (!isSelectingKeys && isAddingKeys && keysAdded) {
                   setResult(RESULT_OK, result)
-                  finish()
                 } else {
                   setResult(RESULT_CANCELED, result)
-                  finish()
                 }
+                finish()
               },
               backgroundColor = MaterialTheme.colorScheme.surface,
+              actions = {
+                if (isSelectingKeys) {
+                  IconButton(onClick = { confirmSelection(singleSelection, selectedKeyIds) }) {
+                    Icon(
+                      painter = painterResource(R.drawable.ic_done_24dp),
+                      contentDescription =
+                        if (singleSelection) stringResource(R.string.gpg_key_single_select)
+                        else stringResource(R.string.gpg_key_select),
+                    )
+                  }
+                }
+              },
             )
           },
           floatingActionButton = {
@@ -233,6 +221,36 @@ class PGPKeyListActivity : AppCompatActivity() {
           )
         }
       }
+    }
+  }
+
+  /**
+   * Apply the current selection and finish. Deliberately separate from up/back navigation: a
+   * selection screen should only commit when the user says so.
+   */
+  private fun confirmSelection(singleSelection: Boolean, selectedKeyIds: Set<String>) {
+    if (selectedKeyIds.isNotEmpty()) {
+      val result = Intent()
+      result.putExtra(EXTRA_SELECTED_KEY, selectedKeyIds.joinToString(separator = "\n"))
+      intent.getStringExtra("SUB_PATH")?.let { result.putExtra("SUB_PATH", it) }
+      setResult(RESULT_OK, result)
+      finish()
+    } else {
+      val okButtonText =
+        if (singleSelection) resources.getString(R.string.gpg_key_single_select)
+        else resources.getString(R.string.gpg_key_select)
+      MaterialAlertDialogBuilder(this)
+        .setTitle(R.string.no_keys_selected_dialog_title)
+        .setPositiveButton(okButtonText, null)
+        .setNegativeButton(
+          R.string.pgp_key_insecure_passphrase_warning_confirm // continue anyway
+        ) { _, _ ->
+          if (singleSelection && SshKey.pgpLongKeyId != 0L) SshKey.delete()
+          setResult(RESULT_CANCELED)
+          finish()
+        }
+        .setCancelable(false)
+        .show()
     }
   }
 

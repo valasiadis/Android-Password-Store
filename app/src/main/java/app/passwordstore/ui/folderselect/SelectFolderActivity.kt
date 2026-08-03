@@ -5,7 +5,6 @@
 package app.passwordstore.ui.folderselect
 
 import android.os.Bundle
-import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
@@ -22,6 +21,7 @@ import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.util.extensions.contains
 import app.passwordstore.util.extensions.isInsideRepository
 import app.passwordstore.util.viewmodel.SearchableRepositoryViewModel
+import com.google.android.material.button.MaterialButton
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import kotlinx.coroutines.launch
@@ -46,8 +46,11 @@ class SelectFolderActivity : AppCompatActivity(R.layout.select_folder_layout) {
       this,
       object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-          if (passwordList?.onBackPressedInActivity() != true) {
-            finishAndRemoveTask()
+          if (!passwordList.onBackPressedInActivity()) {
+            // Only this activity goes away. finishAndRemoveTask() used to be called here,
+            // which tore down the whole task including the caller that started us for a
+            // result, so backing out of the picker abandoned the screen behind it.
+            cancelAndFinish()
           }
         }
       },
@@ -59,36 +62,34 @@ class SelectFolderActivity : AppCompatActivity(R.layout.select_folder_layout) {
       replace(R.id.pgp_handler_linearlayout, passwordList, PASSWORD_FRAGMENT_TAG)
     }
 
+    findViewById<MaterialButton>(R.id.create_folder_button).setOnClickListener { createFolder() }
+    findViewById<MaterialButton>(R.id.cancel_button).setOnClickListener { cancelAndFinish() }
+    findViewById<MaterialButton>(R.id.select_button).setOnClickListener { selectFolder() }
+
     supportActionBar?.show()
 
     lifecycleScope.launch { // Update action bar title with current dir name
       model.currentDir.flowWithLifecycle(lifecycle).collect { dir ->
         val basePath = PasswordRepository.getRepositoryDirectory().absoluteFile
         supportActionBar?.apply {
-          if (dir != basePath) title = dir.name else setTitle(R.string.app_name)
+          // At the repository root the app name said nothing about what the screen is for.
+          if (dir != basePath) title = dir.name else setTitle(R.string.title_select_folder)
         }
       }
     }
   }
 
-  override fun onCreateOptionsMenu(menu: Menu): Boolean {
-    menuInflater.inflate(R.menu.pgp_handler_select_folder, menu)
-    return true
-  }
-
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
     when (item.itemId) {
-      android.R.id.home -> {
-        onBackPressedDispatcher.onBackPressed()
-      }
-      R.id.crypto_cancel -> {
-        setResult(RESULT_CANCELED)
-        finish()
-      }
-      R.id.crypto_select -> selectFolder()
+      android.R.id.home -> onBackPressedDispatcher.onBackPressed()
       else -> return super.onOptionsItemSelected(item)
     }
     return true
+  }
+
+  private fun cancelAndFinish() {
+    setResult(RESULT_CANCELED)
+    finish()
   }
 
   fun refreshPasswordList(target: File? = null) {

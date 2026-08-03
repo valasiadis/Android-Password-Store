@@ -11,6 +11,50 @@
   <LinearLayout
     android:id="@+id/pgp_handler_linearlayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
     android:orientation="vertical" />
+
+  <!--
+    Confirm and cancel live at the bottom rather than as app bar icons: they are this
+    screen's primary actions and belong where a picker's actions are expected. Folder
+    creation sits opposite them on the leading edge, so it does not occupy the trailing
+    position that the confirm action owns.
+  -->
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="@dimen/spacing_small"
+    android:paddingVertical="@dimen/spacing_small">
+
+    <com.google.android.material.button.MaterialButton
+      android:id="@+id/create_folder_button"
+      style="@style/Widget.Material3.Button.TextButton"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/bottom_sheet_create_new_folder" />
+
+    <Space
+      android:layout_width="0dp"
+      android:layout_height="1dp"
+      android:layout_weight="1" />
+
+    <com.google.android.material.button.MaterialButton
+      android:id="@+id/cancel_button"
+      style="@style/Widget.Material3.Button.TextButton"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/dialog_cancel" />
+
+    <com.google.android.material.button.MaterialButton
+      android:id="@+id/select_button"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="@dimen/spacing_small"
+      android:text="@string/crypto_select" />
+
+  </LinearLayout>
+
 </LinearLayout>

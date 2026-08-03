@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.flowWithLifecycle
@@ -48,9 +49,9 @@ class SelectFolderFragment : Fragment(R.layout.password_recycler_view) {
 
     ViewCompat.setOnApplyWindowInsetsListener(view, windowInsetsLambda)
 
-    binding.fab.setMaxImageSize(64)
-    binding.fab.setImageResource(R.drawable.ic_new_folder_48dp)
-    binding.fab.setOnClickListener { (requireActivity() as SelectFolderActivity).createFolder() }
+    // Folder creation moved to the activity's bottom bar, opposite the confirm action, so
+    // the floating button no longer sits where a confirmation is expected.
+    binding.fab.hide()
 
     recyclerAdapter =
       PasswordItemRecyclerAdapter(lifecycleScope, dispatcherProvider).onItemClicked { _, item ->
@@ -83,9 +84,13 @@ class SelectFolderFragment : Fragment(R.layout.password_recycler_view) {
       .supportActionBar
       ?.setDisplayHomeAsUpEnabled(model.canNavigateBack)
 
+    binding.emptyMessage.setText(R.string.folder_list_empty)
+
     lifecycleScope.launch {
       model.searchResult.flowWithLifecycle(lifecycle).collect { result ->
         recyclerAdapter.submitList(result.passwordItems)
+        // A folder with no subfolders would otherwise render as an unexplained blank list.
+        binding.emptyMessage.isVisible = result.passwordItems.isEmpty()
       }
     }
   }

@@ -9,4 +9,15 @@
     <item name="android:background">?android:colorBackground</item>
   </style>
 
+  <!--
+    A Material 3 top app bar sits flat on the background at rest and expresses
+    elevation with a surface tint once content scrolls under it, so the default
+    drop shadow is dropped here. The shadow is only really noticeable in the
+    light theme, where it falls on a near-white background.
+  -->
+  <style name="APSThemeM3.ActionBar" parent="Widget.Material3.ActionBar.Solid">
+    <item name="elevation">0dp</item>
+    <item name="background">?android:colorBackground</item>
+  </style>
+
 </resources>

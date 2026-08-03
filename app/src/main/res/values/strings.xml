@@ -417,8 +417,6 @@
   <string name="select_repo_type_text">Choose whether you want to clone a remote repo or create a local repo.</string>
   <string name="clone_remote_repo">Clone remote repo</string>
   <string name="create_local_repo">Create local repo</string>
-  <string name="select_gpg_key_title">Select\nPGP key(s)</string>
-  <string name="select_gpg_key_message">Select one or multiple PGP keys that you want to initialise the store with.</string>
   <string name="gpg_key_select">Select key(s)</string>
   <string name="gpg_key_single_select">Select key</string>
   <string name="select_n_repository_visibility">Repository visibility</string>

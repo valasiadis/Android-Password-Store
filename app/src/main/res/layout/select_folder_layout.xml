@@ -3,58 +3,60 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
   android:layout_width="match_parent"
-  android:layout_height="match_parent"
-  android:orientation="vertical">
+  android:layout_height="match_parent">
 
   <LinearLayout
     android:id="@+id/pgp_handler_linearlayout"
     android:layout_width="match_parent"
-    android:layout_height="0dp"
-    android:layout_weight="1"
+    android:layout_height="match_parent"
     android:orientation="vertical" />
 
   <!--
-    Confirm and cancel live at the bottom rather than as app bar icons: they are this
-    screen's primary actions and belong where a picker's actions are expected. Folder
-    creation sits opposite them on the leading edge, so it does not occupy the trailing
-    position that the confirm action owns.
+    The actions float over the list, as the single folder creation button used to: same
+    widget, so their size, shape and margins are those of that button rather than
+    something that merely resembles it. The list reserves room to scroll clear of them.
+    The row is padded by the system bar insets in code, which puts it at the same height
+    above the navigation bar as the password list's floating button.
+
+    Confirm takes the trailing position it is expected to occupy, which is why folder
+    creation moved to the leading edge. There is no cancel action: the app bar's up arrow
+    and the system back gesture already dismiss the picker.
   -->
   <LinearLayout
+    android:id="@+id/folder_actions"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_gravity="bottom"
+    android:layout_margin="@dimen/fab_compat_margin"
     android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:paddingHorizontal="@dimen/spacing_small"
-    android:paddingVertical="@dimen/spacing_small">
+    android:orientation="horizontal">
 
-    <com.google.android.material.button.MaterialButton
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
       android:id="@+id/create_folder_button"
-      style="@style/Widget.Material3.Button.TextButton"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:text="@string/bottom_sheet_create_new_folder" />
+      android:contentDescription="@string/bottom_sheet_create_new_folder"
+      android:src="@drawable/ic_new_folder_48dp"
+      android:tooltipText="@string/bottom_sheet_create_new_folder"
+      app:maxImageSize="24dp" />
 
     <Space
       android:layout_width="0dp"
       android:layout_height="1dp"
       android:layout_weight="1" />
 
-    <com.google.android.material.button.MaterialButton
-      android:id="@+id/cancel_button"
-      style="@style/Widget.Material3.Button.TextButton"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="@string/dialog_cancel" />
-
-    <com.google.android.material.button.MaterialButton
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
       android:id="@+id/select_button"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:layout_marginStart="@dimen/spacing_small"
-      android:text="@string/crypto_select" />
+      android:contentDescription="@string/crypto_select"
+      android:src="@drawable/ic_done_24dp"
+      android:tooltipText="@string/crypto_select"
+      app:maxImageSize="24dp" />
 
   </LinearLayout>
 
-</LinearLayout>
+</FrameLayout>

@@ -7,7 +7,6 @@ package app.passwordstore.ui.folderselect
 import android.content.Context
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -71,18 +70,21 @@ class SelectFolderFragment : Fragment(R.layout.password_recycler_view) {
       listMode = ListMode.DirectoriesOnly,
       pushPreviousLocation = false,
     )
-    getArguments()?.getString(PasswordStore.REQUEST_ARG_PATH)?.let { relPath ->
-      relPath.trim('/').split('/').forEach { dir ->
-        model.navigateTo(
-          File(currentDir, dir),
-          pushPreviousLocation = true,
-          listMode = ListMode.DirectoriesOnly,
-        )
+    arguments?.getString(PasswordStore.REQUEST_ARG_PATH)?.let { relPath ->
+      // Empty components are dropped rather than resolved: the repository root arrives here as
+      // the empty string, which resolves back to the directory we are already in and pushes a
+      // duplicate onto the navigation stack, so the first back press appears to do nothing.
+      relPath.split('/').filter(String::isNotEmpty).forEach { dir ->
+        val target = File(currentDir, dir)
+        if (target.isDirectory) {
+          model.navigateTo(
+            target,
+            pushPreviousLocation = true,
+            listMode = ListMode.DirectoriesOnly,
+          )
+        }
       }
     }
-    (requireActivity() as AppCompatActivity)
-      .supportActionBar
-      ?.setDisplayHomeAsUpEnabled(model.canNavigateBack)
 
     binding.emptyMessage.setText(R.string.folder_list_empty)
 
@@ -112,9 +114,6 @@ class SelectFolderFragment : Fragment(R.layout.password_recycler_view) {
           override fun onFragmentInteraction(item: PasswordItem) {
             if (item.type == PasswordItem.TYPE_CATEGORY) {
               model.navigateTo(item.file, listMode = ListMode.DirectoriesOnly)
-              (requireActivity() as AppCompatActivity)
-                .supportActionBar
-                ?.setDisplayHomeAsUpEnabled(true)
             }
           }
         }
@@ -126,8 +125,6 @@ class SelectFolderFragment : Fragment(R.layout.password_recycler_view) {
   fun onBackPressedInActivity(): Boolean {
     if (!model.canNavigateBack) return false
     model.navigateBack(listMode = ListMode.DirectoriesOnly)
-    if (!model.canNavigateBack)
-      (requireActivity() as AppCompatActivity).supportActionBar?.setDisplayHomeAsUpEnabled(false)
     return true
   }
 

@@ -273,8 +273,6 @@
   <string name="select_repo_type_text">Sélectionnez si vous voulez créer un dépôt local ou cloner un dépôt distant.</string>
   <string name="clone_remote_repo">Cloner le dépôt distant</string>
   <string name="create_local_repo">Créer un dépôt local</string>
-  <string name="select_gpg_key_title">Sélectionnez\nla clé PGP</string>
-  <string name="select_gpg_key_message">Sélectionnez une clé PGP pour initialiser votre magasin</string>
   <string name="gpg_key_select">Sélectionner la clé</string>
   <!-- SSH port validation -->
   <string name="ssh_scheme_needed_title">URL potentiellement incorrecte</string>

@@ -9,6 +9,9 @@ import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.commit
 import androidx.lifecycle.flowWithLifecycle
@@ -21,7 +24,7 @@ import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.util.extensions.contains
 import app.passwordstore.util.extensions.isInsideRepository
 import app.passwordstore.util.viewmodel.SearchableRepositoryViewModel
-import com.google.android.material.button.MaterialButton
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import kotlinx.coroutines.launch
@@ -62,19 +65,41 @@ class SelectFolderActivity : AppCompatActivity(R.layout.select_folder_layout) {
       replace(R.id.pgp_handler_linearlayout, passwordList, PASSWORD_FRAGMENT_TAG)
     }
 
-    findViewById<MaterialButton>(R.id.create_folder_button).setOnClickListener { createFolder() }
-    findViewById<MaterialButton>(R.id.cancel_button).setOnClickListener { cancelAndFinish() }
-    findViewById<MaterialButton>(R.id.select_button).setOnClickListener { selectFolder() }
+    findViewById<FloatingActionButton>(R.id.create_folder_button).setOnClickListener {
+      createFolder()
+    }
+    findViewById<FloatingActionButton>(R.id.select_button).setOnClickListener { selectFolder() }
 
-    supportActionBar?.show()
+    // The password list's floating button sits inside a container that carries the system bar
+    // insets, so it comes to rest above the navigation bar. This row is outside that container
+    // and has to take the insets itself, otherwise it sits a navigation bar lower than the
+    // button it is meant to line up with.
+    ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.folder_actions)) {
+      view,
+      windowInsets ->
+      val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+      view.updatePadding(left = insets.left, right = insets.right, bottom = insets.bottom)
+      windowInsets
+    }
 
-    lifecycleScope.launch { // Update action bar title with current dir name
+    supportActionBar?.apply {
+      show()
+      // The title names the task for as long as the task lasts: it used to be replaced by the
+      // current folder's name, which read as if the screen had become something else.
+      setTitle(R.string.title_select_folder)
+      // Always offered, at every depth. It used to appear only when a folder could be stepped
+      // out of, so returning to the repository root left the screen with no visible way out
+      // even though back still worked.
+      setDisplayHomeAsUpEnabled(true)
+    }
+
+    lifecycleScope.launch {
+      // Where the user currently stands, below the unchanging title. The full path rather than
+      // the folder's own name, since sibling folders in different parents share names.
       model.currentDir.flowWithLifecycle(lifecycle).collect { dir ->
-        val basePath = PasswordRepository.getRepositoryDirectory().absoluteFile
-        supportActionBar?.apply {
-          // At the repository root the app name said nothing about what the screen is for.
-          if (dir != basePath) title = dir.name else setTitle(R.string.title_select_folder)
-        }
+        val repositoryPath = PasswordRepository.getRepositoryDirectory().absolutePath
+        val relativePath = PasswordRepository.getRelativePath(dir.absolutePath, repositoryPath)
+        supportActionBar?.subtitle = relativePath.ifEmpty { "/" }
       }
     }
   }
@@ -113,7 +138,6 @@ class SelectFolderActivity : AppCompatActivity(R.layout.select_folder_layout) {
     } else {
       model.reset()
     }
-    supportActionBar?.setDisplayHomeAsUpEnabled(model.canNavigateBack)
   }
 
   private fun selectFolder() {

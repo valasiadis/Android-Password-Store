@@ -284,8 +284,6 @@
     <string name="select_repo_type_text">Selecciona si vol crear un repositori local o clonar un de remot.</string>
     <string name="clone_remote_repo">Clona un repositori remot</string>
     <string name="create_local_repo">Crea un repositori local</string>
-    <string name="select_gpg_key_title">Selecciona les claus PGP</string>
-    <string name="select_gpg_key_message">Selecciona una o múltiple claus PGP per inicialitzar el magatzem.</string>
     <string name="gpg_key_select">Selecciona les claus</string>
     <string name="ssh_scheme_needed_title">URL potencialment incorrecta</string>
     <string name="git_scheme_disallowed_title">L\'ús del protocol git:// està desaconsellat</string>

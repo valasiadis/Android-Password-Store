@@ -283,8 +283,6 @@
   <string name="select_repo_type_text">Selecione se você quer criar um repositório local ou clonar um repositório remoto.</string>
   <string name="clone_remote_repo">Clonar repositório remoto</string>
   <string name="create_local_repo">Criar repositório local</string>
-  <string name="select_gpg_key_title">Selecione\nChave PGP</string>
-  <string name="select_gpg_key_message">Selecione uma chave PGP para inicializar o armazenamento com</string>
   <string name="gpg_key_select">Selecione a chave</string>
   <!-- SSH port validation -->
   <string name="ssh_scheme_needed_title">URL potencialmente incorreta</string>

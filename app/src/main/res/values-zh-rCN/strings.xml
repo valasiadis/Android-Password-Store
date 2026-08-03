@@ -286,8 +286,6 @@ personal.com</string>
   <string name="select_repo_type_text">你是要同步仓库还是现在创建一个仓库呢?</string>
   <string name="clone_remote_repo">同步远程仓库</string>
   <string name="create_local_repo">创建本地仓库</string>
-  <string name="select_gpg_key_title">选择\nPGP 密钥</string>
-  <string name="select_gpg_key_message">选择一个PGP密钥来初始化您的仓库</string>
   <string name="gpg_key_select">选择密钥</string>
   <!-- SSH port validation -->
   <string name="ssh_scheme_needed_title">URL可能不正确</string>

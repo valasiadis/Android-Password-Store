@@ -331,8 +331,6 @@
   <string name="select_repo_type_text">Yerel bir depo oluşturmak mı yoksa uzak bir depoyu klonlamak mı istediğinizi seçin.</string>
   <string name="clone_remote_repo">Uzak Depoyu Klonla</string>
   <string name="create_local_repo">Yerel Depo Oluştur</string>
-  <string name="select_gpg_key_title">PGP \nAnahtarı Seçin</string>
-  <string name="select_gpg_key_message">Deponuzu başlatmak için bir PGP anahtarı seçin</string>
   <string name="gpg_key_select">Anahtar seç</string>
 
   <!-- SSH port validation -->

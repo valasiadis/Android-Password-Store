@@ -283,8 +283,6 @@ username@example.com:…</string>
   <string name="select_repo_type_text">로컬 리포지토리를 만들 것인지, 원격 리포지토리를 복제할 것인지 선택합니다.</string>
   <string name="clone_remote_repo">원격 저장소 복제</string>
   <string name="create_local_repo">로컬 저장소 생성</string>
-  <string name="select_gpg_key_title">PGP 키\n선택</string>
-  <string name="select_gpg_key_message">스토어를 초기화할 PGP 키를 선택합니다</string>
   <string name="gpg_key_select">키 선택</string>
   <!-- SSH port validation -->
   <string name="ssh_scheme_needed_title">잠재적으로 잘못된 URL</string>

@@ -4,6 +4,37 @@
   -->
 
 <resources>
+  <!--
+    Spacing scale. Material 3 lays out on a 4dp grid; these are the steps we
+    actually use. Prefer these over raw dp values so spacing stays consistent
+    across screens.
+  -->
+  <dimen name="spacing_xsmall">4dp</dimen>
+  <dimen name="spacing_small">8dp</dimen>
+  <dimen name="spacing_medium">12dp</dimen>
+  <dimen name="spacing_large">16dp</dimen>
+  <dimen name="spacing_xlarge">24dp</dimen>
+
+  <!--
+    Corner radius for drawables we draw by hand, matching the "medium" step of
+    the Material 3 shape scale. Components styled with Material 3 widget styles
+    get their corners from the theme and need nothing here. Add further steps
+    only when something uses them: lint fails the build on unused resources.
+  -->
+  <dimen name="corner_radius_medium">12dp</dimen>
+
+  <!--
+    List item metrics. Rows carry their own filled, rounded container and are
+    separated by margins on the item view itself, so the gaps between rows are
+    real layout space rather than transparent padding inside the background.
+  -->
+  <dimen name="list_item_min_height">64dp</dimen>
+  <!--
+    Clearance below scrolling lists so the last row can scroll clear of the FAB
+    instead of sitting underneath it. Paired with clipToPadding="false".
+  -->
+  <dimen name="list_scroll_bottom_padding">88dp</dimen>
+
   <!-- Default screen margins, per the Android Design guidelines. -->
   <dimen name="activity_horizontal_margin">16dp</dimen>
   <dimen name="activity_vertical_margin">16dp</dimen>

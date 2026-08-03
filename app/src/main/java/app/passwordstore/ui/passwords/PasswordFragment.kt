@@ -21,7 +21,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
@@ -191,7 +190,8 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
         }
     val recyclerView = binding.passRecycler
     recyclerView.apply {
-      addItemDecoration(DividerItemDecoration(requireContext(), LinearLayoutManager.VERTICAL))
+      // No divider decoration: rows carry their own filled container and are
+      // separated by margins, so a rule between them reads as clutter.
       layoutManager = LinearLayoutManager(requireContext())
       itemAnimator = OnOffItemAnimator()
       adapter = recyclerAdapter

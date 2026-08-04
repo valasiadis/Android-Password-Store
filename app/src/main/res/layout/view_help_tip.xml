@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!-- What a question mark has to say, on the app's own container rather than the platform's. -->
+<androidx.appcompat.widget.AppCompatTextView xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:id="@+id/help_tip_text"
+  android:layout_width="wrap_content"
+  android:layout_height="wrap_content"
+  android:background="@drawable/popup_menu_background"
+  android:elevation="6dp"
+  android:paddingHorizontal="@dimen/spacing_large"
+  android:paddingVertical="@dimen/spacing_medium"
+  android:textAppearance="?attr/textAppearanceBodyMedium"
+  android:textColor="?attr/colorOnSurface"
+  tools:text="Stores passwords as text rather than binary." />

@@ -28,6 +28,18 @@
   -->
   <style name="APSThemeM3.ActionBarTheme" parent="ThemeOverlay.Material3.ActionBar">
     <item name="colorControlNormal">?attr/colorOnSurface</item>
+    <item name="actionOverflowMenuStyle">@style/APSThemeM3.PopupMenu</item>
+    <item name="popupMenuStyle">@style/APSThemeM3.PopupMenu</item>
+  </style>
+
+  <!--
+    The menu behind the three dots is drawn by the platform, which gives it the platform's own
+    surface rather than the scheme's — a grey that belongs to no other part of the app. Its
+    background and its rounding come from the theme instead, like every other container.
+  -->
+  <style name="APSThemeM3.PopupMenu" parent="Widget.Material3.PopupMenu.Overflow">
+    <item name="android:popupBackground">@drawable/popup_menu_background</item>
+    <item name="android:popupElevation">@dimen/popup_menu_elevation</item>
   </style>
 
 </resources>

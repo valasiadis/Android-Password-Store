@@ -14,6 +14,8 @@
     <item name="actionBarStyle">@style/APSThemeM3.ActionBar</item>
     <item name="actionBarTheme">@style/APSThemeM3.ActionBarTheme</item>
     <item name="bottomSheetDialogTheme">@style/APSThemeM3.BottomSheetDialog</item>
+    <item name="actionOverflowMenuStyle">@style/APSThemeM3.PopupMenu</item>
+    <item name="popupMenuStyle">@style/APSThemeM3.PopupMenu</item>
   </style>
 
   <style name="NoBackgroundThemeM3" parent="@style/AppThemeM3">

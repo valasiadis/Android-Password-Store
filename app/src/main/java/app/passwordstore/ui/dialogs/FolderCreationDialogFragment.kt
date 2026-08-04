@@ -74,6 +74,7 @@ class FolderCreationDialogFragment : DialogFragment() {
           requireContext(),
           keySelection = true,
           preselectedKeyIds = chosenKeyIds,
+          offerInherit = true,
         )
       )
     }
@@ -102,7 +103,11 @@ class FolderCreationDialogFragment : DialogFragment() {
   private val gpgKeySelectAction =
     registerForActivityResult(StartActivityForResult()) { result ->
       if (result.resultCode == AppCompatActivity.RESULT_OK) {
-        chosenKeyIds = result.data?.getStringExtra(PGPKeyListActivity.EXTRA_SELECTED_KEY)
+        // An empty selection is the choice of having no key of one's own.
+        chosenKeyIds =
+          result.data?.getStringExtra(PGPKeyListActivity.EXTRA_SELECTED_KEY)?.takeIf {
+            it.isNotEmpty()
+          }
         showChosenKeys()
       }
     }

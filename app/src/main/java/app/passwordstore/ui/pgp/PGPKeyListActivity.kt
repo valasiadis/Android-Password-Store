@@ -28,7 +28,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.contentColorFor
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -133,6 +136,11 @@ class PGPKeyListActivity : AppCompatActivity() {
     selectedKeyIds.addAll(preselectedKeys)
     // What the caller arrived with, to tell an actual change from merely looking.
     val initialKeyIds = preselectedKeys.toSet()
+    // A folder with no key of its own follows the folder above it, which this screen offers as a
+    // choice of its own — and starts on, when that is what the folder is doing now.
+    val offerInherit = intent.extras?.getBoolean(EXTRA_OFFER_INHERIT) ?: false
+    val inheritInitially = offerInherit && preselectedKeys.isEmpty()
+    var inheritSelected by mutableStateOf(inheritInitially)
     // initial selection of a PGP key for authentication
     if (singleSelection && SshKey.pgpLongKeyId != 0L && selectedKeyIds.isEmpty())
       selectedKeyIds.add(KeyId(SshKey.pgpLongKeyId).toString())
@@ -223,6 +231,9 @@ class PGPKeyListActivity : AppCompatActivity() {
                 preselectedKeys
                   .mapNotNull { PGPIdentifier.fromString(it) as? KeyId }
                   .toImmutableList(),
+              offerInherit = offerInherit,
+              inheritInitially = inheritInitially,
+              onInheritChanged = { inheritSelected = it },
               // Selecting an SSH authentication key (single-selection mode): grey out keys that
               // can't authenticate — public-only keys, and stubs without an associated smartcard.
               isKeyEnabled =
@@ -247,9 +258,15 @@ class PGPKeyListActivity : AppCompatActivity() {
               // as keys are tapped. Leaving without applying anything is what the up arrow and
               // the back gesture are for.
               val selection = selectedKeyIds.toSet()
-              val hasChanges = selection.isNotEmpty() && selection != initialKeyIds
+              val hasChanges =
+                if (inheritSelected) !inheritInitially
+                else selection.isNotEmpty() && selection != initialKeyIds
               FloatingActionButton(
-                onClick = { if (hasChanges) confirmSelection(selectedKeyIds) },
+                onClick = {
+                  if (hasChanges) {
+                    confirmSelection(if (inheritSelected) emptySet() else selectedKeyIds)
+                  }
+                },
                 containerColor =
                   if (hasChanges) FloatingActionButtonDefaults.containerColor
                   else MaterialTheme.colorScheme.surfaceVariant,
@@ -280,6 +297,10 @@ class PGPKeyListActivity : AppCompatActivity() {
    * Apply the current selection and finish. Deliberately separate from up/back navigation: a
    * selection screen should only commit when the user says so, and only ever with a selection — the
    * confirm action is unavailable until there is one.
+   */
+  /**
+   * Applies the current selection and finishes — an empty one meaning "no keys of its own", which
+   * is what the folder above deciding looks like on disk.
    */
   private fun confirmSelection(selectedKeyIds: Set<String>) {
     val result = Intent()
@@ -490,6 +511,9 @@ class PGPKeyListActivity : AppCompatActivity() {
     const val EXTRA_KEY_FOR_SSH = "EXTRA_KEY_FOR_SSH"
     const val EXTRA_PRESELECTED_KEYS = "PRESELECTED_KEYS"
 
+    /** Whether following the folder above is one of the choices, for the screens where it is. */
+    const val EXTRA_OFFER_INHERIT = "OFFER_INHERIT"
+
     const val PGP_KEY_ADD_REQUEST_KEY = "add_pgp_key"
     const val ACTION_KEY = "action"
     const val ACTION_IMPORT_FILE = "from_file"
@@ -501,10 +525,12 @@ class PGPKeyListActivity : AppCompatActivity() {
       keySelection: Boolean = false,
       singleSelection: Boolean = false,
       preselectedKeyIds: String? = null,
+      offerInherit: Boolean = false,
     ): Intent {
       val intent = Intent(context, PGPKeyListActivity::class.java)
       intent.putExtra(EXTRA_KEY_SELECTION, singleSelection || keySelection)
       intent.putExtra(EXTRA_KEY_FOR_SSH, singleSelection)
+      intent.putExtra(EXTRA_OFFER_INHERIT, offerInherit)
       preselectedKeyIds?.let { intent.putExtra(EXTRA_PRESELECTED_KEYS, it) }
       return intent
     }

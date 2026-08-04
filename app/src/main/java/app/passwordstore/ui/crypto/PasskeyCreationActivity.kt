@@ -342,11 +342,6 @@ class PasskeyCreationActivity : BasePGPActivity() {
     return true
   }
 
-  override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-    menu.findItem(R.id.save_and_copy_password).setVisible(false).setEnabled(false)
-    return true
-  }
-
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
     when (item.itemId) {
       android.R.id.home -> {

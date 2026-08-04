@@ -64,7 +64,6 @@
   <string name="crypto_encrypt_username_label">Szyfruj nazwę użytkownika</string>
   <string name="crypto_select">Wybierz</string>
   <string name="crypto_save">Zapisz</string>
-  <string name="crypto_save_and_copy">Zapisz i skopiuj</string>
   <!-- DECRYPT Layout -->
   <string name="action_search">Szukaj</string>
   <string name="password">Hasło</string>

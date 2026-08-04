@@ -86,7 +86,6 @@
   <string name="crypto_encrypt_username_label">Benutzername verschlüsseln</string>
   <string name="crypto_select">Auswählen</string>
   <string name="crypto_save">Speichern</string>
-  <string name="crypto_save_and_copy">Speichern und kopieren</string>
 
   <!-- DECRYPT Layout -->
   <string name="action_search">Suche</string>

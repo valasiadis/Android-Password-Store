@@ -98,7 +98,6 @@ class PasswordCreationActivity : BasePGPActivity() {
 
   private val suggestedName by unsafeLazy { intent.getStringExtra(EXTRA_FILE_NAME) }
   private val suggestedEntryChars by unsafeLazy { intent.getCharArrayExtra(EXTRA_ENTRY) }
-  private var copy: Boolean = false
   private val shouldGeneratePassword by unsafeLazy {
     intent.getBooleanExtra(EXTRA_GENERATE_PASSWORD, false)
   }
@@ -343,17 +342,6 @@ class PasswordCreationActivity : BasePGPActivity() {
         onBackPressedDispatcher.onBackPressed()
       }
       R.id.save_password -> {
-        copy = false
-        if (PasswordRepository.isEmpty()) {
-          initBefore.show()
-        } else {
-          requireKeysExist {
-            requireEncryptionKeysExist(binding.directory.text.toString()) { ids -> encrypt(ids) }
-          }
-        }
-      }
-      R.id.save_and_copy_password -> {
-        copy = true
         if (PasswordRepository.isEmpty()) {
           initBefore.show()
         } else {
@@ -439,11 +427,6 @@ class PasswordCreationActivity : BasePGPActivity() {
           editExtra?.wipe()
           editExtraPlusLineFeed ?: charArrayOf()
         }
-      }
-
-      if (copy && editPass.isNotEmpty()) {
-        clearTimer?.shutdownNow()
-        clearTimer = copyPasswordToClipboard(editPass.copyOf(editPass.size))
       }
 
       // pass enters the key ID into `.gpg-id`.

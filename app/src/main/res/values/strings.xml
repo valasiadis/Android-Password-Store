@@ -104,7 +104,6 @@
   <string name="title_select_folder">Select folder</string>
   <string name="folder_list_empty">No folders here</string>
   <string name="crypto_save">Save</string>
-  <string name="crypto_save_and_copy">Save and Copy</string>
 
   <!-- DECRYPT Layout -->
   <string name="action_search">Search</string>

@@ -65,7 +65,6 @@
   <string name="crypto_encrypt_username_label">Crittografa nome utente</string>
   <string name="crypto_select">Seleziona</string>
   <string name="crypto_save">Salva</string>
-  <string name="crypto_save_and_copy">Salva e Copia</string>
   <!-- DECRYPT Layout -->
   <string name="action_search">Cerca</string>
   <string name="password">Password</string>

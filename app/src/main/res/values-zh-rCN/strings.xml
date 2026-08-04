@@ -65,7 +65,6 @@
   <string name="crypto_encrypt_username_label">加密用户名</string>
   <string name="crypto_select">选择</string>
   <string name="crypto_save">保存</string>
-  <string name="crypto_save_and_copy">保存并复制</string>
   <!-- DECRYPT Layout -->
   <string name="action_search">搜索</string>
   <string name="password">密码</string>

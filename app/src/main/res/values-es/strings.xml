@@ -83,7 +83,6 @@
   <string name="crypto_encrypt_username_label">Cifrar Username</string>
   <string name="crypto_select">Seleccionar</string>
   <string name="crypto_save">Guardar</string>
-  <string name="crypto_save_and_copy">Guardar y copiar</string>
 
   <!-- DECRYPT Layout -->
   <string name="action_search">Buscar</string>

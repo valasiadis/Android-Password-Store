@@ -11,12 +11,12 @@ import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.core.content.edit
 import app.passwordstore.R
-import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.databinding.SetupStepPgpBinding
 import app.passwordstore.ui.dialogs.showsTip
 import app.passwordstore.ui.pgp.PGPKeyListActivity
-import app.passwordstore.util.extensions.setEllipsizedText
+import app.passwordstore.ui.pgp.keyNames
+import app.passwordstore.util.extensions.setInlineText
 import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.settings.PreferenceKeys
 import dagger.hilt.android.AndroidEntryPoint
@@ -67,6 +67,7 @@ class PgpSetupActivity : SetupStepActivity() {
       sharedPrefs.edit { putBoolean(PreferenceKeys.ASCII_ARMOR, isChecked) }
     }
     binding.asciiArmorHelp.showsTip(R.string.setup_ascii_armor_explanation)
+    binding.encryptionHelp.showsTip(R.string.setup_encryption_message)
 
     showSelectedKeys()
   }
@@ -84,13 +85,8 @@ class PgpSetupActivity : SetupStepActivity() {
 
   /** Names the chosen keys in the field, and opens the way onwards once there are any. */
   private fun showSelectedKeys() {
-    val keyIds = selectedKeyIds?.split("\n")?.filter(String::isNotBlank).orEmpty()
-    val names = keyIds.mapNotNull { id ->
-      PGPIdentifier.fromString(id)?.let { identifier ->
-        cryptoRepository.getUserIdFromKeyId(identifier)?.takeIf { it != "null" } ?: id
-      }
-    }
-    binding.gpgKeyValue.setEllipsizedText(
+    val names = cryptoRepository.keyNames(selectedKeyIds)
+    binding.gpgKeyValue.setInlineText(
       if (names.isEmpty()) getString(R.string.setup_key_none_chosen)
       else names.joinToString(separator = ", ")
     )

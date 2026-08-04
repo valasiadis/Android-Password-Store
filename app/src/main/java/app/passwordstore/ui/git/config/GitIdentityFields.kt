@@ -8,6 +8,7 @@ import android.util.Patterns
 import androidx.core.widget.doOnTextChanged
 import app.passwordstore.R
 import app.passwordstore.databinding.GitIdentityFieldsBinding
+import app.passwordstore.ui.dialogs.showsTip
 import app.passwordstore.util.settings.GitSettings
 
 /**
@@ -41,6 +42,7 @@ class GitIdentityFields(
     binding.signCommits.setOnCheckedChangeListener { _, isChecked ->
       gitSettings.signCommits = isChecked
     }
+    binding.signCommitsHelp.showsTip(R.string.setup_sign_commits_tip)
     reportValidity()
   }
 

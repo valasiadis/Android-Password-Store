@@ -114,6 +114,7 @@
   <string name="reencrypt_password">Save with other key(s)</string>
   <string name="reencrypt_password_success">Saved with the selected key(s)</string>
   <string name="reencrypt_password_failure">Could not save with the selected key(s)</string>
+  <string name="reencrypt_password_partial">Saved, but not for %1$s</string>
   <string name="edit_passkey">Edit passkey</string>
   <string name="copy_password">Copy password</string>
   <string name="share_as_plaintext">Share as plaintext</string>

@@ -6,6 +6,7 @@ package app.passwordstore.ui.dialogs
 
 import android.app.Activity
 import android.os.SystemClock
+import android.view.View
 import androidx.annotation.StringRes
 import app.passwordstore.R
 import app.passwordstore.databinding.ViewTopNoticeBinding
@@ -54,9 +55,7 @@ object Notice {
       ViewTopNoticeBinding.inflate(activity.layoutInflater, topBarParent(activity), false)
     binding.root.text = current.message
     // Whatever this screen is already showing is the same message; a second copy would only stack.
-    topBarParent(activity)
-      .findViewById<android.view.View>(R.id.notice_message)
-      ?.let(::removeFromTop)
+    topBarParent(activity).findViewById<View>(R.id.notice_message)?.let(::removeFromTop)
     placeAtTopOf(activity, binding.root)
     binding.root.alpha = 0f
     binding.root.animate().alpha(1f).setDuration(FADE_MS).start()

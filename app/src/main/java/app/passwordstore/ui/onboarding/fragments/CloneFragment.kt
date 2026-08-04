@@ -12,6 +12,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnPreDraw
+import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
@@ -28,7 +31,6 @@ import app.passwordstore.util.extensions.finish
 import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.extensions.unsafeLazy
 import app.passwordstore.util.extensions.viewBinding
-import app.passwordstore.util.extensions.windowInsetsLambda
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
@@ -131,7 +133,19 @@ class CloneFragment : Fragment(R.layout.fragment_clone) {
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
-    ViewCompat.setOnApplyWindowInsetsListener(view, windowInsetsLambda)
+    // This screen carries its own heading, so it keeps clear of the status bar itself. The insets
+    // are read off the window rather than waited for: the screen arrives long after they were
+    // handed out, and a listener alone leaves the app's name drawn under the clock.
+    ViewCompat.setOnApplyWindowInsetsListener(view) { padded, windowInsets ->
+      val bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+      padded.updatePadding(top = bars.top, bottom = bars.bottom)
+      windowInsets
+    }
+    view.doOnPreDraw {
+      val bars =
+        ViewCompat.getRootWindowInsets(view)?.getInsets(WindowInsetsCompat.Type.systemBars())
+      view.updatePadding(top = bars?.top ?: 0, bottom = bars?.bottom ?: 0)
+    }
     savedInstanceState?.let {
       isCloning = it.getBoolean(STATE_CLONING)
       setupKeyIds = it.getString(STATE_KEY_IDS)

@@ -4,9 +4,9 @@
   -->
 
 <!--
-  The one question this screen asks, in the middle of it. The pieces used to be pinned to the top
-  with margins measured from there, which left the choice sitting high on the screen and everything
-  below it empty.
+  The app's name at the top, the way a title page carries it, and the one question this screen asks
+  in the middle of what is left. Everything used to be pinned to the top with margins measured from
+  there, which left the choice sitting high and the rest of the screen empty.
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -15,19 +15,21 @@
   android:background="?android:attr/colorBackground"
   android:fillViewport="true">
 
-  <LinearLayout
+  <androidx.constraintlayout.widget.ConstraintLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:gravity="center_vertical"
-    android:orientation="vertical"
     android:paddingHorizontal="@dimen/activity_horizontal_margin"
     android:paddingVertical="@dimen/spacing_xlarge">
 
     <LinearLayout
-      android:layout_width="match_parent"
+      android:id="@+id/app_header"
+      android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:gravity="center_vertical"
-      android:orientation="horizontal">
+      android:orientation="horizontal"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toTopOf="parent">
 
       <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/app_icon"
@@ -47,65 +49,86 @@
 
     </LinearLayout>
 
-    <TextView
-      android:id="@+id/repo_type"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="@dimen/spacing_xlarge"
-      android:autoSizeMaxTextSize="24sp"
-      android:autoSizeMinTextSize="16sp"
-      android:autoSizeTextType="uniform"
-      android:singleLine="true"
-      android:text="@string/select_n_repository_type"
-      android:textAppearance="?attr/textAppearanceHeadlineSmall"
-      android:textStyle="bold" />
-
+    <!-- The question, centred in whatever the header leaves. -->
     <LinearLayout
-      android:id="@+id/tv_repo_type_text"
+      android:id="@+id/repo_choice"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:layout_marginTop="@dimen/spacing_medium"
-      android:gravity="center_vertical"
-      android:orientation="horizontal">
+      android:orientation="vertical"
+      app:layout_constraintBottom_toBottomOf="parent"
+      app:layout_constraintTop_toBottomOf="@id/app_header">
 
       <TextView
-        android:layout_width="0dp"
+        android:id="@+id/repo_type"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:text="@string/select_repo_type_text"
-        android:textAppearance="?attr/textAppearanceTitleSmall" />
+        android:autoSizeMaxTextSize="24sp"
+        android:autoSizeMinTextSize="16sp"
+        android:autoSizeTextType="uniform"
+        android:singleLine="true"
+        android:text="@string/select_n_repository_type"
+        android:textAlignment="center"
+        android:textAppearance="?attr/textAppearanceHeadlineSmall"
+        android:textStyle="bold" />
 
-      <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/repo_type_help"
+      <!--
+        The sentence is centred on the screen by itself; the question mark hangs off its end
+        rather than being weighed in, so the text does not sit off to one side to make room for it.
+      -->
+      <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/tv_repo_type_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_medium">
+
+        <TextView
+          android:id="@+id/repo_type_description"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:maxWidth="@dimen/repo_type_description_max_width"
+          android:text="@string/select_repo_type_text"
+          android:textAlignment="center"
+          android:textAppearance="?attr/textAppearanceTitleSmall"
+          app:layout_constrainedWidth="true"
+          app:layout_constraintEnd_toEndOf="parent"
+          app:layout_constraintStart_toStartOf="parent"
+          app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+          android:id="@+id/repo_type_help"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:background="?attr/selectableItemBackgroundBorderless"
+          android:padding="@dimen/spacing_small"
+          android:src="@drawable/ic_help_20dp"
+          app:layout_constraintBottom_toBottomOf="@id/repo_type_description"
+          app:layout_constraintStart_toEndOf="@id/repo_type_description"
+          app:layout_constraintTop_toTopOf="@id/repo_type_description"
+          app:tint="?attr/colorOnSurfaceVariant" />
+
+      </androidx.constraintlayout.widget.ConstraintLayout>
+
+      <com.google.android.material.button.MaterialButton
+        android:id="@+id/clone_remote"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/spacing_small"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:padding="@dimen/spacing_small"
-        android:src="@drawable/ic_help_20dp"
-        app:tint="?attr/colorOnSurfaceVariant" />
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/spacing_xxlarge"
+        android:maxWidth="300dp"
+        android:minWidth="200dp"
+        android:text="@string/clone_remote_repo" />
+
+      <com.google.android.material.button.MaterialButton
+        android:id="@+id/create_local"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/spacing_small"
+        android:maxWidth="300dp"
+        android:minWidth="200dp"
+        android:text="@string/create_local_repo" />
 
     </LinearLayout>
 
-    <com.google.android.material.button.MaterialButton
-      android:id="@+id/clone_remote"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_gravity="center_horizontal"
-      android:layout_marginTop="@dimen/spacing_xlarge"
-      android:maxWidth="300dp"
-      android:minWidth="200dp"
-      android:text="@string/clone_remote_repo" />
-
-    <com.google.android.material.button.MaterialButton
-      android:id="@+id/create_local"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_gravity="center_horizontal"
-      android:layout_marginTop="@dimen/spacing_small"
-      android:maxWidth="300dp"
-      android:minWidth="200dp"
-      android:text="@string/create_local_repo" />
-
-  </LinearLayout>
+  </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

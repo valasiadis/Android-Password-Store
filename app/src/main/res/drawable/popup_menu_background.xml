@@ -12,5 +12,10 @@
     <stroke
       android:width="1dp"
       android:color="?attr/colorOutlineVariant" />
+    <!-- Keeps the rows inside the rounding: a row's touch highlight is a rectangle, and one
+         running into a corner would fill it in. -->
+    <padding
+      android:bottom="@dimen/spacing_small"
+      android:top="@dimen/spacing_small" />
   </shape>
 </inset>

@@ -34,6 +34,7 @@ import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.crypto.OpenPgpNfcCard
 import app.passwordstore.util.extensions.base64
 import app.passwordstore.util.extensions.commitChange
+import app.passwordstore.util.extensions.commitSavedChange
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.snackbar
@@ -122,6 +123,8 @@ class DecryptActivity : BasePGPActivity() {
       intent.removeExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
       binding.root.post { snackbar(message = message) }
     }
+    // An entry arrived here straight from being written, so what it changed still wants committing.
+    lifecycleScope.launch { commitSavedChange(intent) }
     if (cachedEntry != null) {
       showCachedEntry(cachedEntry.first, cachedEntry.second)
       return
@@ -576,6 +579,11 @@ class DecryptActivity : BasePGPActivity() {
             .putExtra(EXTRA_FILE_PATH, newPath)
             .putExtra(EXTRA_REPO_PATH, repoPath)
             .putExtra(PasswordCreationActivity.EXTRA_ENTRY, edited)
+            // The entry moved, so the screen that shows it under its new name commits the move.
+            .putExtra(
+              PasswordCreationActivity.RETURN_EXTRA_COMMIT_MESSAGE,
+              data.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_COMMIT_MESSAGE),
+            )
         )
         finish()
         return@registerForActivityResult
@@ -590,6 +598,7 @@ class DecryptActivity : BasePGPActivity() {
       data.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)?.let { message ->
         snackbar(message = message)
       }
+      lifecycleScope.launch { commitSavedChange(data) }
     }
 
   /** Deletes this entry, after asking, and leaves — there is nothing left to show. */

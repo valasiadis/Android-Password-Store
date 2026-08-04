@@ -371,8 +371,8 @@
   <string name="invalid_filename_text">File name must not contain \'/\', set directory above.</string>
   <string name="directory_hint">Directory</string>
   <string name="folder_encryption_key">Encryption key</string>
+  <string name="folder_encryption_key_choose">Choose encryption key</string>
   <string name="folder_encryption_key_inherited">Inherited from the folder above</string>
-  <string name="folder_set_encryption_key">Encryption key</string>
   <string name="folder_key_change_message">Passwords already in this folder stay encrypted to the key they were saved with. You will still need that key — and its smartcard, if it is on one — to open them, until each is saved again under the new key.</string>
   <string name="folder_key_change_confirm">Change key</string>
 

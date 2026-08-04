@@ -27,38 +27,34 @@
   </com.google.android.material.textfield.TextInputLayout>
 
   <!--
-    Names both outcomes rather than offering a checkbox that only names one: a folder either
-    inherits the key of the folder above it or overrides it, and the row says which it will be.
+    Named as a field rather than a line of text, because it is one: it holds a value, it can be
+    changed, and it says which of the two outcomes will happen — the folder inherits the key of
+    the folder above it, or overrides it. It is not typed into; tapping it opens the key picker.
   -->
-  <LinearLayout
-    android:id="@+id/gpg_key_row"
+  <com.google.android.material.textfield.TextInputLayout
+    android:id="@+id/gpg_key_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginTop="@dimen/spacing_medium"
-    android:background="?attr/selectableItemBackground"
-    android:clickable="true"
-    android:focusable="true"
-    android:orientation="vertical"
-    android:paddingVertical="@dimen/spacing_small"
+    android:hint="@string/folder_encryption_key"
     android:visibility="gone"
+    app:endIconContentDescription="@string/folder_encryption_key_choose"
+    app:endIconDrawable="@drawable/ic_keyboard_arrow_right_24dp"
+    app:endIconMode="custom"
     tools:visibility="visible">
 
-    <androidx.appcompat.widget.AppCompatTextView
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:text="@string/folder_encryption_key"
-      android:textAppearance="?attr/textAppearanceBodyLarge"
-      android:textColor="?attr/colorOnSurface" />
-
-    <androidx.appcompat.widget.AppCompatTextView
+    <com.google.android.material.textfield.TextInputEditText
       android:id="@+id/gpg_key_value"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
+      android:clickable="true"
+      android:cursorVisible="false"
       android:ellipsize="middle"
-      android:singleLine="true"
-      android:text="@string/folder_encryption_key_inherited"
-      android:textAppearance="?attr/textAppearanceBodyMedium"
-      android:textColor="?attr/colorOnSurfaceVariant" />
+      android:focusable="false"
+      android:inputType="none"
+      android:maxLines="1"
+      android:text="@string/folder_encryption_key_inherited" />
 
-  </LinearLayout>
+  </com.google.android.material.textfield.TextInputLayout>
+
 </LinearLayout>

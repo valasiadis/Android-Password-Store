@@ -28,7 +28,7 @@
 
   <item
     android:id="@+id/menu_set_folder_key"
-    android:title="@string/folder_set_encryption_key"
+    android:title="@string/folder_encryption_key"
     app:showAsAction="never" />
 
   <item

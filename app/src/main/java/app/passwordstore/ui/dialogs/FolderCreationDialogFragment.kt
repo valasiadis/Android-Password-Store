@@ -6,6 +6,7 @@ package app.passwordstore.ui.dialogs
 
 import android.app.Dialog
 import android.os.Bundle
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.appcompat.app.AlertDialog
@@ -20,6 +21,7 @@ import app.passwordstore.ui.folderselect.SelectFolderActivity
 import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.extensions.commitChange
+import app.passwordstore.util.extensions.hideKeyboard
 import app.passwordstore.util.extensions.isInsideRepository
 import app.passwordstore.util.extensions.unsafeLazy
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -54,8 +56,11 @@ class FolderCreationDialogFragment : DialogFragment() {
     builder.setView(binding.root)
     builder.setPositiveButton(getString(R.string.button_create), null)
     builder.setNegativeButton(getString(android.R.string.cancel)) { _, _ -> dismiss() }
-    binding.gpgKeyRow.isVisible = requireArguments().getBoolean(SET_GPG_KEY_EXTRA)
-    binding.gpgKeyRow.setOnClickListener {
+    binding.gpgKeyContainer.isVisible = requireArguments().getBoolean(SET_GPG_KEY_EXTRA)
+    val chooseKeys = View.OnClickListener {
+      // The dialog opens with the keyboard up for the name field; it has no business staying
+      // over the screen that opens next.
+      requireActivity().hideKeyboard()
       gpgKeySelectAction.launch(
         PGPKeyListActivity.newIntent(
           requireContext(),
@@ -64,6 +69,9 @@ class FolderCreationDialogFragment : DialogFragment() {
         )
       )
     }
+    // The field takes the taps; the end icon needs its own, having consumed them itself.
+    binding.gpgKeyValue.setOnClickListener(chooseKeys)
+    binding.gpgKeyContainer.setEndIconOnClickListener(chooseKeys)
     showChosenKeys()
     val dialog = builder.create()
     dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
@@ -92,8 +100,9 @@ class FolderCreationDialogFragment : DialogFragment() {
     }
 
   private fun showChosenKeys() {
-    binding.gpgKeyValue.text =
+    binding.gpgKeyValue.setText(
       chosenKeyIds?.replace("\n", ", ") ?: getString(R.string.folder_encryption_key_inherited)
+    )
   }
 
   private fun createDirectory(currentDir: String) {

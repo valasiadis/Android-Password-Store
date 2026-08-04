@@ -16,11 +16,13 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitCloneBinding
+import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.ui.onboarding.activity.SetupStepActivity
 import app.passwordstore.ui.onboarding.activity.show
 import app.passwordstore.ui.sshkeygen.PgpAuthKeySelectionActivity
+import app.passwordstore.ui.sshkeygen.ShowSshKeyFragment
 import app.passwordstore.ui.sshkeygen.SshKeyGenActivity
 import app.passwordstore.ui.sshkeygen.SshKeyImportActivity
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
@@ -33,7 +35,6 @@ import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
@@ -115,17 +116,19 @@ class GitServerConfigActivity : BaseGitActivity() {
     binding.authKeyImport.setOnClickListener {
       authKeyAction.launch(intentFor<SshKeyImportActivity>())
     }
+    binding.authKeyShow.setOnClickListener {
+      ShowSshKeyFragment().show(supportFragmentManager, "public_key")
+    }
     showAuthKeyState()
 
     binding.clearHostKeyButton.isVisible = gitSettings.hasSavedHostKey()
     binding.clearHostKeyButton.setOnClickListener {
       gitSettings.clearSavedHostKey()
-      Snackbar.make(
-          binding.root,
-          getString(R.string.clear_saved_host_key_success),
-          Snackbar.LENGTH_LONG,
-        )
-        .show()
+      Notice.show(
+        this@GitServerConfigActivity,
+        R.string.clear_saved_host_key_success,
+        success = true,
+      )
       it.isVisible = false
     }
   }
@@ -245,6 +248,9 @@ class GitServerConfigActivity : BaseGitActivity() {
     binding.authKeyStatus.setText(
       if (SshKey.exists) R.string.setup_auth_key_set else R.string.setup_auth_key_none
     )
+    // Only some kinds of key can show their public half; the others were imported as a private
+    // key alone, and the server was told about them elsewhere.
+    binding.authKeyShow.isVisible = SshKey.canShowSshPublicKey
   }
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {

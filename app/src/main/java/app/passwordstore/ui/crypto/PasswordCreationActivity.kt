@@ -418,6 +418,16 @@ class PasswordCreationActivity : BasePGPActivity() {
     }
 
   /** Encrypts the password and the extra content */
+  /** Opens a newly written entry on the copy kept from writing it, rather than decrypting it. */
+  private fun openSavedEntry(path: String, savedEntry: CharArray?) {
+    startActivity(
+      Intent(this, DecryptActivity::class.java)
+        .putExtra(EXTRA_FILE_PATH, path)
+        .putExtra(EXTRA_REPO_PATH, repoPath)
+        .putExtra(EXTRA_ENTRY, savedEntry)
+    )
+  }
+
   private fun encrypt(identifiers: List<PGPIdentifier>) {
     with(binding) {
       val editName = name.text?.toString()?.trim() ?: ""
@@ -556,6 +566,7 @@ class PasswordCreationActivity : BasePGPActivity() {
             else editPass + '\n' + editExtra
           val contentBytes = contentChars.toByteArray()
           contentChars.wipe()
+          val savedEntry = AESEncryption.encrypt(contentBytes)
 
           val (succeededUserEmails, result) =
             withContext(dispatcherProvider.io()) {
@@ -660,7 +671,13 @@ class PasswordCreationActivity : BasePGPActivity() {
               val dialog =
                 MaterialAlertDialogBuilder(this@PasswordCreationActivity)
                   .setCancelable(false)
-                  .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
+                  .setPositiveButton(android.R.string.ok) { _, _ ->
+                    // A new entry opens on itself, so the password can be copied or read without
+                    // finding it in the list again. Editing returns to the entry it came from
+                    // instead, which is already behind this screen.
+                    if (!editing) openSavedEntry(passwordFile.absolutePathString(), savedEntry)
+                    finish()
+                  }
               if (!failedUserEmails.isEmpty()) {
                 dialog.setTitle(R.string.password_creation_file_encryption_partial_success_title)
               } else {

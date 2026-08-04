@@ -96,6 +96,15 @@ class DecryptActivity : BasePGPActivity() {
       }
       fab.setOnClickListener { copyPassword() }
     }
+    // An entry this process has just written arrives with the copy it kept, so opening it costs
+    // nothing: no PGP key, no passphrase, no smartcard touch. The copy travels AES-encrypted
+    // under a Keystore key that lives only as long as the process, so no plaintext is ever in an
+    // intent — the same way an entry reaches the editing screen.
+    val cachedEntry = intent.getCharArrayExtra(PasswordCreationActivity.EXTRA_ENTRY)
+    if (cachedEntry != null) {
+      showCachedEntry(cachedEntry)
+      return
+    }
     requireKeysExist {
       requireDecryptionKeysExist(relativeParentPath) { ids -> getPersistentAndDecrypt(ids) }
     }
@@ -355,6 +364,19 @@ class DecryptActivity : BasePGPActivity() {
         )
       )
       snackbar(message = getString(R.string.reencrypt_password_success))
+    }
+  }
+
+  /** Shows an entry from the copy handed over by whatever wrote it, without decrypting again. */
+  private fun showCachedEntry(encryptedEntry: CharArray) {
+    encryptedEntryChars = encryptedEntry
+    lifecycleScope.launch(dispatcherProvider.main()) {
+      val decrypted = AESEncryption.decrypt(encryptedEntry) ?: return@launch
+      val entry = passwordEntryFactory.create(decrypted)
+      decrypted.wipe()
+      entry.clearExtraChars()
+      createPasswordUI(entry)
+      invalidateOptionsMenu()
     }
   }
 

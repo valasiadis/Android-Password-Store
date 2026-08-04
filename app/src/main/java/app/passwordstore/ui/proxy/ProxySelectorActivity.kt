@@ -59,7 +59,9 @@ class ProxySelectorActivity : AppCompatActivity() {
       proxyHost.doOnTextChanged { _, _, _, _ -> saveIfValid() }
       proxyPort.doOnTextChanged { _, _, _, _ -> saveIfValid() }
       proxyUser.doOnTextChanged { _, _, _, _ -> saveIfValid() }
-      proxyPassword.doOnTextChanged { _, _, _, _ -> saveIfValid() }
+      // The password waits until the field is done with, rather than storing every prefix of it
+      // on the way to the whole.
+      proxyPassword.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) saveIfValid() }
     }
   }
 

@@ -3,109 +3,157 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  Where the store lives and how this app is let in. Reached both as the last step of setting a
+  store up and from the settings afterwards, so it wears the setup step's heading and its button
+  in the corner while cloning, and neither once there is a store to edit the settings of.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
   android:background="?android:attr/windowBackground"
-  android:padding="@dimen/activity_horizontal_margin"
   tools:context="app.passwordstore.ui.git.config.GitServerConfigActivity">
 
-  <androidx.constraintlayout.widget.ConstraintLayout
+  <ScrollView
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="0dp"
+    android:fillViewport="true"
+    app:layout_constraintBottom_toTopOf="@id/setup_footer"
+    app:layout_constraintTop_toTopOf="parent">
 
-    <com.google.android.material.textfield.TextInputLayout
-      android:id="@+id/label_server_url"
-      android:layout_width="0dp"
+    <LinearLayout
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:layout_marginTop="8dp"
-      android:hint="@string/server_url"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toTopOf="parent">
+      android:orientation="vertical"
+      android:padding="@dimen/activity_horizontal_margin">
 
-      <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/server_url"
+      <include
+        android:id="@+id/header"
+        layout="@layout/setup_step_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:imeOptions="actionNext"
-        android:inputType="textWebEmailAddress"
-        android:nextFocusForward="@id/auth_mode_group" />
+        android:layout_marginBottom="@dimen/spacing_xlarge"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
-    </com.google.android.material.textfield.TextInputLayout>
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/label_server_url"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/server_url">
 
-    <androidx.appcompat.widget.AppCompatTextView
-      android:id="@+id/label_auth_mode"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="@dimen/spacing_xlarge"
-      android:layout_marginBottom="@dimen/spacing_medium"
-      android:text="@string/connection_mode"
-      android:textAppearance="?attr/textAppearanceTitleMedium"
-      android:textColor="?attr/colorOnSurfaceVariant"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/label_server_url" />
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/server_url"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:imeOptions="actionNext"
+          android:inputType="textWebEmailAddress"
+          android:nextFocusForward="@id/auth_mode_group" />
 
-    <com.google.android.material.button.MaterialButtonToggleGroup
-      android:id="@+id/auth_mode_group"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/label_auth_mode"
-      app:singleSelection="true">
+      </com.google.android.material.textfield.TextInputLayout>
 
-      <com.google.android.material.button.MaterialButton
-        android:id="@+id/auth_mode_ssh_key"
-        style="?attr/materialButtonOutlinedStyle"
+      <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/label_auth_mode"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/connection_mode_ssh_key" />
+        android:layout_marginTop="@dimen/spacing_xlarge"
+        android:layout_marginBottom="@dimen/spacing_medium"
+        android:text="@string/connection_mode"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        android:textColor="?attr/colorOnSurfaceVariant" />
 
-      <com.google.android.material.button.MaterialButton
-        android:id="@+id/auth_mode_password"
-        style="?attr/materialButtonOutlinedStyle"
+      <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/auth_mode_group"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/connection_mode_basic_authentication" />
+        app:singleSelection="true">
 
-    </com.google.android.material.button.MaterialButtonToggleGroup>
+        <com.google.android.material.button.MaterialButton
+          android:id="@+id/auth_mode_ssh_key"
+          style="?attr/materialButtonOutlinedStyle"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="@string/connection_mode_ssh_key" />
 
-    <!--
-      The connection mode says an authentication key will be used; this is where one is set,
-      rather than sending the user to find it in the settings after the fact.
-    -->
-    <com.google.android.material.button.MaterialButton
-      android:id="@+id/auth_key_button"
-      style="?attr/materialButtonOutlinedStyle"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="@dimen/spacing_medium"
-      android:text="@string/ssh_preferences_dialog_title"
-      android:visibility="gone"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/auth_mode_group"
-      tools:visibility="visible" />
+        <com.google.android.material.button.MaterialButton
+          android:id="@+id/auth_mode_password"
+          style="?attr/materialButtonOutlinedStyle"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="@string/connection_mode_basic_authentication" />
 
-    <com.google.android.material.button.MaterialButton
-      android:id="@+id/save_button"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="8dp"
-      android:text="@string/crypto_save"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/auth_key_button" />
+      </com.google.android.material.button.MaterialButtonToggleGroup>
 
-    <com.google.android.material.button.MaterialButton
-      android:id="@+id/clear_host_key_button"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="8dp"
-      android:text="@string/clear_saved_host_key"
-      android:visibility="gone"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/auth_key_button"
-      tools:visibility="visible" />
-  </androidx.constraintlayout.widget.ConstraintLayout>
-</ScrollView>
+      <!--
+        Public-key authentication needs a key, and this is where one is picked: the three ways of
+        getting one, said outright rather than behind a prompt that used to appear at the moment of
+        cloning, when it is too late to be a choice.
+      -->
+      <LinearLayout
+        android:id="@+id/auth_key_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <androidx.appcompat.widget.AppCompatTextView
+          android:id="@+id/auth_key_status"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/spacing_large"
+          android:textAppearance="?attr/textAppearanceBodyMedium"
+          android:textColor="?attr/colorOnSurfaceVariant"
+          tools:text="No authentication key set yet" />
+
+        <com.google.android.material.button.MaterialButton
+          android:id="@+id/auth_key_pgp"
+          style="?attr/materialButtonOutlinedStyle"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/spacing_medium"
+          android:text="@string/ssh_preferences_dialog_pgp_key" />
+
+        <com.google.android.material.button.MaterialButton
+          android:id="@+id/auth_key_generate"
+          style="?attr/materialButtonOutlinedStyle"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/spacing_small"
+          android:text="@string/ssh_preferences_dialog_generate" />
+
+        <com.google.android.material.button.MaterialButton
+          android:id="@+id/auth_key_import"
+          style="?attr/materialButtonOutlinedStyle"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/spacing_small"
+          android:text="@string/pref_import_ssh_key_title" />
+
+      </LinearLayout>
+
+      <com.google.android.material.button.MaterialButton
+        android:id="@+id/clear_host_key_button"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_large"
+        android:text="@string/clear_saved_host_key"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    </LinearLayout>
+  </ScrollView>
+
+  <include
+    android:id="@+id/setup_footer"
+    layout="@layout/setup_step_footer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:visibility="gone"
+    app:layout_constraintBottom_toBottomOf="parent"
+    tools:visibility="visible" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

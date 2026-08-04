@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="vertical">
+
+  <!--
+    A field rather than a button: it holds a value, it says what that value is, and tapping it
+    goes to where it is chosen — the same shape the folder's key wears elsewhere in the app.
+  -->
+  <com.google.android.material.textfield.TextInputLayout
+    android:id="@+id/gpg_key_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:hint="@string/folder_encryption_key"
+    app:endIconContentDescription="@string/folder_encryption_key_choose"
+    app:endIconDrawable="@drawable/ic_keyboard_arrow_right_24dp"
+    app:endIconMode="custom">
+
+    <com.google.android.material.textfield.TextInputEditText
+      android:id="@+id/gpg_key_value"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:clickable="true"
+      android:cursorVisible="false"
+      android:ellipsize="middle"
+      android:focusable="false"
+      android:inputType="none"
+      android:maxLines="1"
+      android:text="@string/setup_key_none_chosen" />
+
+  </com.google.android.material.textfield.TextInputLayout>
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_xlarge"
+    android:text="@string/setup_encryption_title"
+    android:textAppearance="?attr/textAppearanceTitleMedium"
+    android:textColor="?attr/colorOnSurface" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_small"
+    android:text="@string/setup_encryption_message"
+    android:textAppearance="?attr/textAppearanceBodyMedium"
+    android:textColor="?attr/colorOnSurfaceVariant" />
+
+  <com.google.android.material.switchmaterial.SwitchMaterial
+    android:id="@+id/ascii_armor"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_medium"
+    android:text="@string/pref_pgp_ascii_armor_title" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="@string/setup_ascii_armor_explanation"
+    android:textAppearance="?attr/textAppearanceBodySmall"
+    android:textColor="?attr/colorOnSurfaceVariant" />
+
+</LinearLayout>

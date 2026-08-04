@@ -93,14 +93,20 @@
   <string name="setup_encryption_title">How entries are stored</string>
   <string name="setup_key_title">The key that encrypts them</string>
   <string name="setup_key_message">Pick the PGP key your passwords will be encrypted to, or import one. A key on a smartcard works too — you will be asked for the card when opening an entry.</string>
-  <string name="setup_key_choose">Choose a key</string>
   <string name="setup_repo_tip">Cloning brings an existing store from a Git server. Creating one keeps it on this device until you add a server later.</string>
   <string name="setup_encryption_message">Passwords are kept as files, each encrypted to a PGP key. This decides how those files are written, and applies to entries saved from now on.</string>
   <string name="setup_sign_commits_tip">Signing proves the changes came from you. It asks for your PGP key each time something is saved.</string>
-  <string name="setup_continue">Continue</string>
   <string name="setup_identity_message">Git records a name and email address with every change you make, and both are needed before the store can be synchronised.</string>
   <string name="setup_ascii_armor_explanation">Stores passwords as text rather than binary. The files are larger, but survive tools that would mangle binary data.</string>
-  <string name="setup_finish">Finish</string>
+  <string name="setup_next">Next</string>
+  <string name="setup_back">Back</string>
+  <string name="setup_step_counter">Step %1$d of %2$d</string>
+  <string name="setup_key_none_chosen">No key chosen yet</string>
+  <string name="gpg_key_select_mandatory">Selecting a PGP key is required to proceed</string>
+  <string name="setup_remote_title">Where the store lives</string>
+  <string name="setup_remote_message">The address of the Git repository holding your passwords, and how this app should be let in.</string>
+  <string name="setup_auth_key_none">No authentication key set yet. Pick one of these; the server needs the matching public key.</string>
+  <string name="setup_auth_key_set">An authentication key is set. Choosing another one replaces it.</string>
   <string name="git_author_missing_title">Who is making these commits?</string>
   <string name="git_author_missing_message">Git records a name and email address with every change. Set yours before syncing, or the store will record commits under whatever name this device happens to have.</string>
   <string name="git_author_missing_confirm">Set them now</string>
@@ -413,7 +419,6 @@
   <string name="git_break_out_of_detached_unneeded">The repository is not rebasing, no need to push to another branch.</string>
 
   <!-- PGP key selection in folder creation -->
-  <string name="gpg_key_select_mandatory">Selecting a PGP key is necessary to proceed</string>
   <string name="folder_creation_err_file_exists">A file by that name already exists</string>
   <string name="folder_creation_err_folder_exists">A folder by that name already exists</string>
 

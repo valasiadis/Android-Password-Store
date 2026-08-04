@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.lifecycle.lifecycleScope
@@ -16,13 +17,15 @@ import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitCloneBinding
 import app.passwordstore.ui.git.base.BaseGitActivity
+import app.passwordstore.ui.onboarding.activity.SetupStepActivity
+import app.passwordstore.ui.onboarding.activity.show
 import app.passwordstore.ui.sshkeygen.PgpAuthKeySelectionActivity
 import app.passwordstore.ui.sshkeygen.SshKeyGenActivity
 import app.passwordstore.ui.sshkeygen.SshKeyImportActivity
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
-import app.passwordstore.util.extensions.launchActivity
 import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.viewBinding
+import app.passwordstore.util.git.sshj.SshKey
 import app.passwordstore.util.settings.AuthMode
 import app.passwordstore.util.settings.GitSettings
 import app.passwordstore.util.settings.Protocol
@@ -40,6 +43,10 @@ import logcat.logcat
 /**
  * Activity that encompasses both the initial clone as well as editing the server config for future
  * changes.
+ *
+ * While cloning it is the last step of setting a store up, and dresses accordingly: the step's
+ * heading, and its button in the bottom right corner. Opened from the settings there is a store
+ * already, nothing to start, and every change stores itself as it is made.
  */
 class GitServerConfigActivity : BaseGitActivity() {
 
@@ -49,18 +56,15 @@ class GitServerConfigActivity : BaseGitActivity() {
   private lateinit var newAuthMode: AuthMode
   private var isClone = false
 
+  private val authKeyAction =
+    registerForActivityResult(StartActivityForResult()) { showAuthKeyState() }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdgeView(binding.root)
     isClone = intent?.extras?.getBoolean("cloning") ?: false
-    if (isClone) {
-      binding.saveButton.text = getString(R.string.clone_button)
-    }
-    // Editing the server config stores as the user goes, so it has no button. Cloning keeps one:
-    // it starts work rather than storing a setting, and there is nothing else to trigger it.
-    binding.saveButton.isVisible = isClone
     setContentView(binding.root)
-    supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    setUpChrome()
 
     oldAuthMode = gitSettings.authMode
     newAuthMode = gitSettings.authMode
@@ -81,8 +85,8 @@ class GitServerConfigActivity : BaseGitActivity() {
             View.NO_ID -> newAuthMode = AuthMode.None
           }
         }
-        binding.authKeyButton.isVisible = newAuthMode == AuthMode.SshKey
-        if (!isClone) applySettings()
+        showAuthKeyState()
+        if (isClone) reportUrlState() else applySettings()
       }
     }
 
@@ -99,13 +103,19 @@ class GitServerConfigActivity : BaseGitActivity() {
       // Checked as it is typed, so what is wrong with an address is said while it is being
       // written. Editing stores it as well, once there is something worth storing; cloning waits
       // for its button, so it only says what it thinks.
-      if (isClone) reportProblem(problemWith(binding.serverUrl.text.toString().trim()))
-      else applySettings()
+      if (isClone) reportUrlState() else applySettings()
     }
 
-    // Offered only where a key is what authenticates: password authentication needs none.
-    binding.authKeyButton.isVisible = newAuthMode == AuthMode.SshKey
-    binding.authKeyButton.setOnClickListener { chooseAuthenticationKey() }
+    binding.authKeyPgp.setOnClickListener {
+      authKeyAction.launch(intentFor<PgpAuthKeySelectionActivity>())
+    }
+    binding.authKeyGenerate.setOnClickListener {
+      authKeyAction.launch(intentFor<SshKeyGenActivity>())
+    }
+    binding.authKeyImport.setOnClickListener {
+      authKeyAction.launch(intentFor<SshKeyImportActivity>())
+    }
+    showAuthKeyState()
 
     binding.clearHostKeyButton.isVisible = gitSettings.hasSavedHostKey()
     binding.clearHostKeyButton.setOnClickListener {
@@ -118,12 +128,35 @@ class GitServerConfigActivity : BaseGitActivity() {
         .show()
       it.isVisible = false
     }
-    binding.saveButton.setOnClickListener {
+  }
+
+  private inline fun <reified T> intentFor() = Intent(this, T::class.java)
+
+  /** The setup step's heading and corner button while cloning; the plain settings screen after. */
+  private fun setUpChrome() {
+    binding.header.root.isVisible = isClone
+    binding.setupFooter.root.isVisible = isClone
+    if (!isClone) {
+      supportActionBar?.setDisplayHomeAsUpEnabled(true)
+      return
+    }
+    supportActionBar?.hide()
+    binding.header.show(
+      icon = R.drawable.ic_cloud_sync_48dp,
+      title = R.string.setup_remote_title,
+      message = R.string.setup_remote_message,
+      step = intent.getIntExtra(SetupStepActivity.EXTRA_STEP, 0),
+      stepCount = intent.getIntExtra(SetupStepActivity.EXTRA_STEP_COUNT, 0),
+    )
+    binding.setupFooter.setupNext.setText(R.string.clone_button)
+    binding.setupFooter.setupBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
+    binding.setupFooter.setupNext.setOnClickListener {
       if (applySettings()) {
         if (PasswordRepository.repository == null) PasswordRepository.initialize()
         cloneRepository()
       }
     }
+    reportUrlState()
   }
 
   override fun onPause() {
@@ -132,14 +165,6 @@ class GitServerConfigActivity : BaseGitActivity() {
     super.onPause()
   }
 
-  /**
-   * Stores the address and connection mode if they hold together, and otherwise says what is wrong
-   * under the address field. Returns whether anything was stored.
-   *
-   * The two are validated as a pair, not separately: which connection modes are allowed follows
-   * from the URL's scheme, and an SSH URL without a username is only a problem once a mode that
-   * needs one is picked.
-   */
   /** What is wrong with [url] as a repository address, or null when nothing is. */
   private fun problemWith(url: String): String? =
     when {
@@ -170,6 +195,25 @@ class GitServerConfigActivity : BaseGitActivity() {
     binding.labelServerUrl.error = problem
   }
 
+  /**
+   * Says what is wrong with the address as it stands, and keeps the way onwards shut until nothing
+   * is. Cloning with an address the app cannot use only fails later and less clearly.
+   */
+  private fun reportUrlState() {
+    val url = binding.serverUrl.text.toString().trim()
+    val problem = problemWith(url)
+    reportProblem(problem)
+    binding.setupFooter.setupNext.isEnabled = url.isNotEmpty() && problem == null
+  }
+
+  /**
+   * Stores the address and connection mode if they hold together, and otherwise says what is wrong
+   * under the address field. Returns whether anything was stored.
+   *
+   * The two are validated as a pair, not separately: which connection modes are allowed follows
+   * from the URL's scheme, and an SSH URL without a username is only a problem once a mode that
+   * needs one is picked.
+   */
   private fun applySettings(): Boolean {
     val newUrl = binding.serverUrl.text.toString().trim()
     val problem = problemWith(newUrl)
@@ -191,21 +235,16 @@ class GitServerConfigActivity : BaseGitActivity() {
     return true
   }
 
-  /** The three ways this app can hold an authentication key, as the git operations also offer. */
-  private fun chooseAuthenticationKey() {
-    MaterialAlertDialogBuilder(this)
-      .setTitle(R.string.ssh_preferences_dialog_title)
-      .setMessage(R.string.ssh_preferences_dialog_text)
-      .setPositiveButton(R.string.ssh_preferences_dialog_pgp_key) { _, _ ->
-        launchActivity(PgpAuthKeySelectionActivity::class.java)
-      }
-      .setNegativeButton(R.string.ssh_preferences_dialog_generate) { _, _ ->
-        launchActivity(SshKeyGenActivity::class.java)
-      }
-      .setNeutralButton(R.string.button_label_import) { _, _ ->
-        launchActivity(SshKeyImportActivity::class.java)
-      }
-      .show()
+  /**
+   * The three ways this app can hold an authentication key, offered where the mode that needs one
+   * is chosen — with whether there is one yet, which is the question a prompt at clone time was
+   * answering far too late.
+   */
+  private fun showAuthKeyState() {
+    binding.authKeySection.isVisible = newAuthMode == AuthMode.SshKey
+    binding.authKeyStatus.setText(
+      if (SshKey.exists) R.string.setup_auth_key_set else R.string.setup_auth_key_none
+    )
   }
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -305,11 +344,11 @@ class GitServerConfigActivity : BaseGitActivity() {
 
   companion object {
 
-    private val PORT_REGEX = ":[0-9]{1,5}/".toRegex()
-
-    fun createCloneIntent(context: Context): Intent {
+    fun createCloneIntent(context: Context, step: Int = 0, stepCount: Int = 0): Intent {
       return Intent(context, GitServerConfigActivity::class.java).apply {
         putExtra("cloning", true)
+        putExtra(SetupStepActivity.EXTRA_STEP, step)
+        putExtra(SetupStepActivity.EXTRA_STEP_COUNT, stepCount)
       }
     }
   }

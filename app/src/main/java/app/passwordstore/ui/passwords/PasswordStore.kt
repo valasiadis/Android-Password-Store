@@ -17,9 +17,12 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.SearchView.OnQueryTextListener
 import androidx.core.content.edit
+import androidx.core.graphics.drawable.toBitmap
+import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.commit
 import androidx.lifecycle.flowWithLifecycle
@@ -326,7 +329,14 @@ class PasswordStore : BaseGitActivity() {
     )
 
     supportActionBar?.apply {
-      setLogo(R.mipmap.ic_launcher)
+      // The icon's foreground on its own: the launcher's circle belongs on a launcher, and at
+      // this size it would be a coloured blob beside the name. Drawn at an icon's size rather
+      // than inset within a larger box, which would keep the box and crowd the title out of it.
+      val logoSize = (LOGO_SIZE_DP * resources.displayMetrics.density).toInt()
+      AppCompatResources.getDrawable(this@PasswordStore, R.drawable.ic_launcher_foreground)?.let {
+        logo ->
+        setLogo(logo.toBitmap(logoSize, logoSize).toDrawable(resources))
+      }
       setDisplayUseLogoEnabled(true)
       setDisplayShowHomeEnabled(true)
     }
@@ -857,6 +867,9 @@ class PasswordStore : BaseGitActivity() {
   companion object {
 
     const val REQUEST_ARG_PATH = "PATH"
+
+    /** The mark beside the title is an icon, not a heading of its own. */
+    private const val LOGO_SIZE_DP = 38
     private const val PENDING_KEY_FOLDER_STATE = "PENDING_KEY_FOLDER"
 
     private fun isPrintable(c: Char): Boolean {

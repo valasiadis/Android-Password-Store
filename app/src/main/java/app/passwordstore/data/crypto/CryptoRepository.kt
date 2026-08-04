@@ -60,6 +60,9 @@ constructor(
   fun hasKeys(): Boolean =
     pgpKeyManager.getAllKeys().mapBoth(success = { it.isNotEmpty() }, failure = { false })
 
+  /** How many keys this store holds, which says whether there is another one to change to. */
+  fun keyCount(): Int = pgpKeyManager.getAllKeys().mapBoth(success = { it.size }, failure = { 0 })
+
   fun hasKey(id: PGPIdentifier): Boolean = pgpKeyManager.getKeyById(id).isOk
 
   fun isSecretKey(id: PGPIdentifier): Boolean {

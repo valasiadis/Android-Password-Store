@@ -41,6 +41,7 @@ import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.toByteArray
 import app.passwordstore.util.extensions.toCharArray
+import app.passwordstore.util.extensions.unsafeLazy
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.extensions.wipe
 import app.passwordstore.util.settings.PreferenceKeys
@@ -120,17 +121,16 @@ class DecryptActivity : BasePGPActivity() {
         AESEncryption.decrypt(entry)?.let { decrypted -> entry to decrypted }
       }
     intent.removeExtra(PasswordCreationActivity.EXTRA_ENTRY)
-    intent.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)?.let { message ->
-      intent.removeExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
-      binding.root.post {
-        Notice.show(
-          this@DecryptActivity,
-          message,
-        )
+    // An entry arrived here straight from being written, so what it changed still wants
+    // committing — and only once that is through is there anything to confirm: a commit that
+    // fails says so itself, and a password nobody recorded is not news worth celebrating.
+    val savedMessage = intent.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
+    intent.removeExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
+    lifecycleScope.launch {
+      commitSavedChange(intent).onOk {
+        savedMessage?.let { Notice.show(this@DecryptActivity, it) }
       }
     }
-    // An entry arrived here straight from being written, so what it changed still wants committing.
-    lifecycleScope.launch { commitSavedChange(intent) }
     if (cachedEntry != null) {
       showCachedEntry(cachedEntry.first, cachedEntry.second)
       return
@@ -388,7 +388,9 @@ class DecryptActivity : BasePGPActivity() {
 
   override fun onPrepareOptionsMenu(menu: Menu): Boolean {
     encryptedEntryChars?.let { encrypted ->
-      menu.findItem(R.id.reencrypt_password).setVisible(true)
+      // Changing which keys an entry is encrypted to is only a choice where there is another key
+      // to change to; with one key in the store it can only ever say what it already says.
+      menu.findItem(R.id.reencrypt_password).setVisible(keyCount > 1)
       binding.editFab.isVisible = true
       AESEncryption.decrypt(encrypted)?.let { decrypted ->
         val entry = passwordEntryFactory.create(decrypted)
@@ -579,6 +581,9 @@ class DecryptActivity : BasePGPActivity() {
    * edit was saved or abandoned. A saved edit brings back the copy it wrote, so the entry it shows
    * is the new one without decrypting it again; a renamed entry is opened under its new name.
    */
+  /** Read once: the key set does not change while an entry is on screen. */
+  private val keyCount by unsafeLazy { repository.keyCount() }
+
   private val editAction =
     registerForActivityResult(StartActivityForResult()) { result ->
       val data = result.data ?: return@registerForActivityResult
@@ -607,13 +612,10 @@ class DecryptActivity : BasePGPActivity() {
       } else {
         recreate()
       }
-      data.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)?.let { message ->
-        Notice.show(
-          this@DecryptActivity,
-          message,
-        )
+      val savedMessage = data.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
+      lifecycleScope.launch {
+        commitSavedChange(data).onOk { savedMessage?.let { Notice.show(this@DecryptActivity, it) } }
       }
-      lifecycleScope.launch { commitSavedChange(data) }
     }
 
   /** Deletes this entry, after asking, and leaves — there is nothing left to show. */

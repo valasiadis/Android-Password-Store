@@ -62,6 +62,8 @@ import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import com.github.michaelbull.result.unwrapError
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.BaseTransientBottomBar
+import com.google.android.material.snackbar.Snackbar
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.LuminanceSource
 import com.google.zxing.RGBLuminanceSource
@@ -72,6 +74,7 @@ import com.google.zxing.qrcode.QRCodeReader
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import java.nio.CharBuffer
 import java.nio.file.Paths
@@ -439,8 +442,23 @@ class PasswordCreationActivity : BasePGPActivity() {
         }
       }
 
+      // An entry can be encrypted to keys of its own, and editing it is no reason to drop them
+      // back to whatever the folder's .gpg-id says. The folder decides only where the entry has
+      // none of its own — a new entry, or one written before any of this.
+      val entryKeys =
+        if (editing && suggestedName != null) {
+          val previous = File("${fullPath.trimEnd('/')}/$suggestedName.gpg")
+          if (previous.isFile) {
+            previous
+              .inputStream()
+              .use { repository.recipientKeyIds(it) }
+              .mapNotNull { repository.getLongKeyIdFromKeyId(it) }
+              .mapNotNull(PGPIdentifier::fromString)
+              .distinct()
+          } else emptyList()
+        } else emptyList()
       // pass enters the key ID into `.gpg-id`.
-      val gpgIdentifiers = getPGPIdentifiers(directory.text.toString())
+      val gpgIdentifiers = entryKeys.ifEmpty { getPGPIdentifiers(directory.text.toString()) }
       if (gpgIdentifiers.isNullOrEmpty()) return@with
 
       val path = run { // password item's full file path string
@@ -552,6 +570,9 @@ class PasswordCreationActivity : BasePGPActivity() {
               entry.username?.let { it.copyOf(it.size) }
                 ?: directoryStructure.getUsernameFor(passwordFile.toFile())
             returnIntent.putExtra(RETURN_EXTRA_USERNAME, username)
+            // The screen that asked for this edit shows the entry: handing back the copy just
+            // written lets it show the new one without decrypting anything.
+            returnIntent.putExtra(EXTRA_ENTRY, savedEntry)
 
             entry.clear()
           }
@@ -569,25 +590,28 @@ class PasswordCreationActivity : BasePGPActivity() {
               editUsername?.wipe()
               editExtra?.wipe()
               setResult(RESULT_OK, returnIntent)
+              // A new entry opens on itself, so the password can be copied or read without
+              // finding it in the list again. Editing returns to the entry it came from instead,
+              // which is already behind this screen.
+              val leave = {
+                if (!editing) openSavedEntry(passwordFile.absolutePathString(), savedEntry)
+                finish()
+              }
+              if (failedUserEmails.isEmpty()) {
+                // Nothing went wrong, so it is said in passing rather than held up for an OK.
+                snackbar(message = encryptionOutcomeMessage(succeededUserEmails, failedUserEmails))
+                  .addCallback(
+                    object : BaseTransientBottomBar.BaseCallback<Snackbar>() {
+                      override fun onDismissed(bar: Snackbar?, event: Int) = leave()
+                    }
+                  )
+                return@onOk
+              }
               val dialog =
                 MaterialAlertDialogBuilder(this@PasswordCreationActivity)
                   .setCancelable(false)
-                  .setPositiveButton(android.R.string.ok) { _, _ ->
-                    // A new entry opens on itself, so the password can be copied or read without
-                    // finding it in the list again. Editing returns to the entry it came from
-                    // instead, which is already behind this screen.
-                    if (!editing) openSavedEntry(passwordFile.absolutePathString(), savedEntry)
-                    finish()
-                  }
-              if (!failedUserEmails.isEmpty()) {
-                dialog.setTitle(R.string.password_creation_file_encryption_partial_success_title)
-              } else {
-                val title =
-                  if (editing)
-                    getString(R.string.password_creation_edit_file_encryption_success_title)
-                  else getString(R.string.password_creation_new_file_encryption_success_title)
-                dialog.setTitle(title)
-              }
+                  .setPositiveButton(android.R.string.ok) { _, _ -> leave() }
+              dialog.setTitle(R.string.password_creation_file_encryption_partial_success_title)
               dialog.setMessage(encryptionOutcomeMessage(succeededUserEmails, failedUserEmails))
               dialog.show()
             }

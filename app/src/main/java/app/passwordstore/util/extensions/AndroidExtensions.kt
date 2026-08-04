@@ -19,12 +19,16 @@ import android.content.pm.PackageManager.PackageInfoFlags
 import android.os.Build
 import android.util.TypedValue
 import android.view.View
+import android.view.ViewGroup
 import android.view.autofill.AutofillManager
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.BuildConfig
 import app.passwordstore.R
@@ -125,14 +129,22 @@ fun FragmentActivity.isPermissionGranted(permission: String): Boolean {
  */
 fun FragmentActivity.snackbar(
   view: View = findViewById(android.R.id.content),
-  message: String,
+  message: CharSequence,
   length: Int = Snackbar.LENGTH_SHORT,
 ): Snackbar {
-  // Collapse the soft keyboard so the status bar isn't hidden behind it (a snackbar shown while the
-  // keyboard is up would otherwise sit under it).
-  hideKeyboard()
   val snackbar = Snackbar.make(view, message, length)
   snackbar.anchorView = findViewById(R.id.fab)
+  // Lifted over the soft keyboard rather than dismissing it: a message about what just happened
+  // has no business closing the field the user is typing in, and one shown behind the keyboard is
+  // a message nobody reads.
+  ViewCompat.setOnApplyWindowInsetsListener(snackbar.view) { snackbarView, windowInsets ->
+    val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
+    val bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+    snackbarView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+      bottomMargin = maxOf(ime.bottom - bars.bottom, 0)
+    }
+    windowInsets
+  }
   snackbar.show()
   return snackbar
 }

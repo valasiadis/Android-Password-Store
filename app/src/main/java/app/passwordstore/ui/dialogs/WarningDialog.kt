@@ -34,6 +34,7 @@ object WarningDialog {
   ) {
     val dialog =
       MaterialAlertDialogBuilder(context)
+        .outlined(context)
         .setIcon(R.drawable.ic_warning_red_24dp)
         .setTitle(title)
         .setMessage(message)

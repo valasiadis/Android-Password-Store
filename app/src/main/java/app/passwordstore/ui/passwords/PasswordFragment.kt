@@ -8,9 +8,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Parcelable
+import android.transition.ChangeBounds
+import android.transition.TransitionManager
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
@@ -19,6 +22,7 @@ import androidx.appcompat.view.ActionMode
 import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -271,6 +275,9 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     binding.searchInput.clearFocus()
   }
 
+  /** How long the search field takes to give up (or take back) the sync button's room. */
+  private val SEARCH_BAR_RESIZE_MS = 150L
+
   private var fabVisible = true
 
   private val actionModeCallback =
@@ -399,6 +406,36 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
       animate().setStartDelay(if (showAnim) 100 else 0).setDuration(100).start()
 
       if (showAnim || hideAnim) startAnimation(animation)
+    }
+    updateSearchBarWidth(
+      syncShowing = if (showAnim) true else if (hideAnim) false else binding.fabSync.isVisible
+    )
+  }
+
+  /**
+   * Gives the search field the room the sync button is not using.
+   *
+   * The button comes and goes with whether the store is ahead of its remote, and a field that kept
+   * a gap for a button that is not there looks off-centre for no reason. The change is animated so
+   * the field grows and shrinks with the button rather than jumping the moment it appears.
+   */
+  private fun updateSearchBarWidth(syncShowing: Boolean) {
+    val room =
+      resources.getDimensionPixelSize(
+        if (syncShowing) R.dimen.search_bar_side_room else R.dimen.fab_compat_margin
+      )
+    val bar = binding.searchBar
+    val current = (bar.layoutParams as ViewGroup.MarginLayoutParams).marginStart
+    if (current == room) return
+    TransitionManager.beginDelayedTransition(
+      binding.root,
+      ChangeBounds().setDuration(SEARCH_BAR_RESIZE_MS),
+    )
+    // Both ends, every time: setting one of a pair of start/end margins is what makes the layout
+    // resolve them, and the one left alone comes back as nothing rather than as what it was.
+    bar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+      marginStart = room
+      marginEnd = resources.getDimensionPixelSize(R.dimen.search_bar_side_room)
     }
   }
 

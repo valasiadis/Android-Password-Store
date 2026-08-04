@@ -403,20 +403,23 @@ private inline fun DeleteConfirmationDialog(
   if (isDeleting) {
     AlertDialog(
       onDismissRequest = onDismiss,
-      icon = {
-        Icon(
-          painter = painterResource(id = R.drawable.ic_warning_red_24dp),
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.error,
-        )
-      },
+      // The mark sits beside the question, as it does on the app's other warnings, rather than
+      // centred above it with the title pushed down the dialog.
       title = {
-        Text(
-          text =
-            if (isSecretKey)
-              stringResource(R.string.pgp_key_manager_delete_secret_key_confirmation_dialog_title)
-            else stringResource(R.string.pgp_key_manager_delete_key_confirmation_dialog_title)
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(
+            painter = painterResource(id = R.drawable.ic_warning_red_24dp),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error,
+          )
+          Spacer(modifier = Modifier.width(SpacingLarge))
+          Text(
+            text =
+              if (isSecretKey)
+                stringResource(R.string.pgp_key_manager_delete_secret_key_confirmation_dialog_title)
+              else stringResource(R.string.pgp_key_manager_delete_key_confirmation_dialog_title)
+          )
+        }
       },
       text = {
         if (isSecretKey)

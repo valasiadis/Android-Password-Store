@@ -20,4 +20,14 @@
     <item name="background">?android:colorBackground</item>
   </style>
 
+  <!--
+    The overflow button and any action icons are tinted by colorControlNormal as
+    resolved against the action bar's own theme, not against the app theme, so
+    naming a colour on the style above would not reach them. This overlay is what
+    puts them on the scheme's on-surface colour instead of the stock grey.
+  -->
+  <style name="APSThemeM3.ActionBarTheme" parent="ThemeOverlay.Material3.ActionBar">
+    <item name="colorControlNormal">?attr/colorOnSurface</item>
+  </style>
+
 </resources>

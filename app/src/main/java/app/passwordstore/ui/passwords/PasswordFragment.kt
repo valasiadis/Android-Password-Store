@@ -134,6 +134,10 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
           .show(requireActivity().supportFragmentManager, "NOT_A_GIT_REPO")
         binding.swipeRefresher.isRefreshing = false
       } else {
+        // The gesture's own spinner goes as soon as the operation starts: what is happening is
+        // said at the top of the screen, in the same place as every other wait in the app, and two
+        // indicators for one operation is one too many.
+        binding.swipeRefresher.isRefreshing = false
         // When authentication is set to AuthMode.None then the only git operation we can
         // run is a pull, so automatically fallback to that.
         val operationId =
@@ -144,15 +148,7 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
         requireStore().apply {
           lifecycleScope.launch {
             launchGitOperation(operationId)
-              .fold(
-                success = {
-                  binding.swipeRefresher.isRefreshing = false
-                  refreshPasswordList()
-                },
-                failure = { err ->
-                  promptOnErrorHandler(err) { binding.swipeRefresher.isRefreshing = false }
-                },
-              )
+              .fold(success = { refreshPasswordList() }, failure = { promptOnErrorHandler(it) })
           }
         }
       }

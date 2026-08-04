@@ -12,6 +12,7 @@
     <item name="android:navigationBarColor">?android:colorBackground</item>
     <item name="toolbarStyle">@style/APSThemeM3.Toolbar</item>
     <item name="actionBarStyle">@style/APSThemeM3.ActionBar</item>
+    <item name="actionBarTheme">@style/APSThemeM3.ActionBarTheme</item>
     <item name="bottomSheetDialogTheme">@style/APSThemeM3.BottomSheetDialog</item>
   </style>
 

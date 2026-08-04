@@ -9,10 +9,17 @@
   android:layout_height="match_parent"
   android:orientation="vertical">
 
+  <!--
+    Padded so the grouped containers drawn behind the preferences stand clear of the window
+    edges, and clipToPadding is off so they scroll through that padding rather than being cut.
+  -->
   <androidx.recyclerview.widget.RecyclerView
     android:id="@+id/preference_recycler_view"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:paddingHorizontal="@dimen/spacing_medium"
+    android:paddingVertical="@dimen/spacing_small"
     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
 </LinearLayout>

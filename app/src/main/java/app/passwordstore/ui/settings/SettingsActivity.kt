@@ -5,11 +5,15 @@
 
 package app.passwordstore.ui.settings
 
+import android.content.Context
 import android.os.Bundle
+import android.os.SystemClock
+import android.view.Choreographer
 import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.BundleCompat
+import app.passwordstore.BuildConfig
 import app.passwordstore.R
 import app.passwordstore.databinding.ActivityPreferenceRecyclerviewBinding
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
@@ -20,6 +24,7 @@ import de.Maxr1998.modernpreferences.Preference
 import de.Maxr1998.modernpreferences.PreferencesAdapter
 import de.Maxr1998.modernpreferences.helpers.screen
 import de.Maxr1998.modernpreferences.helpers.subScreen
+import logcat.logcat
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
@@ -39,7 +44,10 @@ class SettingsActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
     enableEdgeToEdgeView(binding.root)
     setContentView(binding.root)
-    Preference.Config.dialogBuilderFactory = { context -> MaterialAlertDialogBuilder(context) }
+    Preference.Config.dialogBuilderFactory = { context -> CancellableDialogBuilder(context) }
+    // Ordered by how close each group sits to the passwords themselves: how the app looks and
+    // behaves, then the entries, then the keys that encrypt them, then the repository they live
+    // in, then the ways other apps reach them, and finally the things that fit nowhere else.
     val screen =
       screen(this) {
         subScreen {
@@ -50,15 +58,15 @@ class SettingsActivity : AppCompatActivity() {
         }
         subScreen {
           collapseIcon = true
-          titleRes = R.string.pref_category_autofill_title
-          iconRes = R.drawable.ic_wysiwyg_24px
-          autofillSettings.provideSettings(this)
-        }
-        subScreen {
-          collapseIcon = true
           titleRes = R.string.pref_category_passwords_title
           iconRes = R.drawable.ic_password_24px
           passwordSettings.provideSettings(this)
+        }
+        subScreen {
+          collapseIcon = true
+          titleRes = R.string.pref_category_pgp_title
+          iconRes = R.drawable.ic_lock_open_24px
+          pgpSettings.provideSettings(this)
         }
         subScreen {
           collapseIcon = true
@@ -68,15 +76,15 @@ class SettingsActivity : AppCompatActivity() {
         }
         subScreen {
           collapseIcon = true
-          titleRes = R.string.pref_category_misc_title
-          iconRes = R.drawable.ic_miscellaneous_services_24px
-          miscSettings.provideSettings(this)
+          titleRes = R.string.pref_category_autofill_title
+          iconRes = R.drawable.ic_wysiwyg_24px
+          autofillSettings.provideSettings(this)
         }
         subScreen {
           collapseIcon = true
-          titleRes = R.string.pref_category_pgp_title
-          iconRes = R.drawable.ic_lock_open_24px
-          pgpSettings.provideSettings(this)
+          titleRes = R.string.pref_category_misc_title
+          iconRes = R.drawable.ic_miscellaneous_services_24px
+          miscSettings.provideSettings(this)
         }
       }
     val backPressedCallback =
@@ -96,6 +104,7 @@ class SettingsActivity : AppCompatActivity() {
           } else {
             getString(subScreen.titleRes)
           }
+        reportScreenChangeCost(subScreen.size())
       }
     if (savedInstanceState != null) {
       BundleCompat.getParcelable(
@@ -106,6 +115,39 @@ class SettingsActivity : AppCompatActivity() {
         ?.let(adapter::loadSavedState)
     }
     binding.preferenceRecyclerView.adapter = adapter
+    PreferenceGroupDecoration(this).attachTo(binding.preferenceRecyclerView)
+    // Opening a screen replaces the whole list at once, so every row is rebound in one pass. A
+    // pool of the default five per type sends the rest back through inflation each time; holding
+    // a screenful means they are reused instead.
+    binding.preferenceRecyclerView.recycledViewPool.setMaxRecycledViews(
+      DEFAULT_PREFERENCE_VIEW_TYPE,
+      PREFERENCE_VIEW_POOL_SIZE,
+    )
+    binding.preferenceRecyclerView.setItemViewCacheSize(PREFERENCE_VIEW_POOL_SIZE)
+  }
+
+  /**
+   * Logs how long the list took to reach the screen after a screen change, so that the cost of
+   * opening a sub-screen can be read off logcat rather than guessed at. Debug builds only.
+   */
+  private fun reportScreenChangeCost(entryCount: Int) {
+    if (!BuildConfig.DEBUG) return
+    val start = SystemClock.uptimeMillis()
+    Choreographer.getInstance().postFrameCallback {
+      logcat(SCREEN_CHANGE_LOG_TAG) {
+        "screen with $entryCount entries drawn ${SystemClock.uptimeMillis() - start}ms after change"
+      }
+    }
+  }
+
+  /**
+   * The preferences library builds its dialogs through this factory and then insists they cannot be
+   * cancelled, which leaves the back gesture doing nothing while one is open. Ignoring that one
+   * call is the only way to reach the dialogs it creates.
+   */
+  private class CancellableDialogBuilder(context: Context) : MaterialAlertDialogBuilder(context) {
+    override fun setCancelable(cancelable: Boolean): MaterialAlertDialogBuilder =
+      super.setCancelable(true)
   }
 
   override fun onSaveInstanceState(outState: Bundle) {
@@ -123,5 +165,12 @@ class SettingsActivity : AppCompatActivity() {
         }
       else -> super.onOptionsItemSelected(item)
     }
+  }
+
+  private companion object {
+    /** What the library reports for preferences that have no widget layout of their own. */
+    const val DEFAULT_PREFERENCE_VIEW_TYPE = 0
+    const val PREFERENCE_VIEW_POOL_SIZE = 20
+    const val SCREEN_CHANGE_LOG_TAG = "SettingsScreenChange"
   }
 }

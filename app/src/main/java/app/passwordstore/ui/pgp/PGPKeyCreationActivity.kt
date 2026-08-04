@@ -10,11 +10,15 @@ import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.doOnTextChanged
+import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.crypto.KeyUtils.tryGetKeyId
+import app.passwordstore.crypto.PGPKey
 import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.databinding.PgpKeyCreationActivityBinding
+import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.WarningDialog
+import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.viewBinding
@@ -22,6 +26,8 @@ import app.passwordstore.util.extensions.wipe
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.asLog
 import logcat.logcat
@@ -31,6 +37,7 @@ class PGPKeyCreationActivity : AppCompatActivity() {
 
   private val binding by viewBinding(PgpKeyCreationActivityBinding::inflate)
   @Inject lateinit var keyManager: PGPKeyManager
+  @Inject lateinit var dispatcherProvider: DispatcherProvider
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -131,9 +138,20 @@ class PGPKeyCreationActivity : AppCompatActivity() {
   private fun createPgpKey(email: String, passphrase: CharArray) {
     val name = binding.name.text.toString().trim()
     val userId = if (name.length > 0) "${name} <${email}>" else email
-    val (key, error) =
-      keyManager.generateKey(userId, if (passphrase.isEmpty()) null else passphrase)
+    // Generating a key takes seconds of solid work. Off the main thread so the screen can say so
+    // rather than freezing mid-tap, which reads as the app having died.
+    val progress = ProgressOverlay.show(this, R.string.pgp_key_creation_in_progress)
+    lifecycleScope.launch {
+      val (key, error) =
+        withContext(dispatcherProvider.io()) {
+          keyManager.generateKey(userId, if (passphrase.isEmpty()) null else passphrase)
+        }
+      progress.dismiss()
+      showKeyCreationOutcome(key, error, passphrase)
+    }
+  }
 
+  private fun showKeyCreationOutcome(key: PGPKey?, error: Throwable?, passphrase: CharArray) {
     if (key != null) {
       MaterialAlertDialogBuilder(this)
         .setTitle(getString(R.string.pgp_key_creation_succeeded))

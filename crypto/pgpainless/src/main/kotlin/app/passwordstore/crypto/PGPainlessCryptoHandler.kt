@@ -33,6 +33,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyConverter
 import org.bouncycastle.util.io.Streams
 import org.pgpainless.PGPainless
 import org.pgpainless.decryption_verification.ConsumerOptions
+import org.pgpainless.decryption_verification.MessageInspector
 import org.pgpainless.encryption_signing.EncryptionOptions
 import org.pgpainless.encryption_signing.ProducerOptions
 import org.pgpainless.exception.MissingDecryptionMethodException
@@ -158,6 +159,18 @@ public class PGPainlessCryptoHandler @Inject constructor() :
     }
 
   /** Runs a naive check on the extension for the given [fileName] to check if it is a PGP file. */
+  /**
+   * The keys [ciphertextStream] is encrypted to, as the message itself records them.
+   *
+   * These are the identifiers of the encryption subkeys used, which is what tells an entry
+   * encrypted to one key from a neighbour encrypted to another — something no amount of looking at
+   * the folder around it can establish.
+   */
+  public fun recipientKeyIds(ciphertextStream: InputStream): List<KeyId> =
+    MessageInspector(pgpApi).determineEncryptionInfoForMessage(ciphertextStream).keyIds.map { id ->
+      KeyId(id)
+    }
+
   public override fun canHandle(fileName: String): Boolean {
     return fileName.substringAfterLast('.', "") == "gpg"
   }

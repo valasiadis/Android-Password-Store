@@ -62,7 +62,6 @@
   <string name="crypto_extra_label">Treść dodatkowa</string>
   <string name="crypto_select">Wybierz</string>
   <string name="crypto_save">Zapisz</string>
-  <string name="crypto_save_and_copy">Zapisz i skopiuj</string>
   <!-- DECRYPT Layout -->
   <string name="action_search">Szukaj</string>
   <string name="password">Hasło</string>

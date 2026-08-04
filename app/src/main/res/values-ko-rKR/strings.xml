@@ -61,7 +61,6 @@
   <string name="crypto_extra_label">추가 내용</string>
   <string name="crypto_select">선택</string>
   <string name="crypto_save">저장</string>
-  <string name="crypto_save_and_copy">저장 및 복사</string>
   <!-- DECRYPT Layout -->
   <string name="action_search">검색</string>
   <string name="password">비밀번호</string>

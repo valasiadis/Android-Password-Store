@@ -63,7 +63,6 @@
   <string name="crypto_extra_label">Extra</string>
   <string name="crypto_select">Sélectionner</string>
   <string name="crypto_save">Sauvegarder</string>
-  <string name="crypto_save_and_copy">Enregistrer et copier</string>
   <!-- DECRYPT Layout -->
   <string name="action_search">Chercher</string>
   <string name="password">Mot de passe</string>

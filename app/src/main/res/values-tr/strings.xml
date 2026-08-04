@@ -80,7 +80,6 @@
   <string name="crypto_extra_label">Ekstra içerik</string>
   <string name="crypto_select">Seç</string>
   <string name="crypto_save">Kaydet</string>
-  <string name="crypto_save_and_copy">Kaydet ve Kopyala</string>
 
   <!-- DECRYPT Layout -->
   <string name="action_search">Ara</string>

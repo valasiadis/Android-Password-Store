@@ -68,7 +68,6 @@
   <string name="crypto_extra_label">Дополнительно</string>
   <string name="crypto_select">Выбрать</string>
   <string name="crypto_save">Сохранить</string>
-  <string name="crypto_save_and_copy">Сохранить и скопировать</string>
   <!-- DECRYPT Layout -->
   <string name="action_search">Поиск</string>
   <string name="password">Пароль:</string>

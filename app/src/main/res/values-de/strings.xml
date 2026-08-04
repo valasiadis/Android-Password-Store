@@ -89,7 +89,6 @@
   <string name="crypto_insert_username_label">Benutzernamen einfügen</string>
   <string name="crypto_select">Auswählen</string>
   <string name="crypto_save">Speichern</string>
-  <string name="crypto_save_and_copy">Speichern und kopieren</string>
 
   <!-- DECRYPT Layout -->
   <string name="action_search">Suche</string>

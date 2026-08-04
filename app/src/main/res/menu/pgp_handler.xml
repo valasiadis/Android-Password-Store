@@ -8,26 +8,15 @@
   xmlns:tools="http://schemas.android.com/tools"
   tools:context=".ui.crypto.PgpActivity">
   <item
-    android:id="@+id/share_password_as_plaintext"
-    android:icon="@drawable/ic_share_24dp"
-    android:title="@string/share_as_plaintext"
-    android:visible="false"
-    pwstore:showAsAction="ifRoom" />
-  <item
-    android:id="@+id/copy_password"
-    android:icon="@drawable/ic_content_copy"
-    android:title="@string/copy_password"
-    android:visible="false"
-    pwstore:showAsAction="ifRoom" />
-  <item
     android:id="@+id/reencrypt_password"
-    android:title="@string/reencrypt_password"
-    android:visible="false"
-    pwstore:showAsAction="never" />
-  <item
-    android:id="@+id/edit_password"
-    android:icon="@drawable/ic_edit_24dp"
-    android:title="@string/edit_password"
+    android:icon="@drawable/ic_key_24dp"
+    android:title="@string/change_keys"
     android:visible="false"
     pwstore:showAsAction="ifRoom" />
+  <item
+    android:id="@+id/delete_password"
+    android:icon="@drawable/ic_delete_24dp"
+    android:title="@string/delete"
+    pwstore:showAsAction="ifRoom" />
+
 </menu>

@@ -10,10 +10,10 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.core.content.edit
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
@@ -26,6 +26,7 @@ import app.passwordstore.databinding.DecryptLayoutBinding
 import app.passwordstore.injection.prefs.CredentialUsernames
 import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.adapters.FieldItemAdapter
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.crypto.AESEncryption
 import app.passwordstore.util.crypto.AESEncryption.KeyType
@@ -49,6 +50,8 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.BaseTransientBottomBar
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -99,6 +102,8 @@ class DecryptActivity : BasePGPActivity() {
         true
       }
       fab.setOnClickListener { copyPassword() }
+      editFab.setOnClickListener { if (isPasskey) editPasskey() else editPassword() }
+      shareFab.setOnClickListener { shareAsPlaintext() }
     }
     // An entry this process has just written arrives with the copy it kept, so opening it costs
     // nothing: no PGP key, no passphrase, no smartcard touch. The copy travels AES-encrypted
@@ -107,10 +112,14 @@ class DecryptActivity : BasePGPActivity() {
     // This screen is exported, so the copy is treated as a claim rather than a fact: it is only
     // shown if it decrypts, which nothing outside this process can arrange, and anything else
     // falls through to opening the file the ordinary way.
+    // Copied out of the intent and taken off it: this screen wipes the copy it holds when it goes
+    // away, and wiping the intent's own array left an empty one behind for the next launch — which
+    // is what a relaunch after a configuration change then tried, and failed, to decrypt.
     val cachedEntry =
-      intent.getCharArrayExtra(PasswordCreationActivity.EXTRA_ENTRY)?.let { entry ->
+      intent.getCharArrayExtra(PasswordCreationActivity.EXTRA_ENTRY)?.copyOf()?.let { entry ->
         AESEncryption.decrypt(entry)?.let { decrypted -> entry to decrypted }
       }
+    intent.removeExtra(PasswordCreationActivity.EXTRA_ENTRY)
     if (cachedEntry != null) {
       showCachedEntry(cachedEntry.first, cachedEntry.second)
       return
@@ -142,7 +151,7 @@ class DecryptActivity : BasePGPActivity() {
    * list. Only an entry encrypted outside its folder's .gpg-id is described by the message alone.
    */
   private fun keysForEntry(folderIds: List<PGPIdentifier>): List<PGPIdentifier> {
-    val recipients = File(fullPath).inputStream().use { repository.recipientKeyIds(it) }
+    val recipients = entryRecipients()
     if (recipients.isEmpty()) return preferringLocal(folderIds)
     // Every recipient this store holds a key for, named the way the folder names it where the
     // folder names it at all — the folder's wording is what cached passphrases are filed under, so
@@ -159,6 +168,29 @@ class DecryptActivity : BasePGPActivity() {
         .distinct()
     return preferringLocal(entryKeys.ifEmpty { folderIds })
   }
+
+  /**
+   * Puts [contents] in place of [entryFile], reporting whether it got there.
+   *
+   * Written elsewhere and moved onto the entry, so a failure part-way through leaves the entry as
+   * it was rather than half of each. Elsewhere means outside the repository: a commit stages
+   * everything under it, so a staging file left behind by a process that died at the wrong moment
+   * would be committed and pushed along with the entry.
+   */
+  private suspend fun replaceEntry(entryFile: File, contents: ByteArray): Boolean =
+    withContext(dispatcherProvider.io()) {
+      val staged = File.createTempFile("entry", null, cacheDir)
+      runCatching {
+          staged.writeBytes(contents)
+          staged.renameTo(entryFile) || staged.copyTo(entryFile, overwrite = true).let { true }
+        }
+        .getOr(false)
+        .also { staged.delete() }
+    }
+
+  /** The keys this entry names as its recipients, empty when the message will not say. */
+  private fun entryRecipients(): List<PGPIdentifier> =
+    File(fullPath).inputStream().use { repository.recipientKeyIds(it) }
 
   /**
    * The keys among [keys] that are held locally, or all of them when none is.
@@ -345,15 +377,14 @@ class DecryptActivity : BasePGPActivity() {
 
   override fun onPrepareOptionsMenu(menu: Menu): Boolean {
     encryptedEntryChars?.let { encrypted ->
-      menu.findItem(R.id.edit_password).setVisible(true)
       menu.findItem(R.id.reencrypt_password).setVisible(true)
+      binding.editFab.isVisible = true
       AESEncryption.decrypt(encrypted)?.let { decrypted ->
         val entry = passwordEntryFactory.create(decrypted)
         decrypted.wipe()
         if (!isPasskey && entry.password?.let { !it.isBlank() } ?: false) {
-          menu.findItem(R.id.share_password_as_plaintext).setVisible(true)
-          menu.findItem(R.id.copy_password).setVisible(true)
-          binding.fab.setVisibility(View.VISIBLE)
+          binding.shareFab.isVisible = true
+          binding.fab.isVisible = true
         }
         entry.clear()
       }
@@ -365,16 +396,30 @@ class DecryptActivity : BasePGPActivity() {
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
     when (item.itemId) {
       android.R.id.home -> onBackPressedDispatcher.onBackPressed()
-      R.id.edit_password -> {
-        if (isPasskey) editPasskey() else editPassword()
-      }
-      R.id.reencrypt_password ->
-        reencryptAction.launch(PGPKeyListActivity.newIntent(this, keySelection = true))
-      R.id.share_password_as_plaintext -> shareAsPlaintext()
-      R.id.copy_password -> copyPassword()
+      R.id.reencrypt_password -> changeKeys()
+      R.id.delete_password -> deleteEntry()
       else -> return super.onOptionsItemSelected(item)
     }
     return true
+  }
+
+  /** Opens the key picker on the keys this entry is already encrypted to. */
+  private fun changeKeys() {
+    lifecycleScope.launch {
+      // Named by primary key, which is how the picker lists them: a message names the encryption
+      // subkey it was addressed to, and that matches nothing in the list.
+      val current =
+        withContext(dispatcherProvider.io()) {
+          entryRecipients().mapNotNull { repository.getLongKeyIdFromKeyId(it) }.distinct()
+        }
+      reencryptAction.launch(
+        PGPKeyListActivity.newIntent(
+          this@DecryptActivity,
+          keySelection = true,
+          preselectedKeyIds = current.joinToString("\n").takeIf { it.isNotEmpty() },
+        )
+      )
+    }
   }
 
   private val reencryptAction =
@@ -387,11 +432,31 @@ class DecryptActivity : BasePGPActivity() {
           ?.filter(String::isNotBlank)
           ?.mapNotNull(PGPIdentifier::fromString)
           .orEmpty()
-      if (identifiers.isNotEmpty()) reencrypt(identifiers)
+      if (identifiers.isEmpty()) return@registerForActivityResult
+      // A key whose private half is not here — a bare public key, or a card stub with no card —
+      // encrypts perfectly well and opens nothing. Choosing only such keys hands the entry to
+      // someone else and takes it away from this store, so it is said out loud first.
+      if (identifiers.none { repository.hasKey(it) && repository.hasDecKey(it) }) {
+        WarningDialog.show(
+          context = this,
+          titleRes = R.string.change_keys_unopenable_title,
+          messageRes = R.string.change_keys_unopenable_message,
+          proceedLabelRes = R.string.change_keys_unopenable_confirm,
+        ) {
+          reencrypt(identifiers)
+        }
+        return@registerForActivityResult
+      }
+      reencrypt(identifiers)
     }
 
   /**
    * Writes this entry back, encrypted to [identifiers] instead of whatever it was saved with.
+   *
+   * This is where an entry's keys and its folder's .gpg-id part company, deliberately: pass allows
+   * one file to be readable by a different key from its neighbours, and the .gpg-id keeps deciding
+   * what *new* saves in that folder are encrypted to. Opening an entry therefore asks the entry
+   * (see [keysForEntry]) rather than the folder.
    *
    * Only this entry changes: the folder keeps its own key, and pass is content for one file to be
    * readable by a different key from its neighbours. The plaintext never leaves memory — it is the
@@ -402,7 +467,7 @@ class DecryptActivity : BasePGPActivity() {
     val decrypted =
       AESEncryption.decrypt(encrypted)
         ?: run {
-          snackbar(message = getString(R.string.reencrypt_password_failure))
+          snackbar(message = getString(R.string.change_keys_failure))
           return
         }
     lifecycleScope.launch(dispatcherProvider.main()) {
@@ -416,28 +481,16 @@ class DecryptActivity : BasePGPActivity() {
       // A key that nothing could be encrypted to would leave the entry unreadable, so it is
       // refused rather than written; keys that failed among others are named, as saving does.
       if (result.isErr || succeededUserIds.isNullOrEmpty()) {
-        snackbar(message = getString(R.string.reencrypt_password_failure))
+        snackbar(message = getString(R.string.change_keys_failure))
         return@launch
       }
       val failedUserIds =
         identifiers.mapNotNull { repository.getEmailFromKeyId(it) } - succeededUserIds.toSet()
       val entryFile = File(fullPath)
       val previousBytes = withContext(dispatcherProvider.io()) { entryFile.readBytes() }
-      val encryptedBytes = result.getOrThrow().toByteArray()
-      val written =
-        withContext(dispatcherProvider.io()) {
-          // Written beside the entry and moved onto it, so a failure part-way through leaves the
-          // entry as it was rather than half of each.
-          val staged = File(entryFile.parentFile, "${entryFile.name}.tmp")
-          runCatching {
-              staged.writeBytes(encryptedBytes)
-              staged.renameTo(entryFile)
-            }
-            .getOr(false)
-            .also { if (staged.exists()) staged.delete() }
-        }
+      val written = replaceEntry(entryFile, result.getOrThrow().toByteArray())
       if (!written) {
-        snackbar(message = getString(R.string.reencrypt_password_failure))
+        snackbar(message = getString(R.string.change_keys_failure))
         return@launch
       }
       commitChange(
@@ -450,14 +503,22 @@ class DecryptActivity : BasePGPActivity() {
           // Put back what was there, so a refused or failed commit does not leave the entry
           // encrypted to keys the repository knows nothing about.
           withContext(dispatcherProvider.io()) { entryFile.writeBytes(previousBytes) }
-          snackbar(message = getString(R.string.reencrypt_password_failure))
+          snackbar(message = getString(R.string.change_keys_failure))
         }
         .onOk {
+          // The entry on screen was decrypted with keys it may no longer have, so the screen goes
+          // — but only once the message about it has been read, rather than out from under it.
+          setResult(RESULT_OK)
           snackbar(
-            message =
-              if (failedUserIds.isEmpty()) getString(R.string.reencrypt_password_success)
-              else getString(R.string.reencrypt_password_partial, failedUserIds.joinToString())
-          )
+              message =
+                if (failedUserIds.isEmpty()) getString(R.string.change_keys_success)
+                else getString(R.string.change_keys_partial, failedUserIds.joinToString())
+            )
+            .addCallback(
+              object : BaseTransientBottomBar.BaseCallback<Snackbar>() {
+                override fun onDismissed(transientBottomBar: Snackbar?, event: Int) = finish()
+              }
+            )
         }
     }
   }
@@ -497,9 +558,61 @@ class DecryptActivity : BasePGPActivity() {
       intent.putExtra(PasswordCreationActivity.EXTRA_FILE_NAME, name)
       intent.putExtra(PasswordCreationActivity.EXTRA_ENTRY, encrypted)
       intent.putExtra(PasswordCreationActivity.EXTRA_EDITING, true)
-      startActivity(intent)
-      finish()
+      editAction.launch(intent)
     }
+  }
+
+  /**
+   * Returns to the entry after editing rather than leaving the list behind the editor, whether the
+   * edit was saved or abandoned. A saved edit brings back the copy it wrote, so the entry it shows
+   * is the new one without decrypting it again; a renamed entry is opened under its new name.
+   */
+  private val editAction =
+    registerForActivityResult(StartActivityForResult()) { result ->
+      val data = result.data ?: return@registerForActivityResult
+      if (result.resultCode != RESULT_OK) return@registerForActivityResult
+      val edited = data.getCharArrayExtra(PasswordCreationActivity.EXTRA_ENTRY)
+      val newPath = data.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_CREATED_FILE)
+      if (newPath != null && newPath != fullPath) {
+        startActivity(
+          Intent(this, DecryptActivity::class.java)
+            .putExtra(EXTRA_FILE_PATH, newPath)
+            .putExtra(EXTRA_REPO_PATH, repoPath)
+            .putExtra(PasswordCreationActivity.EXTRA_ENTRY, edited)
+        )
+        finish()
+        return@registerForActivityResult
+      }
+      val decrypted = edited?.let { AESEncryption.decrypt(it) }
+      if (edited != null && decrypted != null) {
+        encryptedEntryChars?.wipe()
+        showCachedEntry(edited, decrypted)
+      } else {
+        recreate()
+      }
+    }
+
+  /** Deletes this entry, after asking, and leaves — there is nothing left to show. */
+  private fun deleteEntry() {
+    MaterialAlertDialogBuilder(this)
+      .setTitle(R.string.delete_dialog_title)
+      .setMessage(resources.getQuantityString(R.plurals.delete_dialog_text, 1, 1))
+      .setPositiveButton(R.string.dialog_yes) { _, _ ->
+        lifecycleScope.launch {
+          withContext(dispatcherProvider.io()) { File(fullPath).delete() }
+          passwordHistory.edit { remove(fullPath.base64()) }
+          commitChange(
+            getString(
+              R.string.git_commit_remove_text,
+              PasswordRepository.getLongName(fullPath, repoPath, name),
+            )
+          )
+          setResult(RESULT_OK)
+          finish()
+        }
+      }
+      .setNegativeButton(R.string.dialog_no, null)
+      .show()
   }
 
   private fun editPasskey() {

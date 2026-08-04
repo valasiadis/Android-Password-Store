@@ -65,6 +65,33 @@
     app:layout_constraintTop_toBottomOf="@id/divider"
     tools:listitem="@layout/item_field" />
 
+  <!--
+    Sharing sits opposite the actions that work on the entry itself, on the leading edge, because
+    it sends the password out of the app and should not be next to the one that copies it.
+  -->
+  <com.google.android.material.floatingactionbutton.FloatingActionButton
+    android:id="@+id/share_fab"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_margin="@dimen/fab_compat_margin"
+    android:contentDescription="@string/share_as_plaintext"
+    android:src="@drawable/ic_share_24dp"
+    android:visibility="gone"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintStart_toStartOf="parent" />
+
+  <com.google.android.material.floatingactionbutton.FloatingActionButton
+    android:id="@+id/edit_fab"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="@dimen/fab_compat_margin"
+    android:layout_marginBottom="@dimen/spacing_large"
+    android:contentDescription="@string/edit_password"
+    android:src="@drawable/ic_edit_24dp"
+    android:visibility="gone"
+    app:layout_constraintBottom_toTopOf="@id/fab"
+    app:layout_constraintEnd_toEndOf="parent" />
+
   <com.google.android.material.floatingactionbutton.FloatingActionButton
       android:id="@+id/fab"
       android:visibility="gone"

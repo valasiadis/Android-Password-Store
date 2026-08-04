@@ -261,6 +261,11 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
           .findItem(R.id.menu_edit_password)
           .setVisible(selectedItems.all { it.type == PasswordItem.TYPE_CATEGORY })
         menu
+          .findItem(R.id.menu_set_folder_key)
+          .setVisible(
+            selectedItems.size == 1 && selectedItems[0].type == PasswordItem.TYPE_CATEGORY
+          )
+        menu
           .findItem(R.id.menu_pin_password)
           .setVisible(
             selectedItems.size == 1 && selectedItems[0].type == PasswordItem.TYPE_PASSWORD
@@ -285,6 +290,11 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
             requireStore().renameCategory(recyclerAdapter.getSelectedItems())
             mode.finish()
             false
+          }
+          R.id.menu_set_folder_key -> {
+            requireStore().showFolderEncryptionKey(recyclerAdapter.getSelectedItems()[0])
+            mode.finish()
+            true
           }
           R.id.menu_pin_password -> {
             val passwordItem = recyclerAdapter.getSelectedItems()[0]

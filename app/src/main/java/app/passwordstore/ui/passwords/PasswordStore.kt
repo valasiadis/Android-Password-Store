@@ -73,7 +73,6 @@ import java.nio.file.Paths
 import javax.inject.Inject
 import kotlin.io.path.nameWithoutExtension
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.LogPriority.INFO
@@ -98,21 +97,82 @@ class PasswordStore : BaseGitActivity() {
   private val binding by viewBinding(ActivityPwdstoreBinding::inflate)
   private val model: SearchableRepositoryViewModel by viewModels()
 
+  /**
+   * The folder whose key is being chosen, when it is one picked out of the list rather than the
+   * folder currently on screen. Kept in saved state because choosing a key happens in another
+   * activity, which can take this one down behind it.
+   */
+  private var pendingKeyFolder: File? = null
+
   private val gpgKeySelectAction =
     registerForActivityResult(StartActivityForResult()) { result ->
-      if (result.resultCode == AppCompatActivity.RESULT_OK) {
-        val data = result.data ?: return@registerForActivityResult
-        val selectedKeyId =
-          data.getStringExtra(PGPKeyListActivity.EXTRA_SELECTED_KEY)
-            ?: return@registerForActivityResult
-        val gpgIdentifierFile = File(currentDir.absolutePath, ".gpg-id")
-        gpgIdentifierFile.writeText(selectedKeyId + "\n")
-        runBlocking {
-          commitChange(getString(R.string.git_commit_gpg_id, getString(R.string.app_name)))
-        }
-        refreshPasswordList()
+      val selectedKeyId =
+        if (result.resultCode == AppCompatActivity.RESULT_OK) {
+          result.data?.getStringExtra(PGPKeyListActivity.EXTRA_SELECTED_KEY)
+        } else null
+      val folder = pendingKeyFolder ?: currentDir
+      pendingKeyFolder = null
+      if (selectedKeyId == null) return@registerForActivityResult
+      File(folder, ".gpg-id").writeText(selectedKeyId + "\n")
+      // Committing can ask for a signing passphrase, so it stays on the main thread — but it no
+      // longer blocks it, as runBlocking did, freezing the screen for the length of a commit.
+      lifecycleScope.launch {
+        commitChange(getString(R.string.git_commit_gpg_id, getString(R.string.app_name)))
+        refreshPasswordList(folder)
       }
     }
+
+  /**
+   * Opens the key picker for a folder, on the key it uses now.
+   *
+   * Passwords already saved in the folder are left alone by a change: it decides what future saves
+   * are encrypted to, not what the existing files are encrypted to, which is worth saying plainly
+   * first — but only where there is something to lose.
+   */
+  fun showFolderEncryptionKey(folder: PasswordItem) {
+    val directory = folder.file
+    val keyFile = File(directory, ".gpg-id").takeIf(File::isFile) ?: inheritedKeyFile(directory)
+    val keys = keyFile?.readLines()?.filter(String::isNotBlank).orEmpty()
+    val holdsEntries = directory.walkTopDown().any { it.isFile && it.extension == "gpg" }
+    if (!holdsEntries) {
+      launchKeySelection(directory, keys)
+      return
+    }
+    MaterialAlertDialogBuilder(this)
+      .setTitle(R.string.folder_encryption_key)
+      .setMessage(R.string.folder_key_change_message)
+      .setPositiveButton(R.string.folder_key_change_confirm) { _, _ ->
+        launchKeySelection(directory, keys)
+      }
+      .setNegativeButton(R.string.dialog_cancel, null)
+      .show()
+  }
+
+  /** The .gpg-id a folder inherits, which is the nearest one above it inside the repository. */
+  private fun inheritedKeyFile(directory: File): File? {
+    val root = PasswordRepository.getRepositoryDirectory()
+    var candidate = directory.parentFile
+    while (candidate != null && candidate.absolutePath.startsWith(root.absolutePath)) {
+      File(candidate, ".gpg-id").takeIf(File::isFile)?.let {
+        return it
+      }
+      if (candidate == root) break
+      candidate = candidate.parentFile
+    }
+    return null
+  }
+
+  private fun launchKeySelection(directory: File, currentKeys: List<String> = emptyList()) {
+    pendingKeyFolder = directory
+    gpgKeySelectAction.launch(
+      PGPKeyListActivity.newIntent(
+        this,
+        keySelection = true,
+        // Opens on what the folder uses now, so a change starts from the current state.
+        preselectedKeyIds = currentKeys.joinToString("\n").takeIf { it.isNotEmpty() },
+      )
+    )
+  }
 
   private val listRefreshAction =
     registerForActivityResult(StartActivityForResult()) { result ->
@@ -244,6 +304,7 @@ class PasswordStore : BaseGitActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    savedInstanceState?.getString(PENDING_KEY_FOLDER_STATE)?.let { pendingKeyFolder = File(it) }
 
     enableEdgeToEdgeView(binding.root)
     setContentView(binding.root)
@@ -775,9 +836,15 @@ class PasswordStore : BaseGitActivity() {
     finish()
   }
 
+  override fun onSaveInstanceState(outState: Bundle) {
+    super.onSaveInstanceState(outState)
+    pendingKeyFolder?.let { outState.putString(PENDING_KEY_FOLDER_STATE, it.path) }
+  }
+
   companion object {
 
     const val REQUEST_ARG_PATH = "PATH"
+    private const val PENDING_KEY_FOLDER_STATE = "PENDING_KEY_FOLDER"
 
     private fun isPrintable(c: Char): Boolean {
       val block = UnicodeBlock.of(c)

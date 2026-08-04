@@ -5,6 +5,7 @@
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="wrap_content"
   android:orientation="vertical"
@@ -25,10 +26,39 @@
     <requestFocus />
   </com.google.android.material.textfield.TextInputLayout>
 
-  <com.google.android.material.checkbox.MaterialCheckBox
-    android:id="@+id/set_gpg_key"
-    android:text="@string/new_folder_set_gpg_key"
-    android:visibility="gone"
+  <!--
+    Names both outcomes rather than offering a checkbox that only names one: a folder either
+    inherits the key of the folder above it or overrides it, and the row says which it will be.
+  -->
+  <LinearLayout
+    android:id="@+id/gpg_key_row"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content" />
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_medium"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical"
+    android:paddingVertical="@dimen/spacing_small"
+    android:visibility="gone"
+    tools:visibility="visible">
+
+    <androidx.appcompat.widget.AppCompatTextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="@string/folder_encryption_key"
+      android:textAppearance="?attr/textAppearanceBodyLarge"
+      android:textColor="?attr/colorOnSurface" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+      android:id="@+id/gpg_key_value"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:ellipsize="middle"
+      android:singleLine="true"
+      android:text="@string/folder_encryption_key_inherited"
+      android:textAppearance="?attr/textAppearanceBodyMedium"
+      android:textColor="?attr/colorOnSurfaceVariant" />
+
+  </LinearLayout>
 </LinearLayout>

@@ -7,10 +7,10 @@
     android:viewportWidth="10"
     android:viewportHeight="10"
     android:width="24dp"
-    android:height="24dp">
+    android:height="24dp"
+    android:tint="?attr/colorError">
     <path
         android:pathData="M1 1L9 9M1 9L9 1"
-        android:fillColor="#000000"
-        android:strokeColor="#FF0000"
+        android:strokeColor="@android:color/white"
         android:strokeWidth="2" />
 </vector>

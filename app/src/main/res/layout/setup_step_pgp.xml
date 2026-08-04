@@ -95,7 +95,7 @@
       android:layout_height="1dp"
       android:layout_weight="1" />
 
-    <com.google.android.material.switchmaterial.SwitchMaterial
+    <com.google.android.material.materialswitch.MaterialSwitch
       android:id="@+id/ascii_armor"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content" />

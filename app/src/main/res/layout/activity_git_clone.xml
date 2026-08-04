@@ -134,7 +134,7 @@
 
       </LinearLayout>
 
-      <com.google.android.material.switchmaterial.SwitchMaterial
+      <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/show_server_response"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

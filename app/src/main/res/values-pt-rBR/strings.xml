@@ -233,7 +233,6 @@
   <string name="pref_app_theme_value_follow_system">Padrão do sistema</string>
   <string name="connection_mode_ssh_key">Chave SSH</string>
   <string name="connection_mode_basic_authentication">Senha</string>
-  <string name="git_server_config_save_success">Configuração salva com sucesso</string>
   <string name="git_server_config_save_error">A URL do repositório fornecido não é válida</string>
   <string name="git_server_config_save_missing_username_https">Por favor, especifique o nome de usuário HTTPS no formulário https://username@example.com/…</string>
   <string name="git_server_config_save_missing_username_ssh">Por favor, especifique o nome de usuário SSH no formulário@exemplo.com:…</string>
@@ -261,7 +260,6 @@
   <string name="short_gpg_id">O arquivo .gpg-id foi encontrado, mas contém uma ID hexadecimal curta, que não é suportada.</string>
   <string name="invalid_filename_text">Nome do arquivo não deve conter \'/\', defina o diretório acima</string>
   <string name="directory_hint">Diretório</string>
-  <string name="new_folder_set_gpg_key">Definir chave PGP para diretório</string>
   <!-- GitException messages -->
   <string name="git_unknown_error">Erro desconhecido</string>
   <string name="git_pull_rebase_fail_error">O pull falhou, você está em uma Head avulsa. Usando \"configurações &gt; utils\" do git, salve suas alterações no remoto em uma nova branch e resolva o conflito no seu computador.</string>
@@ -285,8 +283,6 @@
   <string name="create_local_repo">Criar repositório local</string>
   <string name="gpg_key_select">Selecione a chave</string>
   <!-- SSH port validation -->
-  <string name="ssh_scheme_needed_title">URL potencialmente incorreta</string>
-  <string name="git_scheme_disallowed_title">Usa o protocolo git:// não é recomendado</string>
   <string name="git_scheme_disallowed_message">O protocolo git fornecido pelo git-daemon não produz qualquer encriptação de transporte e não é adequado para operações seguras.</string>
   <!-- Proxy configuration activity -->
   <string name="activity_proxy_label">Configurações de proxy</string>

@@ -236,7 +236,6 @@
   <string name="pref_app_theme_value_follow_system">系统默认</string>
   <string name="connection_mode_ssh_key">SSH密钥</string>
   <string name="connection_mode_basic_authentication">密码</string>
-  <string name="git_server_config_save_success">已成功保存配置</string>
   <string name="git_server_config_save_error">提供的存储库URL无效</string>
   <string name="git_server_config_save_missing_username_https">请以https://username@example.com/…的形式指定HTTPS用户名</string>
   <string name="git_server_config_save_missing_username_ssh">请以username@example.com:…的形式指定SSH用户名</string>
@@ -264,7 +263,6 @@ personal.com</string>
   <string name="short_gpg_id">找到 .gpg-id 但它包含一个不受支持的短十六进制ID。</string>
   <string name="invalid_filename_text">文件名不能包含\'/\'</string>
   <string name="directory_hint">目录</string>
-  <string name="new_folder_set_gpg_key">为目录设置PGP密钥</string>
   <!-- GitException messages -->
   <string name="git_unknown_error">未知错误</string>
   <string name="git_pull_merge_fail_error">合并失败，你处于冲突状态。TODO：添加恢复方法。</string>
@@ -288,8 +286,6 @@ personal.com</string>
   <string name="create_local_repo">创建本地仓库</string>
   <string name="gpg_key_select">选择密钥</string>
   <!-- SSH port validation -->
-  <string name="ssh_scheme_needed_title">URL可能不正确</string>
-  <string name="git_scheme_disallowed_title">不鼓励使用 git:// 协议</string>
   <string name="git_scheme_disallowed_message">Git-daemon 提供的 git 协议不执行传输加密，不适合安全操作。</string>
   <!-- Proxy configuration activity -->
   <string name="activity_proxy_label">代理设置</string>

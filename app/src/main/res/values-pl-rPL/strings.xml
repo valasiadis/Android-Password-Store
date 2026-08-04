@@ -230,7 +230,6 @@
   <string name="pref_app_theme_value_follow_system">Domyślny</string>
   <string name="connection_mode_ssh_key">Klucz SSH</string>
   <string name="connection_mode_basic_authentication">Hasło</string>
-  <string name="git_server_config_save_success">Konfiguracja zapisana pomyślnie</string>
   <string name="git_server_config_save_error">Podany adres URL repozytorium jest nieprawidłowy</string>
   <string name="git_server_config_save_missing_username_https">Proszę podać nazwę użytkownika HTTPS w następujący sposób: https://username@example.com/…</string>
   <string name="git_server_config_save_missing_username_ssh">Proszę podać nazwę użytkownika SSH w następujący sposób: username@example.com:…</string>
@@ -255,7 +254,6 @@
   <string name="short_gpg_id">Znaleziono .gpg-id, ale zawarty w nim skrócony identyfikator nie jest obsługiwany</string>
   <string name="invalid_filename_text">Nazwa pliku nie może zawierać \'/\', ustaw katalog powyżej</string>
   <string name="directory_hint">Katalog</string>
-  <string name="new_folder_set_gpg_key">Ustaw klucz PGP dla katalogu</string>
   <!-- GitException messages -->
   <string name="git_unknown_error">Nieznany błąd</string>
   <string name="git_pull_rebase_fail_error">Zaciąganie zmian nie powiodło się, nie jesteś na żadnej gałęzi (detached head). Używając \"Ustawienia &gt; narzędzia Git\", wyślij lokalne zmiany do zdalnego repozytorium na nowej gałęzi i rozwiąż konflikt na komputerze.</string>
@@ -278,8 +276,6 @@
   <string name="create_local_repo">Utwórz lokalne repozytorium</string>
   <string name="gpg_key_select">Wybierz klucz</string>
   <!-- SSH port validation -->
-  <string name="ssh_scheme_needed_title">Potencjalnie nieprawidłowy adres URL</string>
-  <string name="git_scheme_disallowed_title">Odradzamy stosowanie protokołu \"git://\"</string>
   <string name="git_scheme_disallowed_message">Protokół git dostarczony przez git-demon nie używa szyfrowania podczas transportu i nie nadaje się do bezpiecznych operacji.</string>
   <!-- Proxy configuration activity -->
   <string name="proxy_hostname">Nazwa hosta proxy</string>

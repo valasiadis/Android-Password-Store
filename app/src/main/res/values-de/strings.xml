@@ -303,7 +303,6 @@
   <string name="git_server_hostkey_dialog_message">%s\n\nÜberprüfen Sie die Korrektheit des Fingerabdrucks vor dem Verbinden.</string>
   <string name="git_server_hostkey_dialog_connect">Verbinden</string>
   <string name="git_server_hostkey_dialog_abort">Abbruch</string>
-  <string name="git_server_config_save_success">Konfiguration erfolgreich gespeichert</string>
   <string name="git_server_config_save_error">Die angegebene Repository-URL ist ungültig.</string>
   <string name="git_server_config_save_missing_username_https">Bitte geben Sie den HTTPS-Benutzernamen in der Form https://username@example.com/… an.</string>
   <string name="git_server_config_save_missing_username_ssh">Bitte geben Sie den SSH-Benutzernamen in der Form username@example.com:… an.</string>
@@ -348,7 +347,6 @@
   <string name="short_gpg_id">.gpg-id wurde gefunden, enthält jedoch eine kurze Hex-ID, die nicht unterstützt wird.</string>
   <string name="invalid_filename_text">Dateiname darf kein \'/\' enthalten; Verzeichnis oben setzen.</string>
   <string name="directory_hint">Ordner</string>
-  <string name="new_folder_set_gpg_key">PGP-Schlüssel für Ordner festlegen</string>
 
   <!-- Password decryption failure -->
   <string name="password_decryption_no_decryption_key">Entschlüsseln fehlgeschlagen. Kein geeigneter geheimer Schlüssel gefunden.</string>
@@ -382,8 +380,6 @@
   <string name="gpg_key_single_select">Schlüssel auswählen</string>
 
   <!-- SSH port validation -->
-  <string name="ssh_scheme_needed_title">Möglicherweise inkorrekte URL</string>
-  <string name="git_scheme_disallowed_title">Es wird davon abgeraten, das git://-Protokoll zu nutzen</string>
   <string name="git_scheme_disallowed_message">Das Git-Protokoll des Git-Daemons unterstützt keine verschlüsselten Verbindungen und ist für einen sicheren Betrieb nicht geeignet.</string>
 
   <!-- Proxy configuration activity -->
@@ -461,7 +457,6 @@
   <string name="pgp_new_passphrase_repeated">Neuen Kennwortsatz wiederholen</string>
   <string name="git_utils_reset_remote_branch_title">Name des Remote-Branchs</string>
   <string name="pgp_key_manager_no_keys_guidance">Fügen Sie einen Schlüssel über die Schaltfläche „+“ hinzu.</string>
-  <string name="no_keys_selected_dialog_title">Kein Schlüssel ausgewählt</string>
   <string name="no_keys_imported_dialog_title">Keine Schlüssel vorhanden</string>
   <string name="no_keys_imported_dialog_message">Es wurden noch keine PGP-Schlüssel der App hinzugefügt. Importieren Sie eine Schlüsseldatei oder erstellen Sie einen neuen Schlüssel im PGP-Schlüsselmanager.</string>
   <string name="no_keys_imported_dialog_open_key_manager">PGP-Schlüsselmanager öffnen</string>

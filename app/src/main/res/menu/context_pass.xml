@@ -27,6 +27,11 @@
     app:showAsAction="ifRoom" />
 
   <item
+    android:id="@+id/menu_set_folder_key"
+    android:title="@string/folder_set_encryption_key"
+    app:showAsAction="never" />
+
+  <item
     android:id="@+id/menu_pin_password"
     android:icon="@drawable/ic_push_pin_24dp"
     android:title="@string/place_shortcut_on_home_screen"

@@ -322,7 +322,6 @@
   <string name="git_server_hostkey_dialog_message">%s\n\nVerify the correctness of the fingerprint before connecting.</string>
   <string name="git_server_hostkey_dialog_connect">Connect</string>
   <string name="git_server_hostkey_dialog_abort">Abort</string>
-  <string name="git_server_config_save_success">Successfully saved configuration</string>
   <string name="git_server_config_save_error">The provided repository URL is not valid.</string>
   <string name="git_server_config_save_missing_username_https">Please specify the HTTPS username in the form https://username@example.com/…</string>
   <string name="git_server_config_save_missing_username_ssh">Please specify the SSH username in the form username@example.com:…</string>
@@ -368,7 +367,11 @@
   <string name="short_gpg_id">Found .gpg-id, but it contains a short hex ID, which is not supported.</string>
   <string name="invalid_filename_text">File name must not contain \'/\', set directory above.</string>
   <string name="directory_hint">Directory</string>
-  <string name="new_folder_set_gpg_key">Set PGP key for directory</string>
+  <string name="folder_encryption_key">Encryption key</string>
+  <string name="folder_encryption_key_inherited">Inherited from the folder above</string>
+  <string name="folder_set_encryption_key">Encryption key</string>
+  <string name="folder_key_change_message">Passwords already in this folder stay encrypted to the key they were saved with. You will still need that key — and its smartcard, if it is on one — to open them, until each is saved again under the new key.</string>
+  <string name="folder_key_change_confirm">Change key</string>
 
   <!-- Password decryption failure -->
   <string name="password_decryption_no_decryption_key">Decryption failed. No suitable decryption key found</string>
@@ -403,8 +406,6 @@
   <string name="gpg_key_single_select">Select key</string>
 
   <!-- SSH port validation -->
-  <string name="ssh_scheme_needed_title">Potentially incorrect URL</string>
-  <string name="git_scheme_disallowed_title">Using the git:// protocol is discouraged</string>
   <string name="git_scheme_disallowed_message">The git protocol provided by git-daemon performs no transport encryption and is unsuitable for secure operations.</string>
 
   <!-- Proxy configuration activity -->
@@ -413,6 +414,7 @@
   <string name="port">Port</string>
   <string name="pref_edit_proxy_settings">HTTP(S) proxy settings</string>
   <string name="invalid_proxy_url">Invalid URL</string>
+  <string name="invalid_proxy_port">Invalid port</string>
   <string name="oreo_autofill_password_fill_and_conditional_save_support">Fill and save passwords (saving requires that no accessibility services are enabled)</string>
   <string name="clear_saved_host_key">Clear saved host key</string>
   <string name="clear_saved_host_key_success">Successfully cleared saved host key!</string>
@@ -520,6 +522,7 @@
   <string name="pgp_key_manager_no_keys_guidance">Add a key using the “+” button below</string>
   <string name="pgp_key_hardware_indicator">Hardware-backed key</string>
   <string name="pgp_key_software_indicator">Software-backed key</string>
+  <string name="pgp_key_selected_indicator">Selected</string>
   <string name="pgp_key_info_title">Key information</string>
   <string name="pgp_key_info_user_id">User ID: %1$s</string>
   <string name="pgp_key_info_email">Email: %1$s</string>
@@ -529,7 +532,6 @@
   <string name="pgp_key_info_type_secret">Software-backed</string>
   <string name="pgp_key_info_type_public">Public key</string>
   <string name="pgp_key_info_type_hardware">Hardware-backed (smartcard)</string>
-  <string name="no_keys_selected_dialog_title">No key selected</string>
   <string name="no_keys_imported_dialog_title">No keys available</string>
   <string name="no_keys_imported_dialog_message">No PGP keys have been added to the app yet. Import a key file or create a new key in the PGP key manager.</string>
   <string name="no_keys_imported_dialog_open_key_manager">Open PGP key manager</string>

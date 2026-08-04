@@ -231,7 +231,6 @@
   <string name="pref_app_theme_value_follow_system">Системная</string>
   <string name="connection_mode_ssh_key">SSH ключ</string>
   <string name="connection_mode_basic_authentication">Пароль</string>
-  <string name="git_server_config_save_success">Конфигурация успешно сохранена</string>
   <string name="git_server_config_save_error">Указанный URL репозитория недействителен</string>
   <string name="git_server_config_save_missing_username_https">Пожалуйста, укажите имя пользователя (username) в формате https://usrname@example.com/…</string>
   <string name="git_server_config_save_missing_username_ssh">Пожалуйста, укажите имя пользователя (username) в формате usrname@example.com:…</string>
@@ -258,7 +257,6 @@
   <string name="invalid_gpg_id">Файл .gpg-id найден, но содержит неверный или неизвестный идентификатор ключа.</string>
   <string name="invalid_filename_text">Имя файла не должно содержать \'/\', укажите директорию выше</string>
   <string name="directory_hint">Директория</string>
-  <string name="new_folder_set_gpg_key">Установить PGP ключ для каталога</string>
   <!-- GitException messages -->
   <string name="git_unknown_error">Неизвестная ошибка</string>
   <string name="git_pull_rebase_fail_error">Не удалось получить изменения, вы находитесь в состоянии \"оторванной головы\". Используйте \"настройки &gt; утилиты git\", сохраните ваши изменения в новую удаленную ветку и разрешите конфликты на своем компьютере.</string>
@@ -282,8 +280,6 @@
   <string name="create_local_repo">Создать локальное хранилище</string>
   <string name="gpg_key_select">Выберите ключ</string>
   <!-- SSH port validation -->
-  <string name="ssh_scheme_needed_title">Потенциально неправильный URL</string>
-  <string name="git_scheme_disallowed_title">Использование протокола git нежелательно</string>
   <string name="git_scheme_disallowed_message">Протокол git, предоставляемый демоном, не обеспечивает транспортного шифрования и не подходит для безопасных операций.</string>
   <!-- Proxy configuration activity -->
   <string name="activity_proxy_label">Настройки прокси-сервера</string>

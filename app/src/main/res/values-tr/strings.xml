@@ -270,7 +270,6 @@
   <string name="pref_app_theme_value_follow_system">Sistem varsayılanı</string>
   <string name="connection_mode_ssh_key">SSH anahtarı</string>
   <string name="connection_mode_basic_authentication">Şifre</string>
-  <string name="git_server_config_save_success">Yapılandırma başarıyla kaydedildi</string>
   <string name="git_server_config_save_error">Sağlanan depo URL\'si geçerli değil</string>
   <string name="git_server_config_save_missing_username_https">Lütfen HTTPS kullanıcı adını https://kullaniciadi@example.com/… biçiminde belirtin</string>
   <string name="git_server_config_save_missing_username_ssh">Lütfen SSH kullanıcı adını kullaniciadi@example.com:… biçiminde belirtin</string>
@@ -301,7 +300,6 @@
   <string name="short_gpg_id">.gpg-id bulundu, ancak desteklenmeyen kısa bir onaltılık kimlik içeriyor.</string>
   <string name="invalid_filename_text">Dosya adı \'/\' içeremez, dizini yukarıda ayarlayın.</string>
   <string name="directory_hint">Dizin</string>
-  <string name="new_folder_set_gpg_key">Dizin için PGP anahtarı ayarla</string>
 
   <!-- Password decryption failure -->
   <string name="password_decryption_no_decryption_key">Şifre çözme başarısız: Kullanılabilir gizli anahtar yok</string>
@@ -334,8 +332,6 @@
   <string name="gpg_key_select">Anahtar seç</string>
 
   <!-- SSH port validation -->
-  <string name="ssh_scheme_needed_title">Potansiyel olarak yanlış URL</string>
-  <string name="git_scheme_disallowed_title">git:// protokolünün kullanılması önerilmez</string>
   <string name="git_scheme_disallowed_message">git-daemon tarafından sağlanan git protokolü, taşıma şifrelemesi yapmaz ve güvenli işlemler için uygun değildir.</string>
 
   <!-- Proxy configuration activity -->

@@ -227,7 +227,6 @@
   <string name="pref_app_theme_value_follow_system">Valeur par défaut du système</string>
   <string name="connection_mode_ssh_key">Clé SSH</string>
   <string name="connection_mode_basic_authentication">Mot de passe</string>
-  <string name="git_server_config_save_success">Configuration enregistrée avec succès</string>
   <string name="git_server_config_save_error">L\'URL du dépôt fournie n\'est pas valide</string>
   <string name="git_server_config_save_missing_username_https">Veuillez spécifier le nom d\'utilisateur HTTPS sous la forme https://nom@exemple.com/…</string>
   <string name="git_server_config_save_missing_username_ssh">Veuillez spécifier le nom d\'utilisateur SSH sous la forme nom@example.com:…</string>
@@ -252,7 +251,6 @@
   <string name="otp_import_failure_generic">Impossible d\'importer la configuration TOTP</string>
   <string name="invalid_filename_text">Le nom du fichier ne doit pas contenir \'/\', définir le répertoire parent</string>
   <string name="directory_hint">Dossier</string>
-  <string name="new_folder_set_gpg_key">Définir la clé PGP pour le dossier</string>
   <!-- GitException messages -->
   <string name="git_unknown_error">Erreur inconnue</string>
   <string name="git_pull_rebase_fail_error">Tirer a échoué, vous êtes dans un \'head\' détaché. En utilisant \"settings &gt; git utils\", enregistrez vos modifications sur le dépôt distant dans une nouvelle branche et résolvez le conflit sur votre ordinateur.</string>
@@ -275,7 +273,6 @@
   <string name="create_local_repo">Créer un dépôt local</string>
   <string name="gpg_key_select">Sélectionner la clé</string>
   <!-- SSH port validation -->
-  <string name="ssh_scheme_needed_title">URL potentiellement incorrecte</string>
   <!-- Proxy configuration activity -->
   <string name="proxy_hostname">Nom d\'hôte du proxy</string>
   <string name="port">Port</string>

@@ -222,7 +222,6 @@
   <string name="pref_app_theme_value_follow_system">Predefinito del sistema</string>
   <string name="connection_mode_ssh_key">Chiave SSH</string>
   <string name="connection_mode_basic_authentication">Password</string>
-  <string name="git_server_config_save_success">Configurazione correttamente salvata</string>
   <string name="git_server_config_save_error">L\'URL fornito della repository non è valido</string>
   <string name="git_server_config_save_missing_username_https">Sei pregato di specificare il nome utente HTTPS nella forma https://username@example.com/…</string>
   <string name="git_server_config_save_missing_username_ssh">Sei pregato di specificare il nome utente SSH nella forma username@example.com:…</string>
@@ -247,7 +246,6 @@
   <string name="otp_import_failure_generic">Impossibile importare la configurazione di TOTP</string>
   <string name="invalid_filename_text">Il nome del file non deve contenere \'/0, imposta la directory sopra</string>
   <string name="directory_hint">Directory</string>
-  <string name="new_folder_set_gpg_key">Imposta la chiave PGP per la directory</string>
   <!-- GitException messages -->
   <string name="git_unknown_error">Errore sconosciuto</string>
   <string name="git_pull_rebase_fail_error">Pull non è riuscito, sei in un capo distaccato. Usando \"impostazioni e utilità di git\", salvi le tue modifiche in remoto in un nuovo ramo e risolvi il conflitto sul tuo computer.</string>
@@ -269,7 +267,6 @@
   <string name="create_local_repo">Crea Repo Locale</string>
   <string name="gpg_key_select">Seleziona chiave</string>
   <!-- SSH port validation -->
-  <string name="ssh_scheme_needed_title">URL potenzialmente errato</string>
   <!-- Proxy configuration activity -->
   <string name="proxy_hostname">Nome host del proxy</string>
   <string name="port">Porta</string>

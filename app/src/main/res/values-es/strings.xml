@@ -273,7 +273,6 @@
   <string name="pref_app_theme_value_follow_system">Predeterminado del sistema</string>
   <string name="connection_mode_ssh_key">Clave SSH</string>
   <string name="connection_mode_basic_authentication">Contraseña</string>
-  <string name="git_server_config_save_success">Configuración guardada correctamente</string>
   <string name="git_server_config_save_error">La URL del repositorio proporcionada no es válida</string>
   <string name="git_server_config_save_missing_username_https">Especifique el nombre de usuario HTTPS en el formato https://username@example.com/…</string>
   <string name="git_server_config_save_missing_username_ssh">Especifique el nombre de usuario SSH en el formato username@example.com:…</string>
@@ -306,7 +305,6 @@
   <string name="short_gpg_id">Se encontró .gpg-id, pero contiene un ID hexadecimal corto, que no es compatible.</string>
   <string name="invalid_filename_text">El nombre del archivo no debe contener \'/\', establezca el directorio anterior.</string>
   <string name="directory_hint">Directorio</string>
-  <string name="new_folder_set_gpg_key">Establecer la clave PGP para el directorio</string>
 
   <!-- Password decryption failure -->
   <string name="password_decryption_no_decryption_key">Error de descifrado: no se encontró ninguna clave coincidente</string>
@@ -339,8 +337,6 @@
   <string name="gpg_key_select">Seleccionar clave(s)</string>
 
   <!-- SSH port validation -->
-  <string name="ssh_scheme_needed_title">URL potencialmente incorrecta</string>
-  <string name="git_scheme_disallowed_title">Se desaconseja el uso del protocolo git://</string>
   <string name="git_scheme_disallowed_message">El protocolo Git proporcionado por git-daemon no realiza cifrado de transporte y no es adecuado para operaciones seguras.</string>
 
   <!-- Proxy configuration activity -->

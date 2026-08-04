@@ -232,7 +232,6 @@
     <string name="pref_app_theme_value_follow_system">Predeterminat del sistema</string>
     <string name="connection_mode_ssh_key">Clau SSH</string>
     <string name="connection_mode_basic_authentication">Contrasenya</string>
-    <string name="git_server_config_save_success">La configuració s\'ha desat correctament</string>
     <string name="git_server_config_save_error">La URL del repositori no és vàlida</string>
     <string name="git_server_config_save_missing_username_https">Especifica el nom d\'usuari HTTPS en la forma https://username@example.com/…</string>
     <string name="git_server_config_save_missing_username_ssh">Especifica el nom d\'usuari SSH en la forma username@example.com:…</string>
@@ -263,7 +262,6 @@
     <string name="short_gpg_id">S\'ha trobat el fitxer .gpg-id, però conté un ID hexadecimal curt, que no està suportat.</string>
     <string name="invalid_filename_text">El nom del fitxer no ha de contenir \'/\', s\'usarà el directori anterior.</string>
     <string name="directory_hint">Directori</string>
-    <string name="new_folder_set_gpg_key">Defineix la clau PGP per al directori</string>
     <string name="password_decryption_no_decryption_key">Ha fallat el desxifrat: No s\'ha trobat la clau corresponent</string>
     <string name="password_decryption_unknown_error">Ha fallat el desxifrat per un error desconegut</string>
     <string name="git_unknown_error">Error desconegut</string>
@@ -285,8 +283,6 @@
     <string name="clone_remote_repo">Clona un repositori remot</string>
     <string name="create_local_repo">Crea un repositori local</string>
     <string name="gpg_key_select">Selecciona les claus</string>
-    <string name="ssh_scheme_needed_title">URL potencialment incorrecta</string>
-    <string name="git_scheme_disallowed_title">L\'ús del protocol git:// està desaconsellat</string>
     <string name="git_scheme_disallowed_message">El protocol Git proveït per git-daemon usa un transport en clar i no és adequat per operacions segures.</string>
     <string name="activity_proxy_label">Configuració del servidor intermediari</string>
     <string name="proxy_hostname">Nom del servidor intermediari</string>

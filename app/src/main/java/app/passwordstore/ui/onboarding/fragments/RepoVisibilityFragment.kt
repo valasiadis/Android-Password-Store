@@ -16,19 +16,18 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.FragmentRepoVisibilityBinding
+import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.git.config.GitServerConfigActivity
-import app.passwordstore.util.extensions.finish
 import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.extensions.commitChange
+import app.passwordstore.util.extensions.finish
 import app.passwordstore.util.extensions.sharedPrefs
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.unsafeLazy
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.extensions.windowInsetsLambda
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.snackbar.Snackbar
 import java.io.File
 import kotlinx.coroutines.launch
 import logcat.LogPriority.ERROR
@@ -73,11 +72,7 @@ class RepoVisibilityFragment : Fragment(R.layout.fragment_repo_visibility) {
           finish()
         }
       } else {
-        requireActivity()
-          .snackbar(
-            message = getString(R.string.gpg_key_select_mandatory),
-            length = Snackbar.LENGTH_LONG,
-          )
+        Notice.show(requireActivity(), R.string.gpg_key_select_mandatory)
       }
     }
 

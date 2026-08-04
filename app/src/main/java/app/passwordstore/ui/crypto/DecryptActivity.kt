@@ -26,6 +26,8 @@ import app.passwordstore.databinding.DecryptLayoutBinding
 import app.passwordstore.injection.prefs.CredentialUsernames
 import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.adapters.FieldItemAdapter
+import app.passwordstore.ui.dialogs.ErrorDialog
+import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.crypto.AESEncryption
@@ -37,7 +39,6 @@ import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.commitSavedChange
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.toByteArray
 import app.passwordstore.util.extensions.toCharArray
 import app.passwordstore.util.extensions.viewBinding
@@ -121,7 +122,7 @@ class DecryptActivity : BasePGPActivity() {
     intent.removeExtra(PasswordCreationActivity.EXTRA_ENTRY)
     intent.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)?.let { message ->
       intent.removeExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
-      binding.root.post { snackbar(message = message) }
+      binding.root.post { Notice.show(this@DecryptActivity, message, success = true) }
     }
     // An entry arrived here straight from being written, so what it changed still wants committing.
     lifecycleScope.launch { commitSavedChange(intent) }
@@ -261,9 +262,9 @@ class DecryptActivity : BasePGPActivity() {
       } else if (
         results.filter { it.second.getError() is NoDecryptionKeyAvailableException }.any()
       ) {
-        snackbar(message = resources.getString(R.string.password_decryption_no_decryption_key))
+        ErrorDialog.show(this@DecryptActivity, R.string.password_decryption_no_decryption_key)
       } else {
-        snackbar(message = resources.getString(R.string.password_decryption_unknown_error))
+        ErrorDialog.show(this@DecryptActivity, R.string.password_decryption_unknown_error)
       }
     }
     if (!settings.getBoolean(PreferenceKeys.CACHE_PASSPHRASE, false)) {
@@ -472,7 +473,7 @@ class DecryptActivity : BasePGPActivity() {
     val decrypted =
       AESEncryption.decrypt(encrypted)
         ?: run {
-          snackbar(message = getString(R.string.change_keys_failure))
+          ErrorDialog.show(this@DecryptActivity, R.string.change_keys_failure)
           return
         }
     lifecycleScope.launch(dispatcherProvider.main()) {
@@ -486,7 +487,7 @@ class DecryptActivity : BasePGPActivity() {
       // A key that nothing could be encrypted to would leave the entry unreadable, so it is
       // refused rather than written; keys that failed among others are named, as saving does.
       if (result.isErr || succeededUserIds.isNullOrEmpty()) {
-        snackbar(message = getString(R.string.change_keys_failure))
+        ErrorDialog.show(this@DecryptActivity, R.string.change_keys_failure)
         return@launch
       }
       val failedUserIds =
@@ -495,7 +496,7 @@ class DecryptActivity : BasePGPActivity() {
       val previousBytes = withContext(dispatcherProvider.io()) { entryFile.readBytes() }
       val written = replaceEntry(entryFile, result.getOrThrow().toByteArray())
       if (!written) {
-        snackbar(message = getString(R.string.change_keys_failure))
+        ErrorDialog.show(this@DecryptActivity, R.string.change_keys_failure)
         return@launch
       }
       commitChange(
@@ -508,17 +509,20 @@ class DecryptActivity : BasePGPActivity() {
           // Put back what was there, so a refused or failed commit does not leave the entry
           // encrypted to keys the repository knows nothing about.
           withContext(dispatcherProvider.io()) { entryFile.writeBytes(previousBytes) }
-          snackbar(message = getString(R.string.change_keys_failure))
+          ErrorDialog.show(this@DecryptActivity, R.string.change_keys_failure)
         }
         .onOk {
           // The entry stays open: what it says did not change, only what encrypts it, and the
           // copy on screen is still the one that was just written.
           setResult(RESULT_OK)
-          snackbar(
-            message =
-              if (failedUserIds.isEmpty()) getString(R.string.change_keys_success)
-              else getString(R.string.change_keys_partial, failedUserIds.joinToString())
-          )
+          if (failedUserIds.isEmpty()) {
+            Notice.show(this@DecryptActivity, R.string.change_keys_success, success = true)
+          } else {
+            Notice.show(
+              this@DecryptActivity,
+              getString(R.string.change_keys_partial, failedUserIds.joinToString()),
+            )
+          }
         }
     }
   }
@@ -596,7 +600,7 @@ class DecryptActivity : BasePGPActivity() {
         recreate()
       }
       data.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)?.let { message ->
-        snackbar(message = message)
+        Notice.show(this@DecryptActivity, message, success = true)
       }
       lifecycleScope.launch { commitSavedChange(data) }
     }

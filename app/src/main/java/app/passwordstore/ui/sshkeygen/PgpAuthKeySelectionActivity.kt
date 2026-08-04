@@ -11,8 +11,8 @@ import androidx.appcompat.app.AppCompatActivity
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.crypto.PGPKeyManager
+import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.pgp.PGPKeyListActivity
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.git.sshj.SshKey
 import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.get
@@ -93,7 +93,7 @@ class PgpAuthKeySelectionActivity : AppCompatActivity() {
     }
       .onErr { e ->
         logcat(ERROR) { e.asLog() }
-        e.message?.let { message -> snackbar(message = message) }
+        e.message?.let { message -> ErrorDialog.show(this@PgpAuthKeySelectionActivity, message) }
       }
   }
 }

@@ -40,6 +40,8 @@ import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.PasskeyCreationActivityBinding
 import app.passwordstore.injection.prefs.CredentialUsernames
 import app.passwordstore.injection.prefs.PasswordHistory
+import app.passwordstore.ui.dialogs.ErrorDialog
+import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.OtpImportDialogFragment
 import app.passwordstore.ui.folderselect.SelectFolderActivity
 import app.passwordstore.ui.passwords.PasswordStore
@@ -62,7 +64,6 @@ import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.isInsideRepository
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.toByteArray
 import app.passwordstore.util.extensions.unsafeLazy
 import app.passwordstore.util.extensions.viewBinding
@@ -148,16 +149,16 @@ class PasskeyCreationActivity : BasePGPActivity() {
             binding.extraContent.append("\n$contents")
           else binding.extraContent.append(contents)
         }
-        snackbar(message = getString(R.string.otp_import_success))
+        Notice.show(this@PasskeyCreationActivity, R.string.otp_import_success, success = true)
       } else {
-        snackbar(message = getString(R.string.otp_import_failure_generic))
+        ErrorDialog.show(this@PasskeyCreationActivity, R.string.otp_import_failure_generic)
       }
     }
 
   private val imageImportAction =
     registerForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
       if (imageUri == null) {
-        snackbar(message = getString(R.string.otp_import_failure_no_selection))
+        ErrorDialog.show(this@PasskeyCreationActivity, R.string.otp_import_failure_no_selection)
         return@registerForActivityResult
       }
       val bitmap =
@@ -182,10 +183,12 @@ class PasskeyCreationActivity : BasePGPActivity() {
             binding.extraContent.append("\n$text")
           else binding.extraContent.append(text)
         }
-        snackbar(message = getString(R.string.otp_import_success))
+        Notice.show(this@PasskeyCreationActivity, R.string.otp_import_success, success = true)
         binding.otpImportButton.isVisible = false
       }
-        .onErr { snackbar(message = getString(R.string.otp_import_failure_generic)) }
+        .onErr {
+          ErrorDialog.show(this@PasskeyCreationActivity, R.string.otp_import_failure_generic)
+        }
     }
 
   override fun onDestroy() {
@@ -262,7 +265,9 @@ class PasskeyCreationActivity : BasePGPActivity() {
                   runCatching { imageImportAction.launch("image/*") }
                     .onErr { e ->
                       logcat(ERROR) { e.asLog() }
-                      e.message?.let { message -> snackbar(message = message) }
+                      e.message?.let { message ->
+                        ErrorDialog.show(this@PasskeyCreationActivity, message)
+                      }
                     }
                 }
                 2 -> OtpImportDialogFragment().show(supportFragmentManager, "OtpImport")
@@ -582,7 +587,10 @@ class PasskeyCreationActivity : BasePGPActivity() {
             val destinationFolder = Paths.get(repoPath, editRelativePath.trim('/'))
             destinationFolder.createDirectories() // ensure destination dir exists
             if (!destinationFolder.exists()) { // should not happen
-              snackbar(message = "Failed to create directory ${editRelativePath.trimEnd('/')}")
+              ErrorDialog.show(
+                this@PasskeyCreationActivity,
+                "Failed to create directory ${editRelativePath.trimEnd('/')}",
+              )
               return@runCatching
             }
 
@@ -597,12 +605,18 @@ class PasskeyCreationActivity : BasePGPActivity() {
               "${fullPath.trimEnd('/')}/$suggestedName.gpg" != passkeyFile.absolutePathString() &&
               passkeyFile.exists()
           ) {
-            snackbar(message = getString(R.string.password_creation_duplicate_error))
+            ErrorDialog.show(
+              this@PasskeyCreationActivity,
+              R.string.password_creation_duplicate_error,
+            )
             return@runCatching
           }
 
           if (!passkeyFile.toFile().isInsideRepository()) {
-            snackbar(message = getString(R.string.message_error_destination_outside_repo))
+            ErrorDialog.show(
+              this@PasskeyCreationActivity,
+              R.string.message_error_destination_outside_repo,
+            )
             return@runCatching
           }
 

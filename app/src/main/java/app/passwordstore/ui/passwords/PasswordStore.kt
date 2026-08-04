@@ -37,7 +37,9 @@ import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.crypto.BasePGPActivity
 import app.passwordstore.ui.crypto.DecryptActivity
 import app.passwordstore.ui.crypto.PasswordCreationActivity
+import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.FolderCreationDialogFragment
+import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.folderselect.SelectFolderActivity
 import app.passwordstore.ui.git.base.BaseGitActivity
@@ -56,7 +58,6 @@ import app.passwordstore.util.extensions.isInsideRepository
 import app.passwordstore.util.extensions.launchActivity
 import app.passwordstore.util.extensions.listFilesRecursively
 import app.passwordstore.util.extensions.sharedPrefs
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.git.ErrorMessages
 import app.passwordstore.util.settings.AuthMode
@@ -69,7 +70,6 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
@@ -635,7 +635,11 @@ class PasswordStore : BaseGitActivity() {
             }
             AutofillMatcher.updateMatches(applicationContext, delete = filesToDelete)
             shortcutHandler.pruneDynamicShortcuts()
-            snackbar(message = resources.getQuantityString(R.plurals.password_delete_success, size))
+            Notice.show(
+              this@PasswordStore,
+              resources.getQuantityString(R.plurals.password_delete_success, size),
+              success = true,
+            )
           }
           .onErr { e ->
             // The commit (or its signature) did not go through, e.g. the user cancelled the
@@ -657,13 +661,13 @@ class PasswordStore : BaseGitActivity() {
                 }
               }
             refreshPasswordList()
-            // Don't nag with a bar when the user cancelled, or when the failure was already shown
+            // Don't say it twice when the user cancelled, or when the failure was already shown
             // in a dialog (e.g. a blocked smartcard PIN).
             if (!isCancellation(e) && !OpenPgpCardPrompt.isHandled(e)) {
               val message =
                 if (isGitLockError(e) || !restored) getString(R.string.git_index_locked_error)
                 else ErrorMessages[e]
-              snackbar(message = message, length = Snackbar.LENGTH_LONG)
+              ErrorDialog.show(this@PasswordStore, message)
             }
           }
         updateFabSync()

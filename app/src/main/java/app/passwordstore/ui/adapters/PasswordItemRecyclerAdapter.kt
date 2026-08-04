@@ -4,14 +4,11 @@
  */
 package app.passwordstore.ui.adapters
 
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
-import android.text.style.RelativeSizeSpan
 import android.view.MotionEvent
 import android.view.View
-import androidx.appcompat.R as appcompatR
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.AppCompatTextView
+import androidx.core.view.isVisible
 import androidx.recyclerview.selection.ItemDetailsLookup
 import androidx.recyclerview.selection.Selection
 import androidx.recyclerview.widget.RecyclerView
@@ -20,7 +17,6 @@ import app.passwordstore.data.password.PasswordItem
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.viewmodel.SearchableRepositoryAdapter
 import app.passwordstore.util.viewmodel.stableId
-import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withContext
 
@@ -55,31 +51,17 @@ open class PasswordItemRecyclerAdapter(
   class PasswordItemViewHolder(view: View) : RecyclerView.ViewHolder(view) {
 
     private val name: AppCompatTextView = itemView.findViewById(R.id.label)
+    private val parentPath: AppCompatTextView = itemView.findViewById(R.id.parent_path)
     private val childCount: AppCompatTextView = itemView.findViewById(R.id.child_count)
     private val folderIndicator: AppCompatImageView = itemView.findViewById(R.id.folder_indicator)
     private val typeIcon: AppCompatImageView = itemView.findViewById(R.id.type_icon)
     var itemDetails: ItemDetailsLookup.ItemDetails<String>? = null
 
     suspend fun bind(item: PasswordItem, dispatcherProvider: DispatcherProvider) {
-      val parentPath = item.fullPathToParent.replace("(^/)|(/$)".toRegex(), "")
-      val source =
-        if (parentPath.isNotEmpty()) {
-          "$parentPath\n$item"
-        } else {
-          "$item"
-        }
-      val spannable = SpannableString(source)
-      // The parent path is a subdued prefix; the entry name itself carries the
-      // emphasis, so it gets the primary colour at full size.
-      spannable.setSpan(RelativeSizeSpan(0.7f), 0, parentPath.length, 0)
-      val nameStart = if (parentPath.isEmpty()) 0 else parentPath.length + 1
-      spannable.setSpan(
-        ForegroundColorSpan(MaterialColors.getColor(name, appcompatR.attr.colorPrimary)),
-        nameStart,
-        source.length,
-        0,
-      )
-      name.text = spannable
+      val parent = item.fullPathToParent.replace("(^/)|(/$)".toRegex(), "")
+      parentPath.text = parent
+      parentPath.isVisible = parent.isNotEmpty()
+      name.text = "$item"
       // State-list drawables: each shows the item's type normally and a check while the row is
       // selected, so the icon doubles as the selection indicator during multi-select.
       typeIcon.setImageResource(

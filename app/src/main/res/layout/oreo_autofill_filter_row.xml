@@ -7,13 +7,10 @@
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
-  android:layout_height="wrap_content"
+  android:layout_height="@dimen/list_item_height"
   android:layout_marginHorizontal="@dimen/spacing_small"
   android:layout_marginVertical="@dimen/spacing_xsmall"
-  android:background="@drawable/password_row_background"
-  android:minHeight="@dimen/list_item_min_height"
-  android:paddingTop="@dimen/spacing_medium"
-  android:paddingBottom="@dimen/spacing_medium">
+  android:background="@drawable/password_row_background">
 
   <ImageView
     android:id="@+id/credentialIcon"
@@ -40,6 +37,7 @@
     app:layout_constraintEnd_toStartOf="@id/continueIcon"
     app:layout_constraintStart_toEndOf="@id/credentialIcon"
     app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintVertical_chainStyle="packed"
     tools:text="/example.com/" />
 
   <TextView

@@ -29,8 +29,11 @@
     List item metrics. Rows carry their own filled, rounded container and are
     separated by margins on the item view itself, so the gaps between rows are
     real layout space rather than transparent padding inside the background.
+    The height is fixed rather than a minimum: a row naming the folder it came
+    from would otherwise stand taller than one that does not, and a list of
+    entries that are all the same kind of thing should not ripple.
   -->
-  <dimen name="list_item_min_height">64dp</dimen>
+  <dimen name="list_item_height">56dp</dimen>
   <!--
     Clearance below scrolling lists so the last row can scroll clear of the FAB
     instead of sitting underneath it. Paired with clipToPadding="false".

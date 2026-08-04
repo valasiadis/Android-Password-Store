@@ -230,6 +230,9 @@ object AESEncryption {
   ): ByteArray? {
     if (encryptedBase64Data == null || !isHardwareBacked(keyType)) return null
     val ivAndEncryptedData = encryptedBase64Data.decodeFromBase64ToByteArray()
+    // Anything shorter than the initialisation vector is not something this ever wrote — an
+    // emptied or truncated array, say — and there is nothing to decrypt in it.
+    if (ivAndEncryptedData.size <= IV_SIZE) return null
     val encryptedBytes = ivAndEncryptedData.copyOfRange(IV_SIZE, ivAndEncryptedData.size)
     val c = cipher ?: getCipher(keyType, encryptedBase64Data)
     if (c == null) return null

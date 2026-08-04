@@ -49,11 +49,6 @@ val Context.autofillManager: AutofillManager?
   get() = getSystemService()
 
 /**
- * Hides the soft keyboard and clears the focused view, so a focused text field cannot resurface the
- * keyboard over a dialog, snackbar, or the status bar once overlaying dialogs close. Must be called
- * on the main thread.
- */
-/**
  * Shows [text] on one line, draggable sideways where it does not fit.
  *
  * The value fields that name chosen keys can hold several of them, and long names besides. Wrapping
@@ -94,6 +89,11 @@ fun TextView.setInlineText(text: CharSequence) {
   }
 }
 
+/**
+ * Hides the soft keyboard and clears the focused view, so a focused text field cannot resurface the
+ * keyboard over a dialog or the status bar once overlaying dialogs close. Must be called on the
+ * main thread.
+ */
 fun FragmentActivity.hideKeyboard() {
   val imm = getSystemService<InputMethodManager>() ?: return
   val focus = currentFocus

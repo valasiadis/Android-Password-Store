@@ -158,7 +158,6 @@ public class PGPainlessCryptoHandler @Inject constructor() :
       }
     }
 
-  /** Runs a naive check on the extension for the given [fileName] to check if it is a PGP file. */
   /**
    * The keys [ciphertextStream] is encrypted to, as the message itself records them.
    *
@@ -171,6 +170,7 @@ public class PGPainlessCryptoHandler @Inject constructor() :
       KeyId(id)
     }
 
+  /** Runs a naive check on the extension for the given [fileName] to check if it is a PGP file. */
   public override fun canHandle(fileName: String): Boolean {
     return fileName.substringAfterLast('.', "") == "gpg"
   }

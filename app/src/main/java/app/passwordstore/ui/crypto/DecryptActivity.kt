@@ -43,7 +43,11 @@ import app.passwordstore.util.extensions.wipe
 import app.passwordstore.util.settings.PreferenceKeys
 import app.passwordstore.util.shortcuts.ShortcutHandler
 import com.github.michaelbull.result.getError
+import com.github.michaelbull.result.getOr
 import com.github.michaelbull.result.getOrThrow
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
+import com.github.michaelbull.result.runCatching
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.ByteArrayOutputStream
@@ -100,9 +104,15 @@ class DecryptActivity : BasePGPActivity() {
     // nothing: no PGP key, no passphrase, no smartcard touch. The copy travels AES-encrypted
     // under a Keystore key that lives only as long as the process, so no plaintext is ever in an
     // intent — the same way an entry reaches the editing screen.
-    val cachedEntry = intent.getCharArrayExtra(PasswordCreationActivity.EXTRA_ENTRY)
+    // This screen is exported, so the copy is treated as a claim rather than a fact: it is only
+    // shown if it decrypts, which nothing outside this process can arrange, and anything else
+    // falls through to opening the file the ordinary way.
+    val cachedEntry =
+      intent.getCharArrayExtra(PasswordCreationActivity.EXTRA_ENTRY)?.let { entry ->
+        AESEncryption.decrypt(entry)?.let { decrypted -> entry to decrypted }
+      }
     if (cachedEntry != null) {
-      showCachedEntry(cachedEntry)
+      showCachedEntry(cachedEntry.first, cachedEntry.second)
       return
     }
     requireKeysExist {
@@ -343,35 +353,73 @@ class DecryptActivity : BasePGPActivity() {
    */
   private fun reencrypt(identifiers: List<PGPIdentifier>) {
     val encrypted = encryptedEntryChars ?: return
-    val decrypted = AESEncryption.decrypt(encrypted) ?: return
+    val decrypted =
+      AESEncryption.decrypt(encrypted)
+        ?: run {
+          snackbar(message = getString(R.string.reencrypt_password_failure))
+          return
+        }
     lifecycleScope.launch(dispatcherProvider.main()) {
       val plaintext = decrypted.toByteArray()
       decrypted.wipe()
-      val encryptedMessage = ByteArrayOutputStream()
-      val result = repository.encrypt(identifiers, plaintext.inputStream(), encryptedMessage).second
+      val (succeededUserIds, result) =
+        withContext(dispatcherProvider.io()) {
+          repository.encrypt(identifiers, plaintext.inputStream(), ByteArrayOutputStream())
+        }
       plaintext.wipe()
-      if (result.isErr) {
+      // A key that nothing could be encrypted to would leave the entry unreadable, so it is
+      // refused rather than written; keys that failed among others are named, as saving does.
+      if (result.isErr || succeededUserIds.isNullOrEmpty()) {
         snackbar(message = getString(R.string.reencrypt_password_failure))
         return@launch
       }
-      withContext(dispatcherProvider.io()) {
-        File(fullPath).writeBytes(encryptedMessage.toByteArray())
+      val failedUserIds =
+        identifiers.mapNotNull { repository.getEmailFromKeyId(it) } - succeededUserIds.toSet()
+      val entryFile = File(fullPath)
+      val previousBytes = withContext(dispatcherProvider.io()) { entryFile.readBytes() }
+      val encryptedBytes = result.getOrThrow().toByteArray()
+      val written =
+        withContext(dispatcherProvider.io()) {
+          // Written beside the entry and moved onto it, so a failure part-way through leaves the
+          // entry as it was rather than half of each.
+          val staged = File(entryFile.parentFile, "${entryFile.name}.tmp")
+          runCatching {
+              staged.writeBytes(encryptedBytes)
+              staged.renameTo(entryFile)
+            }
+            .getOr(false)
+            .also { if (staged.exists()) staged.delete() }
+        }
+      if (!written) {
+        snackbar(message = getString(R.string.reencrypt_password_failure))
+        return@launch
       }
       commitChange(
-        getString(
-          R.string.git_commit_edit_text,
-          PasswordRepository.getLongName(fullPath, repoPath, name),
+          getString(
+            R.string.git_commit_edit_text,
+            PasswordRepository.getLongName(fullPath, repoPath, name),
+          )
         )
-      )
-      snackbar(message = getString(R.string.reencrypt_password_success))
+        .onErr {
+          // Put back what was there, so a refused or failed commit does not leave the entry
+          // encrypted to keys the repository knows nothing about.
+          withContext(dispatcherProvider.io()) { entryFile.writeBytes(previousBytes) }
+          snackbar(message = getString(R.string.reencrypt_password_failure))
+        }
+        .onOk {
+          snackbar(
+            message =
+              if (failedUserIds.isEmpty()) getString(R.string.reencrypt_password_success)
+              else getString(R.string.reencrypt_password_partial, failedUserIds.joinToString())
+          )
+        }
     }
   }
 
   /** Shows an entry from the copy handed over by whatever wrote it, without decrypting again. */
-  private fun showCachedEntry(encryptedEntry: CharArray) {
+  private fun showCachedEntry(encryptedEntry: CharArray, decrypted: CharArray) {
     encryptedEntryChars = encryptedEntry
     lifecycleScope.launch(dispatcherProvider.main()) {
-      val decrypted = AESEncryption.decrypt(encryptedEntry) ?: return@launch
       val entry = passwordEntryFactory.create(decrypted)
       decrypted.wipe()
       entry.clearExtraChars()

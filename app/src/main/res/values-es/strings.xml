@@ -31,7 +31,6 @@
   </plurals>
   <string name="delete_directory_progress_text">Eliminando…</string>
   <string name="move">Mover</string>
-  <string name="edit">Editar</string>
   <string name="delete">Eliminar</string>
   <string name="password_exists_title">¡La contraseña ya existe!</string>
   <string name="password_exists_message">Esto sobrescribirá %1$s con %2$s.</string>

@@ -28,7 +28,6 @@
   </plurals>
   <string name="delete_directory_progress_text">Удаляется…</string>
   <string name="move">Переместить</string>
-  <string name="edit">Редактировать</string>
   <string name="delete">Удалить</string>
   <string name="password_exists_title">Пароль уже существует!</string>
   <string name="password_exists_message">Это перезапишет %1$s на %2$s</string>

@@ -23,7 +23,6 @@
   <string name="creation_dialog_text">Zanim dodasz hasło lub rozpoczniesz synchronizację, stwórz albo sklonuj poniżej nowe repozytorium.</string>
   <string name="delete_directory_progress_text">Usuwanie…</string>
   <string name="move">Przenieś</string>
-  <string name="edit">Edytuj</string>
   <string name="delete">Usuń</string>
   <string name="password_exists_title">Hasło już istnieje!</string>
   <string name="password_exists_message">%1$s zostanie nadpisane przez %2$s.</string>

@@ -24,7 +24,6 @@
   </plurals>
   <string name="delete_directory_progress_text">Eliminando…</string>
   <string name="move">Sposta</string>
-  <string name="edit">Modifica</string>
   <string name="delete">Elimina</string>
   <string name="password_exists_title">La password esiste già!</string>
   <string name="password_exists_message">Questo sovrascriverà %1$s con %2$s.</string>

@@ -23,7 +23,6 @@
   </plurals>
   <string name="delete_directory_progress_text">正在删除…</string>
   <string name="move">更多</string>
-  <string name="edit">编辑</string>
   <string name="delete">删除</string>
   <string name="password_exists_title">密码已经存在！</string>
   <string name="password_exists_message">这将用%2$s覆盖%1$s</string>

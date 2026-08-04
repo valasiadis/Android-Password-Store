@@ -24,7 +24,6 @@
   </plurals>
   <string name="delete_directory_progress_text">Suppression…</string>
   <string name="move">Déplacer</string>
-  <string name="edit">Éditer</string>
   <string name="delete">Supprimer</string>
   <string name="password_exists_title">Le mot de passe existe!</string>
   <string name="password_exists_message">Cela écrasera %1$s avec %2$s.</string>

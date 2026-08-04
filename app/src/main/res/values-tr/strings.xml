@@ -30,7 +30,6 @@
   </plurals>
   <string name="delete_directory_progress_text">Siliniyor…</string>
   <string name="move">Taşı</string>
-  <string name="edit">Düzenle</string>
   <string name="delete">Sil</string>
   <string name="password_exists_title">Şifre zaten mevcut!</string>
   <string name="password_exists_message">Bu işlem, %1$s üzerine %2$s yazacaktır.</string>

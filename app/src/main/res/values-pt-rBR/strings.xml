@@ -24,7 +24,6 @@
   </plurals>
   <string name="delete_directory_progress_text">Excluindo…</string>
   <string name="move">Mover</string>
-  <string name="edit">Editar</string>
   <string name="delete">Excluir</string>
   <string name="password_exists_title">Senha já existe!</string>
   <string name="password_exists_message">Isso irá sobrescrever %1$s com %2$s.</string>

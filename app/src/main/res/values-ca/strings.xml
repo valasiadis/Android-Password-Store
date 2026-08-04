@@ -25,7 +25,6 @@
     </plurals>
     <string name="delete_directory_progress_text">Eliminant</string>
     <string name="move">Mou</string>
-    <string name="edit">Edita</string>
     <string name="delete">Elimina</string>
     <string name="password_exists_title">La contrasenya ja existeix.</string>
     <string name="password_exists_message">Aquesta acció sobreescriurà %1$s amb %2$s.</string>

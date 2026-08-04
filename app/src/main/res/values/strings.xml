@@ -35,7 +35,6 @@
   </plurals>
   <string name="delete_directory_progress_text">Deleting…</string>
   <string name="move">Move</string>
-  <string name="edit">Edit</string>
   <string name="delete">Delete</string>
   <string name="error">Error</string>
   <string name="password_exists_title">Password already exists!</string>
@@ -101,6 +100,8 @@
   <string name="pgp_key_creation_in_progress">Creating key…</string>
   <string name="notice_password_created">Password created</string>
   <string name="notice_password_updated">Password updated</string>
+  <string name="rename">Rename</string>
+  <string name="search_clear">Clear the search</string>
   <string name="notice_password_renamed">Password renamed</string>
   <string name="notice_password_moved">Password moved</string>
   <string name="setup_next">Next</string>
@@ -466,6 +467,7 @@
   <string name="openpgp_nfc_unavailable">NFC is unavailable or disabled.</string>
   <string name="openpgp_nfc_not_iso_dep">This NFC tag is not an ISO-DEP smartcard.</string>
   <string name="openpgp_nfc_setup_title">NFC smartcard setup</string>
+  <string name="openpgp_nfc_importing_key">Importing key…</string>
   <string name="openpgp_nfc_setup_detected_title">Smartcard detected</string>
   <string name="openpgp_nfc_setup_detected_no_url_message">The app can talk to this OpenPGP card over NFC, but the card does not provide a public-key URL. Import the matching public key or GnuPG stub key file next; the app will verify it against the card fingerprints.</string>
   <string name="openpgp_nfc_setup_detected_fetch_failed_message">The app can talk to this OpenPGP card over NFC, but could not download the public key from the card URL. Import the matching public key or GnuPG stub key file next; the app will verify it against the card fingerprints.</string>

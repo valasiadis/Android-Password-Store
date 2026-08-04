@@ -30,7 +30,6 @@
   </plurals>
   <string name="delete_directory_progress_text">Wird gelöscht.</string>
   <string name="move">Verschieben</string>
-  <string name="edit">Bearbeiten</string>
   <string name="delete">Löschen</string>
   <string name="error">Fehler</string>
   <string name="password_exists_title">Passwort existiert bereits!</string>

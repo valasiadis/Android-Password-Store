@@ -80,9 +80,11 @@
       -->
       <TextView
         android:id="@+id/repo_type_description"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
+        android:layout_gravity="center_horizontal"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/spacing_medium"
+        android:maxWidth="@dimen/repo_type_description_width"
         android:text="@string/select_repo_type_text"
         android:textAlignment="center"
         android:textAppearance="?attr/textAppearanceTitleSmall" />

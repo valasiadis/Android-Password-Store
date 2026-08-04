@@ -24,6 +24,7 @@ import app.passwordstore.crypto.errors.KeyAlreadyExistsException
 import app.passwordstore.crypto.errors.UnusableKeyException
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.ui.dialogs.ErrorDialog
+import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.TextInputDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.OpenPgpCardInfo
@@ -174,6 +175,18 @@ class PGPKeyImportActivity : AppCompatActivity() {
       return
     }
 
+    // Reading the card is done; what follows — searching this store for a matching key, and
+    // fetching the public half from wherever the card says it lives — takes as long as a network
+    // round trip, with the card prompt already gone and nothing else on the screen to show for it.
+    val progress = ProgressOverlay.show(this, R.string.openpgp_nfc_importing_key)
+    try {
+      importSmartcardKey(cardInfo)
+    } finally {
+      progress.dismiss()
+    }
+  }
+
+  private suspend fun importSmartcardKey(cardInfo: OpenPgpCardInfo) {
     val localKey =
       withContext(dispatcherProvider.io()) {
         pgpKeyManager.getAllKeys().get()?.firstOrNull {

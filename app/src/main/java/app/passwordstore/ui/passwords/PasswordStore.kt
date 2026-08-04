@@ -12,15 +12,12 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
-import android.view.MenuItem.OnActionExpandListener
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.appcompat.widget.SearchView
-import androidx.appcompat.widget.SearchView.OnQueryTextListener
 import androidx.core.content.edit
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toDrawable
@@ -97,7 +94,6 @@ class PasswordStore : BaseGitActivity() {
   @Inject @PasswordHistory lateinit var passwordHistory: SharedPreferences
   @Inject @CredentialUsernames lateinit var credentialUsernames: SharedPreferences
   @Inject lateinit var shortcutHandler: ShortcutHandler
-  private lateinit var searchItem: MenuItem
   private val settings by lazy { sharedPrefs }
 
   private val binding by viewBinding(ActivityPwdstoreBinding::inflate)
@@ -310,21 +306,16 @@ class PasswordStore : BaseGitActivity() {
     }
 
   override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-    // open search view on search key, or Ctr+F
+    // open the search field on the search key, or Ctrl+F
     if (
-      (keyCode == KeyEvent.KEYCODE_SEARCH ||
-        keyCode == KeyEvent.KEYCODE_F && event.isCtrlPressed) && !searchItem.isActionViewExpanded
+      keyCode == KeyEvent.KEYCODE_SEARCH || keyCode == KeyEvent.KEYCODE_F && event.isCtrlPressed
     ) {
-      searchItem.expandActionView()
-      return true
+      if (getPasswordFragment()?.focusSearch() == true) return true
     }
 
-    // open search view on any printable character and query for it
+    // start searching on any printable character, for the character typed
     val c = event.unicodeChar.toChar()
-    val printable = isPrintable(c)
-    if (printable && !searchItem.isActionViewExpanded) {
-      searchItem.expandActionView()
-      (searchItem.actionView as SearchView).setQuery(c.toString(), true)
+    if (isPrintable(c) && getPasswordFragment()?.focusSearch(c.toString()) == true) {
       return true
     }
     return super.onKeyDown(keyCode, event)
@@ -398,10 +389,8 @@ class PasswordStore : BaseGitActivity() {
     super.onResume()
     checkLocalRepository()
     refreshPasswordList()
-    if (settings.getBoolean(PreferenceKeys.SEARCH_ON_START, false) && ::searchItem.isInitialized) {
-      if (!searchItem.isActionViewExpanded) {
-        searchItem.expandActionView()
-      }
+    if (settings.getBoolean(PreferenceKeys.SEARCH_ON_START, false)) {
+      getPasswordFragment()?.focusSearch()
     }
   }
 
@@ -420,52 +409,26 @@ class PasswordStore : BaseGitActivity() {
     // Invalidation forces onCreateOptionsMenu to be called again. This is cheap and quick so
     // we can get by without any noticeable difference in performance.
     invalidateOptionsMenu()
-    searchItem = menu.findItem(R.id.action_search)
-    val searchView = searchItem.actionView as SearchView
-    searchView.setOnQueryTextListener(
-      object : OnQueryTextListener {
-        override fun onQueryTextSubmit(s: String): Boolean {
-          searchView.clearFocus()
-          return true
-        }
-
-        override fun onQueryTextChange(s: String): Boolean {
-          val filter = s.trim()
-          val filterMode =
-            if (settings.getString(PreferenceKeys.SEARCH_FILTER_MODE, "exact") == "fuzzy")
-              FilterMode.Fuzzy
-            else FilterMode.Exact
-          // List the contents of the current directory if the user enters a blank
-          // search term.
-          if (filter.isEmpty())
-            model.navigateTo(newDirectory = model.currentDir.value, pushPreviousLocation = false)
-          else model.search(filter, filterMode = filterMode)
-          return true
-        }
-      }
-    )
-
-    // When using the support library, the setOnActionExpandListener() method is
-    // static and accepts the MenuItem object as an argument
-    searchItem.setOnActionExpandListener(
-      object : OnActionExpandListener {
-        override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-          refreshPasswordList()
-          return true
-        }
-
-        override fun onMenuItemActionExpand(item: MenuItem): Boolean {
-          return true
-        }
-      }
-    )
-    if (
-      settings.getBoolean(PreferenceKeys.SEARCH_ON_START, false) ||
-        intent.action == Intent.ACTION_SEARCH
-    ) {
-      searchItem.expandActionView()
-    }
     return super.onPrepareOptionsMenu(menu)
+  }
+
+  /**
+   * Narrows the list to [query], or shows the folder again when there is nothing to narrow by.
+   *
+   * The search field belongs to the list, but what a query means belongs here: which folder is
+   * being looked at, and whether the store is searched loosely or exactly.
+   */
+  fun searchFor(query: String) {
+    val filter = query.trim()
+    if (filter.isEmpty()) {
+      model.navigateTo(newDirectory = model.currentDir.value, pushPreviousLocation = false)
+      return
+    }
+    val filterMode =
+      if (settings.getString(PreferenceKeys.SEARCH_FILTER_MODE, "exact") == "fuzzy")
+        FilterMode.Fuzzy
+      else FilterMode.Exact
+    model.search(filter, filterMode = filterMode)
   }
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -517,7 +480,7 @@ class PasswordStore : BaseGitActivity() {
   }
 
   fun clearSearch() {
-    if (searchItem.isActionViewExpanded) searchItem.collapseActionView()
+    getPasswordFragment()?.clearSearch()
   }
 
   fun runGitOperation(operation: GitOp) = lifecycleScope.launch {

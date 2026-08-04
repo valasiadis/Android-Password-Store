@@ -25,6 +25,7 @@ import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.databinding.PgpKeyChangePassphraseActivityBinding
 import app.passwordstore.ui.compose.R as composeR
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.viewBinding
@@ -194,20 +195,18 @@ class PGPKeyChangePassphraseActivity : AppCompatActivity() {
           getString(R.string.pgp_key_empty_passphrase_warning),
           getString(R.string.pgp_key_empty_passphrase_warning_message),
         )
-    MaterialAlertDialogBuilder(this)
-      .setIcon(R.drawable.ic_warning_red_24dp)
-      .setTitle(title)
-      .setMessage(message)
-      .setPositiveButton(getString(R.string.pgp_key_insecure_passphrase_warning_confirm)) { _, _ ->
-        changePassphrase(identifier, subkeyIdentifier, oldPassphrase, passphrase)
-      }
-      .setNegativeButton(R.string.dialog_cancel, null)
-      .setCancelable(false)
-      .setOnDismissListener {
+    WarningDialog.show(
+      context = this,
+      title = title,
+      message = message,
+      proceedLabel = getString(R.string.pgp_key_insecure_passphrase_warning_confirm),
+      onDismiss = {
         oldPassphrase?.wipe()
         passphrase?.wipe()
-      }
-      .show()
+      },
+    ) {
+      changePassphrase(identifier, subkeyIdentifier, oldPassphrase, passphrase)
+    }
   }
 
   private fun changePassphrase(

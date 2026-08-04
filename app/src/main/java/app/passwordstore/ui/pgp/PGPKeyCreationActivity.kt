@@ -14,6 +14,7 @@ import app.passwordstore.R
 import app.passwordstore.crypto.KeyUtils.tryGetKeyId
 import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.databinding.PgpKeyCreationActivityBinding
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.viewBinding
@@ -116,17 +117,15 @@ class PGPKeyCreationActivity : AppCompatActivity() {
           getString(R.string.pgp_key_short_passphrase_warning_message),
         )
       }
-    MaterialAlertDialogBuilder(this)
-      .setIcon(R.drawable.ic_warning_red_24dp)
-      .setTitle(title)
-      .setMessage(message)
-      .setPositiveButton(getString(R.string.pgp_key_insecure_passphrase_warning_confirm)) { _, _ ->
-        createPgpKey(email, passphrase)
-      }
-      .setNegativeButton(R.string.dialog_cancel, null)
-      .setCancelable(false)
-      .setOnDismissListener { passphrase.wipe() }
-      .show()
+    WarningDialog.show(
+      context = this,
+      title = title,
+      message = message,
+      proceedLabel = getString(R.string.pgp_key_insecure_passphrase_warning_confirm),
+      onDismiss = { passphrase.wipe() },
+    ) {
+      createPgpKey(email, passphrase)
+    }
   }
 
   private fun createPgpKey(email: String, passphrase: CharArray) {

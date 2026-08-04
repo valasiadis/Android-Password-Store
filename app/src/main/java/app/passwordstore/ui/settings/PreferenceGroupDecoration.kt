@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Rect
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.view.View
@@ -38,6 +39,8 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
   private val entrySpacing = context.resources.getDimensionPixelSize(R.dimen.spacing_xsmall)
   private val groupSpacing = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
   private val contentMargin = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
+  private val containers = mutableMapOf<PlaceInGroup, RippleDrawable>()
+  private val applied = java.util.WeakHashMap<View, PlaceInGroup>()
 
   /**
    * Adds this decoration to [recyclerView] and takes over its entries' background, padding and icon
@@ -57,6 +60,9 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
           if (place != null) {
             view.background = containerDrawable(view, place)
             trimContentMargins(view)
+            applied[view] = place
+          } else {
+            applied.remove(view)
           }
           view.findViewById<ImageView>(android.R.id.icon)?.imageTintList =
             ColorStateList.valueOf(
@@ -75,7 +81,20 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
     parent: RecyclerView,
     state: RecyclerView.State,
   ) {
-    val place = placeInGroup(parent, parent.getChildAdapterPosition(view)) ?: return
+    val place =
+      placeInGroup(parent, parent.getChildAdapterPosition(view))
+        ?: run {
+          applied.remove(view)
+          return
+        }
+    // An entry's place changes without it being attached again — a preference appearing or
+    // disappearing makes a new last entry of its neighbour — so the shape is checked on every
+    // layout rather than only when the row arrives, and redrawn when it no longer fits.
+    if (applied[view] != place) {
+      view.background = containerDrawable(view, place)
+      trimContentMargins(view)
+      applied[view] = place
+    }
     outRect.bottom = if (place.endsGroup) groupSpacing else entrySpacing
   }
 
@@ -93,8 +112,20 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
     }
   }
 
-  /** The container, and a ripple masked to it, as one background. */
-  private fun containerDrawable(view: View, place: PlaceInGroup): RippleDrawable {
+  /**
+   * The container, and a ripple masked to it, as one background.
+   *
+   * There are four of these — a group's first entry, its last, one that is both, one that is
+   * neither — so each is built once and handed out as a new drawable sharing that constant state,
+   * rather than three fresh drawables every time a row is attached.
+   */
+  private fun containerDrawable(view: View, place: PlaceInGroup): Drawable {
+    val prototype = containers.getOrPut(place) { newContainerDrawable(view, place) }
+    // A drawable with no constant state cannot be shared, so that one is simply built again.
+    return prototype.constantState?.newDrawable()?.mutate() ?: newContainerDrawable(view, place)
+  }
+
+  private fun newContainerDrawable(view: View, place: PlaceInGroup): RippleDrawable {
     val container =
       GradientDrawable().apply {
         cornerRadii = cornerRadiiFor(place)

@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitCloneBinding
+import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.ui.onboarding.activity.SetupStepActivity
 import app.passwordstore.ui.onboarding.activity.show
@@ -23,7 +24,6 @@ import app.passwordstore.ui.sshkeygen.PgpAuthKeySelectionActivity
 import app.passwordstore.ui.sshkeygen.SshKeyGenActivity
 import app.passwordstore.ui.sshkeygen.SshKeyImportActivity
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.git.sshj.SshKey
 import app.passwordstore.util.settings.AuthMode
@@ -290,16 +290,16 @@ class GitServerConfigActivity : BaseGitActivity() {
         .setPositiveButton(R.string.dialog_delete) { dialog, _ ->
           runCatching {
             lifecycleScope.launch {
-              val snackbar =
-                snackbar(
-                  message = getString(R.string.delete_directory_progress_text),
-                  length = Snackbar.LENGTH_INDEFINITE,
+              val progress =
+                ProgressOverlay.show(
+                  this@GitServerConfigActivity,
+                  R.string.delete_directory_progress_text,
                 )
               withContext(dispatcherProvider.io()) {
                 localDir.deleteRecursively()
                 localDir.mkdirs()
               }
-              snackbar.dismiss()
+              progress.dismiss()
               launchGitOperation(GitOp.CLONE)
                 .fold(
                   success = {

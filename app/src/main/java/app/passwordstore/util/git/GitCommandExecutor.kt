@@ -9,10 +9,10 @@ import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPKeyManager
+import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import app.passwordstore.util.extensions.hideKeyboard
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.unsafeLazy
 import app.passwordstore.util.git.GitException.PullException
 import app.passwordstore.util.git.GitException.PushException
@@ -20,7 +20,6 @@ import app.passwordstore.util.git.operation.GitOperation
 import app.passwordstore.util.settings.GitSettings
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -48,14 +47,12 @@ class GitCommandExecutor(
   suspend fun execute(): Result<Unit, Throwable> {
     val gitSettings = hiltEntryPoint.gitSettings()
     val dispatcherProvider = hiltEntryPoint.dispatcherProvider()
-    // Collapse any keyboard left focused by an entry form so it can't overlap the status snackbar
-    // or the dialogs shown while the operation runs (or the error/success UI when it finishes).
+    // Collapse any keyboard left focused by an entry form so it can't overlap the dialogs shown
+    // while the operation runs, or the error/success UI when it finishes.
     activity.hideKeyboard()
-    val snackbar =
-      activity.snackbar(
-        message = activity.resources.getString(R.string.git_operation_running),
-        length = Snackbar.LENGTH_INDEFINITE,
-      )
+    // Talking to a server takes as long as the server takes. Said over the screen rather than in a
+    // snackbar at the bottom of it: an idle-looking screen invites taps on things that are busy.
+    val progress = ProgressOverlay.show(activity, R.string.git_operation_running)
     // Count the number of uncommitted files
     var nbChanges = 0
     return runCatching {
@@ -141,7 +138,7 @@ class GitCommandExecutor(
         }
       }
     }
-      .also { snackbar.dismiss() }
+      .also { progress.dismiss() }
   }
 
   @EntryPoint

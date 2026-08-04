@@ -98,6 +98,7 @@
   <string name="setup_sign_commits_tip">Signing proves the changes came from you. It asks for your PGP key each time something is saved.</string>
   <string name="setup_identity_message">Git records a name and email address with every change you make, and both are needed before the store can be synchronised.</string>
   <string name="setup_ascii_armor_explanation">Stores passwords as text rather than binary. The files are larger, but survive tools that would mangle binary data.</string>
+  <string name="pgp_key_creation_in_progress">Creating key…</string>
   <string name="setup_next">Next</string>
   <string name="setup_back">Back</string>
   <string name="setup_step_counter">Step %1$d of %2$d</string>

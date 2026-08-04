@@ -72,6 +72,22 @@
 
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
+    <!--
+      The connection mode says an authentication key will be used; this is where one is set,
+      rather than sending the user to find it in the settings after the fact.
+    -->
+    <com.google.android.material.button.MaterialButton
+      android:id="@+id/auth_key_button"
+      style="?attr/materialButtonOutlinedStyle"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="@dimen/spacing_medium"
+      android:text="@string/ssh_preferences_dialog_title"
+      android:visibility="gone"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toBottomOf="@id/auth_mode_group"
+      tools:visibility="visible" />
+
     <com.google.android.material.button.MaterialButton
       android:id="@+id/save_button"
       android:layout_width="wrap_content"
@@ -79,7 +95,7 @@
       android:layout_marginTop="8dp"
       android:text="@string/crypto_save"
       app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/auth_mode_group" />
+      app:layout_constraintTop_toBottomOf="@id/auth_key_button" />
 
     <com.google.android.material.button.MaterialButton
       android:id="@+id/clear_host_key_button"
@@ -89,7 +105,7 @@
       android:text="@string/clear_saved_host_key"
       android:visibility="gone"
       app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/auth_mode_group"
+      app:layout_constraintTop_toBottomOf="@id/auth_key_button"
       tools:visibility="visible" />
   </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

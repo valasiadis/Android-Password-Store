@@ -89,6 +89,17 @@
   <string name="connection_mode">Authentication method</string>
 
   <!-- Git Config fragment -->
+  <string name="setup_identity_title">Your Git identity</string>
+  <string name="setup_encryption_title">How entries are stored</string>
+  <string name="setup_encryption_message">One last thing before the store opens.</string>
+  <string name="setup_sign_commits_tip">Signing proves the changes came from you. It asks for your PGP key each time something is saved.</string>
+  <string name="setup_continue">Continue</string>
+  <string name="setup_identity_message">Git records a name and email address with every change you make, and both are needed before the store can be synchronised.</string>
+  <string name="setup_ascii_armor_explanation">Stores passwords as text rather than binary. The files are larger, but survive tools that would mangle binary data.</string>
+  <string name="setup_finish">Finish</string>
+  <string name="git_author_missing_title">Who is making these commits?</string>
+  <string name="git_author_missing_message">Git records a name and email address with every change. Set yours before syncing, or the store will record commits under whatever name this device happens to have.</string>
+  <string name="git_author_missing_confirm">Set them now</string>
   <string name="git_user_name_hint">Username</string>
   <string name="git_user_email">Email</string>
   <string name="invalid_email_dialog_text">Please enter a valid email address.</string>
@@ -111,10 +122,13 @@
   <string name="username">Username</string>
   <string name="otp_label_format">OTP (expires in %ds)</string>
   <string name="edit_password">Edit password</string>
-  <string name="reencrypt_password">Save with other key(s)</string>
-  <string name="reencrypt_password_success">Saved with the selected key(s)</string>
-  <string name="reencrypt_password_failure">Could not save with the selected key(s)</string>
-  <string name="reencrypt_password_partial">Saved, but not for %1$s</string>
+  <string name="change_keys">Change keys</string>
+  <string name="change_keys_unopenable_title">Nothing here could open it</string>
+  <string name="change_keys_unopenable_message">None of the selected keys has a private half in this app, so this entry would be readable only by whoever holds them. You would not be able to open it again.</string>
+  <string name="change_keys_unopenable_confirm">Change anyway</string>
+  <string name="change_keys_success">Saved with the selected key(s)</string>
+  <string name="change_keys_failure">Could not save with the selected key(s)</string>
+  <string name="change_keys_partial">Saved, but not for %1$s</string>
   <string name="edit_passkey">Edit passkey</string>
   <string name="copy_password">Copy password</string>
   <string name="share_as_plaintext">Share as plaintext</string>

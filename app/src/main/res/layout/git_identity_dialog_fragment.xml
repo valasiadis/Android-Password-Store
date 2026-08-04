@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="vertical"
+  android:padding="@dimen/activity_horizontal_margin">
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/spacing_medium"
+    android:text="@string/setup_identity_message"
+    android:textAppearance="?attr/textAppearanceBodyMedium"
+    android:textColor="?attr/colorOnSurfaceVariant" />
+
+  <com.google.android.material.textfield.TextInputLayout
+    android:id="@+id/author_name_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:hint="@string/git_user_name_hint">
+
+    <com.google.android.material.textfield.TextInputEditText
+      android:id="@+id/author_name"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:inputType="textPersonName" />
+  </com.google.android.material.textfield.TextInputLayout>
+
+  <com.google.android.material.textfield.TextInputLayout
+    android:id="@+id/author_email_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_small"
+    android:hint="@string/git_user_email">
+
+    <com.google.android.material.textfield.TextInputEditText
+      android:id="@+id/author_email"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:inputType="textEmailAddress" />
+  </com.google.android.material.textfield.TextInputLayout>
+
+  <com.google.android.material.switchmaterial.SwitchMaterial
+    android:id="@+id/sign_commits"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_large"
+    android:text="@string/git_sign_commits" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="@string/setup_sign_commits_tip"
+    android:textAppearance="?attr/textAppearanceBodySmall"
+    android:textColor="?attr/colorOnSurfaceVariant" />
+
+</LinearLayout>

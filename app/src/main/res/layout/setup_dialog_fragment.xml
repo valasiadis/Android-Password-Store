@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="vertical"
+  android:padding="@dimen/activity_horizontal_margin">
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/spacing_medium"
+    android:text="@string/setup_encryption_message"
+    android:textAppearance="?attr/textAppearanceBodyMedium"
+    android:textColor="?attr/colorOnSurfaceVariant" />
+
+  <com.google.android.material.switchmaterial.SwitchMaterial
+    android:id="@+id/ascii_armor"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="@string/pref_pgp_ascii_armor_title" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="@string/setup_ascii_armor_explanation"
+    android:textAppearance="?attr/textAppearanceBodySmall"
+    android:textColor="?attr/colorOnSurfaceVariant" />
+
+</LinearLayout>

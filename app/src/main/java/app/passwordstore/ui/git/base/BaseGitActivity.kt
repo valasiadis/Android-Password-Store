@@ -10,7 +10,9 @@ import androidx.core.content.edit
 import app.passwordstore.R
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.injection.prefs.GitSecrets
+import app.passwordstore.ui.git.config.GitConfigActivity
 import app.passwordstore.util.coroutines.DispatcherProvider
+import app.passwordstore.util.extensions.launchActivity
 import app.passwordstore.util.git.ErrorMessages
 import app.passwordstore.util.git.operation.BreakOutOfDetached
 import app.passwordstore.util.git.operation.CloneOperation
@@ -70,9 +72,31 @@ abstract class BaseGitActivity : AppCompatActivity() {
    *
    * @param operation The type of git operation to launch
    */
+  private fun hasCommitAuthor(): Boolean =
+    gitSettings.authorName.isNotEmpty() && gitSettings.authorEmail.isNotEmpty()
+
+  /** Asks who is making these commits, and takes the user where that is answered. */
+  private fun askForCommitAuthor() {
+    MaterialAlertDialogBuilder(this)
+      .setTitle(R.string.git_author_missing_title)
+      .setMessage(R.string.git_author_missing_message)
+      .setPositiveButton(R.string.git_author_missing_confirm) { _, _ ->
+        launchActivity(GitConfigActivity::class.java)
+      }
+      .setNegativeButton(R.string.dialog_cancel, null)
+      .show()
+  }
+
   suspend fun launchGitOperation(operation: GitOp): Result<Unit, Throwable> {
     if (gitSettings.url == null) {
       return Err(IllegalStateException("Git url is not set!"))
+    }
+    // Every operation here ends in a commit, and a commit needs someone to have made it. Git will
+    // invent an author from the device's hostname rather than fail, which is how stores end up
+    // with commits by "root@localhost", so the question is asked once, here, instead.
+    if (!hasCommitAuthor()) {
+      askForCommitAuthor()
+      return Err(IllegalStateException("Git author is not set"))
     }
     if (operation == GitOp.SYNC && !gitSettings.useMultiplexing) {
       // If the server does not support multiple SSH channels per connection, we cannot run

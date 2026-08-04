@@ -16,7 +16,11 @@ import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitCloneBinding
 import app.passwordstore.ui.git.base.BaseGitActivity
+import app.passwordstore.ui.sshkeygen.PgpAuthKeySelectionActivity
+import app.passwordstore.ui.sshkeygen.SshKeyGenActivity
+import app.passwordstore.ui.sshkeygen.SshKeyImportActivity
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
+import app.passwordstore.util.extensions.launchActivity
 import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.settings.AuthMode
@@ -77,6 +81,7 @@ class GitServerConfigActivity : BaseGitActivity() {
             View.NO_ID -> newAuthMode = AuthMode.None
           }
         }
+        binding.authKeyButton.isVisible = newAuthMode == AuthMode.SshKey
         if (!isClone) applySettings()
       }
     }
@@ -95,6 +100,10 @@ class GitServerConfigActivity : BaseGitActivity() {
       // written. While editing this also stores it, once there is something worth storing.
       if (!isClone) applySettings()
     }
+
+    // Offered only where a key is what authenticates: password authentication needs none.
+    binding.authKeyButton.isVisible = newAuthMode == AuthMode.SshKey
+    binding.authKeyButton.setOnClickListener { chooseAuthenticationKey() }
 
     binding.clearHostKeyButton.isVisible = gitSettings.hasSavedHostKey()
     binding.clearHostKeyButton.setOnClickListener {
@@ -167,6 +176,23 @@ class GitServerConfigActivity : BaseGitActivity() {
     // becomes the one to compare against: storing again must not drop anything a second time.
     oldAuthMode = newAuthMode
     return true
+  }
+
+  /** The three ways this app can hold an authentication key, as the git operations also offer. */
+  private fun chooseAuthenticationKey() {
+    MaterialAlertDialogBuilder(this)
+      .setTitle(R.string.ssh_preferences_dialog_title)
+      .setMessage(R.string.ssh_preferences_dialog_text)
+      .setPositiveButton(R.string.ssh_preferences_dialog_pgp_key) { _, _ ->
+        launchActivity(PgpAuthKeySelectionActivity::class.java)
+      }
+      .setNegativeButton(R.string.ssh_preferences_dialog_generate) { _, _ ->
+        launchActivity(SshKeyGenActivity::class.java)
+      }
+      .setNeutralButton(R.string.button_label_import) { _, _ ->
+        launchActivity(SshKeyImportActivity::class.java)
+      }
+      .show()
   }
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {

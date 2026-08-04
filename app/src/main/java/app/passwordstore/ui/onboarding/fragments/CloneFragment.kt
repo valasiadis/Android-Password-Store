@@ -46,7 +46,7 @@ class CloneFragment : Fragment(R.layout.fragment_clone) {
       if (result.resultCode == AppCompatActivity.RESULT_OK) {
         if (File(PasswordRepository.getRepositoryDirectory(), ".gpg-id").isFile()) {
           settings.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true) }
-          finish()
+          finishSetup()
         } else {
           // non-pass repository --> go to key selection
           selectGpgKey()
@@ -70,7 +70,7 @@ class CloneFragment : Fragment(R.layout.fragment_clone) {
           settings.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true) }
           requireActivity()
             .commitChange(getString(R.string.git_commit_gpg_id, getString(R.string.app_name)))
-          finish()
+          finishSetup()
         }
       } else {
         requireActivity()
@@ -85,12 +85,52 @@ class CloneFragment : Fragment(R.layout.fragment_clone) {
     gpgKeySelectAction.launch(PGPKeyListActivity.newIntent(requireContext(), keySelection = true))
   }
 
+  /**
+   * Asks who is committing before anything else is decided, since every route from here ends in a
+   * commit. Once answered it stays answered, and the question is not asked again.
+   */
+  private fun withIdentity(proceed: () -> Unit) {
+    val settings = requireContext().applicationContext.sharedPrefs
+    val hasIdentity =
+      !settings.getString(PreferenceKeys.GIT_CONFIG_AUTHOR_NAME, "").isNullOrEmpty() &&
+        !settings.getString(PreferenceKeys.GIT_CONFIG_AUTHOR_EMAIL, "").isNullOrEmpty()
+    if (hasIdentity) {
+      proceed()
+      return
+    }
+    pendingAfterIdentity = proceed
+    GitIdentityDialogFragment.newInstance().show(parentFragmentManager, "GIT_IDENTITY_DIALOG")
+  }
+
+  private var pendingAfterIdentity: (() -> Unit)? = null
+
+  /**
+   * Asks the last of the questions a store needs answered — who commits, and how entries are
+   * written — before the app opens on it.
+   */
+  private fun finishSetup() {
+    SetupDialogFragment.newInstance().show(parentFragmentManager, "SETUP_DIALOG")
+  }
+
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
     ViewCompat.setOnApplyWindowInsetsListener(view, windowInsetsLambda)
+    parentFragmentManager.setFragmentResultListener(
+      SetupDialogFragment.SETUP_RESULT_KEY,
+      viewLifecycleOwner,
+    ) { _, _ ->
+      finish()
+    }
+    parentFragmentManager.setFragmentResultListener(
+      GitIdentityDialogFragment.IDENTITY_RESULT_KEY,
+      viewLifecycleOwner,
+    ) { _, _ ->
+      pendingAfterIdentity?.invoke()
+      pendingAfterIdentity = null
+    }
 
-    binding.cloneRemote.setOnClickListener { cloneToHiddenDir() }
-    binding.createLocal.setOnClickListener { createRepository() }
+    binding.cloneRemote.setOnClickListener { withIdentity(::cloneToHiddenDir) }
+    binding.createLocal.setOnClickListener { withIdentity(::createRepository) }
   }
 
   /** Clones a remote Git repository to the app's private directory */

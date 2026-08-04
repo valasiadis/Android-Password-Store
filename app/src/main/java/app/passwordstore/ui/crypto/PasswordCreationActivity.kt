@@ -392,7 +392,12 @@ class PasswordCreationActivity : BasePGPActivity() {
 
   /** Encrypts the password and the extra content */
   /** Opens a newly written entry on the copy kept from writing it, rather than decrypting it. */
-  private fun openSavedEntry(path: String, savedEntry: CharArray?, commitMessage: String) {
+  private fun openSavedEntry(
+    path: String,
+    savedEntry: CharArray?,
+    commitMessage: String,
+    touchedPaths: Array<String>,
+  ) {
     startActivity(
       Intent(this, DecryptActivity::class.java)
         .putExtra(EXTRA_FILE_PATH, path)
@@ -400,6 +405,7 @@ class PasswordCreationActivity : BasePGPActivity() {
         .putExtra(EXTRA_ENTRY, savedEntry)
         .putExtra(RETURN_EXTRA_MESSAGE, savedMessage)
         .putExtra(RETURN_EXTRA_COMMIT_MESSAGE, commitMessage)
+        .putExtra(RETURN_EXTRA_TOUCHED_PATHS, touchedPaths)
     )
   }
 
@@ -614,11 +620,24 @@ class PasswordCreationActivity : BasePGPActivity() {
           // Whoever ends up in front does the committing, and only one of them: a new entry is
           // opened here and hands it that screen, while an edit goes back to the entry it came
           // from, which is waiting behind this one.
+          // What the save touched, so a commit that fails can put it all back: the file written,
+          // and the one it was moved from.
+          val touchedPaths =
+            listOfNotNull(passwordFile.absolutePathString(), renamedFrom?.absolutePath)
+              .toTypedArray()
           val leave = {
-            if (editing) returnIntent.putExtra(RETURN_EXTRA_COMMIT_MESSAGE, commitMessage)
+            if (editing) {
+              returnIntent.putExtra(RETURN_EXTRA_COMMIT_MESSAGE, commitMessage)
+              returnIntent.putExtra(RETURN_EXTRA_TOUCHED_PATHS, touchedPaths)
+            }
             setResult(RESULT_OK, returnIntent)
             if (!editing) {
-              openSavedEntry(passwordFile.absolutePathString(), savedEntry, commitMessage)
+              openSavedEntry(
+                passwordFile.absolutePathString(),
+                savedEntry,
+                commitMessage,
+                touchedPaths,
+              )
             }
             finish()
           }
@@ -684,6 +703,9 @@ class PasswordCreationActivity : BasePGPActivity() {
 
     /** What the screen this returns to should commit, once it is showing the saved entry. */
     const val RETURN_EXTRA_COMMIT_MESSAGE = "COMMIT_MESSAGE"
+
+    /** The files that save touched, to be put back if the commit does not go through. */
+    const val RETURN_EXTRA_TOUCHED_PATHS = "TOUCHED_PATHS"
     const val RETURN_EXTRA_MESSAGE = "SAVE_MESSAGE"
     const val RETURN_EXTRA_NAME = "NAME"
     const val RETURN_EXTRA_LONG_NAME = "LONG_NAME"

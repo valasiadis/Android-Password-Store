@@ -29,20 +29,34 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.fragment.app.FragmentActivity
+import app.passwordstore.Application
 import app.passwordstore.BuildConfig
+import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.ui.crypto.PasswordCreationActivity
 import app.passwordstore.ui.dialogs.ErrorDialog
+import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.git.ErrorMessages
 import app.passwordstore.util.git.operation.GitOperation
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.getOr
 import com.github.michaelbull.result.onErr
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import java.io.File
 import kotlin.math.abs
 import kotlin.math.max
+import kotlinx.coroutines.withContext
 import logcat.logcat
+import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.CanceledException
+import org.eclipse.jgit.lib.Constants
+import org.eclipse.jgit.revwalk.RevWalk
+import org.eclipse.jgit.treewalk.TreeWalk
 
 /** Get an instance of [AutofillManager]. Only available on Android Oreo and above */
 val Context.autofillManager: AutofillManager?
@@ -168,23 +182,83 @@ suspend fun FragmentActivity.commitChange(message: String): Result<Unit, Throwab
  *
  * The editor used to wait for git before closing, which left it sitting over the entry it had just
  * written for the length of a commit — signing prompt included. It now returns straight away and
- * passes the commit message along, so the entry is on screen while this runs behind it. A commit
- * that fails says so and leaves the file where it is: it is saved either way, and the next commit
- * picks it up.
+ * passes the commit message along, so the entry is on screen while this runs behind it.
+ *
+ * A commit that does not go through — a cancelled signing prompt, a locked index — takes the save
+ * with it: the entry is put back the way the last commit had it, so what is on disk and what is in
+ * the history never disagree. Only the files the save touched are restored, and a store with other
+ * uncommitted work keeps it.
  */
-suspend fun FragmentActivity.commitSavedChange(data: Intent?): Result<Unit, Throwable> {
+suspend fun FragmentActivity.commitSavedChange(
+  data: Intent?,
+  onRolledBack: () -> Unit = {},
+): Result<Unit, Throwable> {
   val message =
     data?.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_COMMIT_MESSAGE) ?: return Ok(Unit)
   data.removeExtra(PasswordCreationActivity.RETURN_EXTRA_COMMIT_MESSAGE)
+  val touched =
+    data
+      .getStringArrayExtra(PasswordCreationActivity.RETURN_EXTRA_TOUCHED_PATHS)
+      ?.toList()
+      .orEmpty()
   return commitChange(message).onErr { error ->
+    val restored = restoreFromHead(touched)
     // Cancelling the signing prompt is an answer, not a fault, and a card that refused already
-    // said so in its own dialog.
-    if (
+    // said so in its own dialog — but a save that could not be undone is worth saying either way.
+    // Whatever the screen does about the entry waits until the failure has been read.
+    when {
+      !restored ->
+        ErrorDialog.show(this, getString(R.string.git_index_locked_error), onDismiss = onRolledBack)
       !OpenPgpCardPrompt.isHandled(error) &&
-        generateSequence(error) { it.cause }.none { it is CanceledException }
-    ) {
-      ErrorDialog.show(this, ErrorMessages[error])
+        generateSequence(error) { it.cause }.none { it is CanceledException } ->
+        ErrorDialog.show(this, ErrorMessages[error], onDismiss = onRolledBack)
+      else -> onRolledBack()
     }
+  }
+}
+
+/** The app's own dispatchers, for the few helpers here that are not part of an injected class. */
+private fun dispatchers(): DispatcherProvider =
+  EntryPointAccessors.fromApplication(
+      Application.instance.applicationContext,
+      DispatchersEntryPoint::class.java,
+    )
+    .dispatcherProvider()
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+internal interface DispatchersEntryPoint {
+  fun dispatcherProvider(): DispatcherProvider
+}
+
+/**
+ * Puts [paths] back the way the last commit has them: a file the commit knows is restored from it,
+ * and one it has never seen — a new entry — is removed. Returns whether that succeeded, since a
+ * store left holding a change git refused is worth complaining about.
+ */
+private suspend fun restoreFromHead(paths: List<String>): Boolean {
+  if (paths.isEmpty()) return true
+  val repository = PasswordRepository.repository ?: return true
+  val workTree = repository.workTree ?: return true
+  return withContext(dispatchers().io()) {
+    com.github.michaelbull.result
+      .runCatching {
+        val head = repository.resolve("${Constants.HEAD}^{tree}")
+        val git = Git(repository)
+        paths.forEach { path ->
+          val relative =
+            File(path).relativeToOrNull(workTree)?.invariantSeparatorsPath ?: return@forEach
+          val known =
+            head != null &&
+              RevWalk(repository).use { walk ->
+                TreeWalk.forPath(repository, relative, walk.parseTree(head)) != null
+              }
+          if (known) git.checkout().setStartPoint(Constants.HEAD).addPath(relative).call()
+          else File(path).delete()
+        }
+        true
+      }
+      .getOr(false)
   }
 }
 

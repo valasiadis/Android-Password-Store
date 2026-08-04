@@ -4,7 +4,4 @@
   -->
 
 <resources>
-  <dimen name="onboarding_icon_margin_top">50dp</dimen>
-  <dimen name="onboarding_button_margin_top">70dp</dimen>
-  <dimen name="onboarding_desc_margin_top">48dp</dimen>
 </resources>

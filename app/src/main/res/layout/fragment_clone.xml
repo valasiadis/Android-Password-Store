@@ -3,71 +3,70 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
+<!--
+  The one question this screen asks, in the middle of it. The pieces used to be pinned to the top
+  with margins measured from there, which left the choice sitting high on the screen and everything
+  below it empty.
+-->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
-  android:background="?android:attr/colorBackground">
+  android:background="?android:attr/colorBackground"
+  android:fillViewport="true">
 
-  <androidx.constraintlayout.widget.ConstraintLayout
+  <LinearLayout
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/activity_horizontal_margin"
+    android:paddingVertical="@dimen/spacing_xlarge">
 
-    <androidx.appcompat.widget.AppCompatImageView
-      android:id="@+id/app_icon"
-      android:layout_width="64dp"
-      android:layout_height="64dp"
-      android:layout_marginStart="32dp"
-      android:layout_marginTop="@dimen/onboarding_icon_margin_top"
-      android:contentDescription="@string/app_icon_hint"
-      android:src="@mipmap/ic_launcher"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toTopOf="parent" />
-
-    <androidx.appcompat.widget.AppCompatTextView
-      android:id="@+id/app_name"
-      android:layout_width="0dp"
+    <LinearLayout
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:layout_centerHorizontal="true"
-      android:layout_marginStart="@dimen/fab_compat_margin"
-      android:layout_marginEnd="@dimen/fab_compat_margin"
-      android:text="@string/app_name"
-      android:textAppearance="?attr/textAppearanceTitleLarge"
-      android:textStyle="bold"
-      app:layout_constraintBottom_toBottomOf="@id/app_icon"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintStart_toEndOf="@id/app_icon"
-      app:layout_constraintTop_toTopOf="@+id/app_icon" />
+      android:gravity="center_vertical"
+      android:orientation="horizontal">
+
+      <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/app_icon"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:contentDescription="@string/app_icon_hint"
+        android:src="@mipmap/ic_launcher" />
+
+      <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/app_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/spacing_large"
+        android:text="@string/app_name"
+        android:textAppearance="?attr/textAppearanceTitleLarge"
+        android:textStyle="bold" />
+
+    </LinearLayout>
 
     <TextView
       android:id="@+id/repo_type"
-      android:layout_width="0dp"
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:layout_marginTop="48dp"
-      android:layout_marginEnd="@dimen/fab_compat_margin"
+      android:layout_marginTop="@dimen/spacing_xlarge"
       android:autoSizeMaxTextSize="24sp"
       android:autoSizeMinTextSize="16sp"
       android:autoSizeTextType="uniform"
       android:singleLine="true"
       android:text="@string/select_n_repository_type"
       android:textAppearance="?attr/textAppearanceHeadlineSmall"
-      android:textStyle="bold"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintHorizontal_bias="0"
-      app:layout_constraintStart_toStartOf="@id/app_icon"
-      app:layout_constraintTop_toBottomOf="@id/app_icon" />
+      android:textStyle="bold" />
 
     <LinearLayout
       android:id="@+id/tv_repo_type_text"
-      android:layout_width="0dp"
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:layout_marginTop="@dimen/onboarding_desc_margin_top"
-      android:layout_marginEnd="@dimen/fab_compat_margin"
+      android:layout_marginTop="@dimen/spacing_medium"
       android:gravity="center_vertical"
-      android:orientation="horizontal"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintStart_toStartOf="@id/repo_type"
-      app:layout_constraintTop_toBottomOf="@id/repo_type">
+      android:orientation="horizontal">
 
       <TextView
         android:layout_width="0dp"
@@ -92,28 +91,21 @@
       android:id="@+id/clone_remote"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:layout_marginStart="16dp"
-      android:layout_marginTop="@dimen/onboarding_button_margin_top"
-      android:layout_marginEnd="16dp"
+      android:layout_gravity="center_horizontal"
+      android:layout_marginTop="@dimen/spacing_xlarge"
       android:maxWidth="300dp"
-      android:minWidth="100dp"
-      android:text="@string/clone_remote_repo"
-      app:layout_constraintBottom_toTopOf="@id/create_local"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/tv_repo_type_text" />
+      android:minWidth="200dp"
+      android:text="@string/clone_remote_repo" />
 
     <com.google.android.material.button.MaterialButton
       android:id="@+id/create_local"
-      android:layout_width="0dp"
+      android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:layout_marginBottom="128dp"
+      android:layout_gravity="center_horizontal"
+      android:layout_marginTop="@dimen/spacing_small"
       android:maxWidth="300dp"
-      android:minWidth="100dp"
-      android:text="@string/create_local_repo"
-      app:layout_constraintEnd_toEndOf="@id/clone_remote"
-      app:layout_constraintStart_toStartOf="@id/clone_remote"
-      app:layout_constraintTop_toBottomOf="@id/clone_remote" />
+      android:minWidth="200dp"
+      android:text="@string/create_local_repo" />
 
-  </androidx.constraintlayout.widget.ConstraintLayout>
+  </LinearLayout>
 </ScrollView>

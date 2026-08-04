@@ -275,7 +275,7 @@ class OpenPgpCardPrompt(
       return
     }
     val dialog =
-      MaterialAlertDialogBuilder(activity)
+      MaterialAlertDialogBuilder(activity, R.style.APSThemeM3_Dialog_Outlined)
         .setTitle(titleRes)
         .setMessage(message)
         .setNegativeButton(R.string.dialog_cancel) { _, _ ->
@@ -336,7 +336,7 @@ class OpenPgpCardPrompt(
           binding.cacheEnabled.isChecked = cacheDefault
         }
         val dialog =
-          MaterialAlertDialogBuilder(activity)
+          MaterialAlertDialogBuilder(activity, R.style.APSThemeM3_Dialog_Outlined)
             .setTitle(titleRes)
             .setView(binding.root)
             .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -424,7 +424,7 @@ class OpenPgpCardPrompt(
   /** Shows a simple informational dialog (used for terminal card errors, e.g. a blocked PIN). */
   suspend fun showError(@StringRes titleRes: Int, message: String) {
     withContext(dispatcherProvider.main()) {
-      MaterialAlertDialogBuilder(activity)
+      MaterialAlertDialogBuilder(activity, R.style.APSThemeM3_Dialog_Outlined)
         .setTitle(titleRes)
         .setMessage(message)
         .setPositiveButton(android.R.string.ok, null)
@@ -482,7 +482,7 @@ class OpenPgpCardPrompt(
     val dialog =
       withContext(dispatcherProvider.main()) {
         if (activity.isFinishing || activity.isDestroyed) return@withContext null
-        MaterialAlertDialogBuilder(activity)
+        MaterialAlertDialogBuilder(activity, R.style.APSThemeM3_Dialog_Outlined)
           .setTitle(R.string.openpgp_nfc_remove_card_title)
           .setMessage(R.string.openpgp_nfc_remove_card_message)
           .setCancelable(false)

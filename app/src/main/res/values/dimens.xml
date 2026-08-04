@@ -50,6 +50,12 @@
   <dimen name="activity_horizontal_margin">16dp</dimen>
   <dimen name="activity_vertical_margin">16dp</dimen>
   <dimen name="fab_compat_margin">16dp</dimen>
+  <!-- The search field between the two buttons, as tall as they are. -->
+  <!-- Narrow enough that the sentence under the heading falls into two lines. -->
+  <dimen name="repo_type_description_width">260dp</dimen>
+  <dimen name="search_bar_height">56dp</dimen>
+  <!-- What that field leaves free on each side for those buttons. -->
+  <dimen name="search_bar_side_room">88dp</dimen>
   <dimen name="normal_margin">8dp</dimen>
   <dimen name="bottom_sheet_item_height">56dp</dimen>
 </resources>

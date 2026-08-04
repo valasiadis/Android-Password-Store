@@ -275,8 +275,11 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     binding.searchInput.clearFocus()
   }
 
-  /** How long the search field takes to give up (or take back) the sync button's room. */
-  private val SEARCH_BAR_RESIZE_MS = 150L
+  /** As long as the sync button's own scale, so the two move as one. */
+  private val SEARCH_BAR_RESIZE_MS = 300L
+
+  /** The wait the sync button takes before it starts appearing, which the field shares. */
+  private val SYNC_FAB_APPEAR_DELAY_MS = 100L
 
   private var fabVisible = true
 
@@ -427,9 +430,14 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     val bar = binding.searchBar
     val current = (bar.layoutParams as ViewGroup.MarginLayoutParams).marginStart
     if (current == room) return
+    // In step with the button it is making room for: the same length, and the same wait before
+    // starting when that button is on its way in.
     TransitionManager.beginDelayedTransition(
       binding.root,
-      ChangeBounds().setDuration(SEARCH_BAR_RESIZE_MS),
+      ChangeBounds().apply {
+        duration = SEARCH_BAR_RESIZE_MS
+        startDelay = if (syncShowing) SYNC_FAB_APPEAR_DELAY_MS else 0
+      },
     )
     // Both ends, every time: setting one of a pair of start/end margins is what makes the layout
     // resolve them, and the one left alone comes back as nothing rather than as what it was.

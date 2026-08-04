@@ -5,11 +5,9 @@
 package app.passwordstore.ui.git.config
 
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Patterns
 import android.view.MenuItem
-import androidx.core.os.postDelayed
+import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
@@ -50,26 +48,38 @@ class GitConfigActivity : BaseGitActivity() {
     binding.gitUserEmail.setText(gitSettings.authorEmail)
     binding.signCommits.isChecked = gitSettings.signCommits
     setupTools()
-    binding.saveButton.setOnClickListener {
-      val email = binding.gitUserEmail.text.toString().trim()
-      val name = binding.gitUserName.text.toString().trim()
-      if (!email.matches(Patterns.EMAIL_ADDRESS.toRegex())) {
-        MaterialAlertDialogBuilder(this)
-          .setMessage(getString(R.string.invalid_email_dialog_text))
-          .setPositiveButton(getString(R.string.dialog_ok), null)
-          .show()
-      } else {
-        gitSettings.authorEmail = email
-        gitSettings.authorName = name
-        gitSettings.signCommits = binding.signCommits.isChecked
-        Snackbar.make(
-            binding.root,
-            getString(R.string.git_server_config_save_success),
-            Snackbar.LENGTH_SHORT,
-          )
-          .show()
-        Handler(Looper.getMainLooper()).postDelayed(500) { finish() }
-      }
+
+    // Stored as it is typed, so that what the screen shows is what is stored and leaving the
+    // screen is never a step the user has to take for their edit to count. An address is only
+    // stored once it is one, and says so under the field until then.
+    binding.gitUserName.doOnTextChanged { _, _, _, _ -> saveName() }
+    binding.gitUserEmail.doOnTextChanged { _, _, _, _ -> saveEmail() }
+    binding.signCommits.setOnCheckedChangeListener { _, isChecked ->
+      gitSettings.signCommits = isChecked
+    }
+  }
+
+  override fun onPause() {
+    saveName()
+    saveEmail()
+    super.onPause()
+  }
+
+  private fun saveName() {
+    gitSettings.authorName = binding.gitUserName.text.toString().trim()
+  }
+
+  /**
+   * Stores the address only once it is one, and says so under the field while it is not. An address
+   * that never becomes valid is simply never stored, leaving the last good one in place.
+   */
+  private fun saveEmail() {
+    val email = binding.gitUserEmail.text.toString().trim()
+    if (email.isNotEmpty() && !email.matches(Patterns.EMAIL_ADDRESS.toRegex())) {
+      binding.emailInputLayout.error = getString(R.string.invalid_email_dialog_text)
+    } else {
+      binding.emailInputLayout.error = null
+      gitSettings.authorEmail = email
     }
   }
 

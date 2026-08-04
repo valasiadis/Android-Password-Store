@@ -7,18 +7,14 @@ package app.passwordstore.ui.git.config
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.MenuItem
 import android.view.View
-import androidx.core.os.postDelayed
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitCloneBinding
-import app.passwordstore.ui.dialogs.BasicBottomSheet
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.snackbar
@@ -47,14 +43,18 @@ class GitServerConfigActivity : BaseGitActivity() {
 
   private lateinit var oldAuthMode: AuthMode
   private lateinit var newAuthMode: AuthMode
+  private var isClone = false
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdgeView(binding.root)
-    val isClone = intent?.extras?.getBoolean("cloning") ?: false
+    isClone = intent?.extras?.getBoolean("cloning") ?: false
     if (isClone) {
       binding.saveButton.text = getString(R.string.clone_button)
     }
+    // Editing the server config stores as the user goes, so it has no button. Cloning keeps one:
+    // it starts work rather than storing a setting, and there is nothing else to trigger it.
+    binding.saveButton.isVisible = isClone
     setContentView(binding.root)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
@@ -77,6 +77,7 @@ class GitServerConfigActivity : BaseGitActivity() {
             View.NO_ID -> newAuthMode = AuthMode.None
           }
         }
+        if (!isClone) applySettings()
       }
     }
 
@@ -90,6 +91,9 @@ class GitServerConfigActivity : BaseGitActivity() {
     binding.serverUrl.doOnTextChanged { text, _, _, _ ->
       if (text.isNullOrEmpty()) return@doOnTextChanged
       setAuthModes(text.startsWith("http://") || text.startsWith("https://"))
+      // Checked as it is typed, so what is wrong with an address is said while it is being
+      // written. While editing this also stores it, once there is something worth storing.
+      if (!isClone) applySettings()
     }
 
     binding.clearHostKeyButton.isVisible = gitSettings.hasSavedHostKey()
@@ -104,75 +108,65 @@ class GitServerConfigActivity : BaseGitActivity() {
       it.isVisible = false
     }
     binding.saveButton.setOnClickListener {
-      val newUrl = binding.serverUrl.text.toString().trim()
-      if (newUrl.startsWith("git://")) {
-        BasicBottomSheet.Builder(this)
-          .setTitleRes(R.string.git_scheme_disallowed_title)
-          .setMessageRes(R.string.git_scheme_disallowed_message)
-          .setPositiveButtonClickListener {}
-          .build()
-          .show(supportFragmentManager, "SSH_SCHEME_WARNING")
-        return@setOnClickListener
-      }
-      when (
-        val updateResult =
-          gitSettings.updateConnectionSettingsIfValid(
-            oldAuthMode = oldAuthMode,
-            newAuthMode = newAuthMode,
-            newUrl = newUrl,
-          )
-      ) {
-        GitSettings.UpdateConnectionSettingsResult.FailedToParseUrl -> {
-          Snackbar.make(
-              binding.root,
-              getString(R.string.git_server_config_save_error),
-              Snackbar.LENGTH_LONG,
-            )
-            .show()
-        }
-        is GitSettings.UpdateConnectionSettingsResult.MissingUsername -> {
-          when (updateResult.newProtocol) {
-            Protocol.Https ->
-              BasicBottomSheet.Builder(this)
-                .setTitleRes(R.string.ssh_scheme_needed_title)
-                .setMessageRes(R.string.git_server_config_save_missing_username_https)
-                .setPositiveButtonClickListener {}
-                .build()
-                .show(supportFragmentManager, "HTTPS_MISSING_USERNAME")
-            Protocol.Ssh ->
-              BasicBottomSheet.Builder(this)
-                .setTitleRes(R.string.ssh_scheme_needed_title)
-                .setMessageRes(R.string.git_server_config_save_missing_username_ssh)
-                .setPositiveButtonClickListener {}
-                .build()
-                .show(supportFragmentManager, "SSH_MISSING_USERNAME")
-          }
-        }
-        GitSettings.UpdateConnectionSettingsResult.Valid -> {
-          if (isClone && PasswordRepository.repository == null) PasswordRepository.initialize()
-          if (!isClone) {
-            Snackbar.make(
-                binding.root,
-                getString(R.string.git_server_config_save_success),
-                Snackbar.LENGTH_SHORT,
-              )
-              .show()
-            Handler(Looper.getMainLooper()).postDelayed(500) { finish() }
-          } else {
-            cloneRepository()
-          }
-        }
-        is GitSettings.UpdateConnectionSettingsResult.AuthModeMismatch -> {
-          val message =
-            getString(
-              R.string.git_server_config_save_auth_mode_mismatch,
-              updateResult.newProtocol,
-              updateResult.validModes.joinToString(", "),
-            )
-          Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
-        }
+      if (applySettings()) {
+        if (PasswordRepository.repository == null) PasswordRepository.initialize()
+        cloneRepository()
       }
     }
+  }
+
+  override fun onPause() {
+    // Catches the address if the screen is left while the field still has focus.
+    if (!isClone) applySettings()
+    super.onPause()
+  }
+
+  /**
+   * Stores the address and connection mode if they hold together, and otherwise says what is wrong
+   * under the address field. Returns whether anything was stored.
+   *
+   * The two are validated as a pair, not separately: which connection modes are allowed follows
+   * from the URL's scheme, and an SSH URL without a username is only a problem once a mode that
+   * needs one is picked.
+   */
+  private fun applySettings(): Boolean {
+    val newUrl = binding.serverUrl.text.toString().trim()
+    if (newUrl.isEmpty()) {
+      binding.labelServerUrl.error = null
+      return false
+    }
+    if (newUrl.startsWith("git://")) {
+      binding.labelServerUrl.error = getString(R.string.git_scheme_disallowed_message)
+      return false
+    }
+    val updateResult =
+      gitSettings.updateConnectionSettingsIfValid(
+        oldAuthMode = oldAuthMode,
+        newAuthMode = newAuthMode,
+        newUrl = newUrl,
+      )
+    binding.labelServerUrl.error =
+      when (updateResult) {
+        GitSettings.UpdateConnectionSettingsResult.FailedToParseUrl ->
+          getString(R.string.git_server_config_save_error)
+        is GitSettings.UpdateConnectionSettingsResult.MissingUsername ->
+          when (updateResult.newProtocol) {
+            Protocol.Https -> getString(R.string.git_server_config_save_missing_username_https)
+            Protocol.Ssh -> getString(R.string.git_server_config_save_missing_username_ssh)
+          }
+        is GitSettings.UpdateConnectionSettingsResult.AuthModeMismatch ->
+          getString(
+            R.string.git_server_config_save_auth_mode_mismatch,
+            updateResult.newProtocol,
+            updateResult.validModes.joinToString(", "),
+          )
+        GitSettings.UpdateConnectionSettingsResult.Valid -> null
+      }
+    if (updateResult != GitSettings.UpdateConnectionSettingsResult.Valid) return false
+    // Changing the mode drops the credentials stored for the old one, so the mode now on record
+    // becomes the one to compare against: storing again must not drop anything a second time.
+    oldAuthMode = newAuthMode
+    return true
   }
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {

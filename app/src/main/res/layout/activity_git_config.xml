@@ -54,15 +54,6 @@
 
   </com.google.android.material.textfield.TextInputLayout>
 
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/save_button"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    android:text="@string/crypto_save"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/sign_commits" />
-
   <com.google.android.material.switchmaterial.SwitchMaterial
     android:id="@+id/sign_commits"
     android:layout_width="0dp"
@@ -82,7 +73,7 @@
     android:textAppearance="?attr/textAppearanceTitleLarge"
     android:textColor="?attr/colorOnSurface"
     app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/save_button" />
+    app:layout_constraintTop_toBottomOf="@id/sign_commits" />
 
   <androidx.appcompat.widget.AppCompatTextView
     android:id="@+id/git_head_status"

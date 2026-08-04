@@ -289,10 +289,12 @@ class OpenPgpCommitSigner(
               choice.set(SigningChoice.SKIP)
               latch.countDown()
             }
-            .setOnCancelListener { latch.countDown() }
-            .setCancelable(true)
+            // Neither answer can be avoided: a commit either carries a signature or does not,
+            // and dismissing the question used to abandon the commit itself — which is not what
+            // tapping beside a dialog means anywhere else in the app.
+            .setCancelable(false)
             .show()
-        dialog.setCanceledOnTouchOutside(true)
+        dialog.setCanceledOnTouchOutside(false)
         // Keep "Commit without signing" available but visually understated so it does not
         // invite accidental taps over the primary "Sign" action.
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.let(::deemphasizeButton)

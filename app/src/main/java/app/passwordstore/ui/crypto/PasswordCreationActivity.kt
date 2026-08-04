@@ -98,11 +98,11 @@ class PasswordCreationActivity : BasePGPActivity() {
 
   private val suggestedName by unsafeLazy { intent.getStringExtra(EXTRA_FILE_NAME) }
   private val suggestedEntryChars by unsafeLazy { intent.getCharArrayExtra(EXTRA_ENTRY) }
+  private var copy: Boolean = false
   private val shouldGeneratePassword by unsafeLazy {
     intent.getBooleanExtra(EXTRA_GENERATE_PASSWORD, false)
   }
   private val editing by unsafeLazy { intent.getBooleanExtra(EXTRA_EDITING, false) }
-  private var copy: Boolean = false
 
   private val otpImportAction =
     registerForActivityResult(StartActivityForResult()) { result ->
@@ -579,18 +579,8 @@ class PasswordCreationActivity : BasePGPActivity() {
                 MaterialAlertDialogBuilder(this@PasswordCreationActivity)
                   .setCancelable(false)
                   .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
-              var messageText =
-                getString(
-                  R.string.password_creation_file_encryption_succeeded_ids_message,
-                  succeededUserEmails.joinToString(),
-                )
               if (!failedUserEmails.isEmpty()) {
                 dialog.setTitle(R.string.password_creation_file_encryption_partial_success_title)
-                messageText +=
-                  getString(
-                    R.string.password_creation_file_encryption_failed_ids_message,
-                    failedUserEmails.joinToString(),
-                  )
               } else {
                 val title =
                   if (editing)
@@ -598,7 +588,7 @@ class PasswordCreationActivity : BasePGPActivity() {
                   else getString(R.string.password_creation_new_file_encryption_success_title)
                 dialog.setTitle(title)
               }
-              dialog.setMessage(messageText)
+              dialog.setMessage(encryptionOutcomeMessage(succeededUserEmails, failedUserEmails))
               dialog.show()
             }
             .onErr { e ->

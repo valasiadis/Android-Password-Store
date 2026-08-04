@@ -8,13 +8,18 @@ package app.passwordstore.ui.crypto
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.SharedPreferences
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.PersistableBundle
+import android.text.SpannableStringBuilder
+import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+import android.text.style.ForegroundColorSpan
 import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.annotation.CallSuper
 import androidx.annotation.StringRes
+import androidx.appcompat.R as AppCompatR
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.fragment.app.setFragmentResultListener
@@ -48,6 +53,7 @@ import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
@@ -90,6 +96,41 @@ open class BasePGPActivity : AppCompatActivity() {
    * Converts personal/auth.foo.org/john_doe@example.org.gpg to john_doe.example.org
    */
   val name: String by unsafeLazy { File(fullPath).nameWithoutExtension }
+
+  /**
+   * The message of an encryption result, with the key names picked out in colour: the keys it
+   * worked for in the theme's primary, the ones it did not in its error colour, so the outcome can
+   * be read off the names themselves rather than by parsing the sentence around them.
+   */
+  protected fun encryptionOutcomeMessage(
+    succeededUserIds: List<String>,
+    failedUserIds: List<String>,
+  ): CharSequence {
+    val message = SpannableStringBuilder()
+    val succeeded = succeededUserIds.joinToString()
+    message.appendHighlighting(
+      getString(R.string.password_creation_file_encryption_succeeded_ids_message, succeeded),
+      succeeded,
+      MaterialColors.getColor(this, AppCompatR.attr.colorPrimary, Color.TRANSPARENT),
+    )
+    if (failedUserIds.isNotEmpty()) {
+      val failed = failedUserIds.joinToString()
+      message.appendHighlighting(
+        getString(R.string.password_creation_file_encryption_failed_ids_message, failed),
+        failed,
+        MaterialColors.getColor(this, AppCompatR.attr.colorError, Color.TRANSPARENT),
+      )
+    }
+    return message
+  }
+
+  private fun SpannableStringBuilder.appendHighlighting(text: String, part: String, color: Int) {
+    val start = length + text.indexOf(part)
+    append(text)
+    if (part.isNotEmpty() && text.contains(part)) {
+      setSpan(ForegroundColorSpan(color), start, start + part.length, SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
+  }
 
   /* Counter for the user's decryption (with passphrase) attempts */
   private var retries = 0

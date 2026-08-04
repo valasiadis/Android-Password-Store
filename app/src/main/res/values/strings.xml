@@ -112,13 +112,16 @@
   <string name="username">Username</string>
   <string name="otp_label_format">OTP (expires in %ds)</string>
   <string name="edit_password">Edit password</string>
+  <string name="reencrypt_password">Save with other key(s)</string>
+  <string name="reencrypt_password_success">Saved with the selected key(s)</string>
+  <string name="reencrypt_password_failure">Could not save with the selected key(s)</string>
   <string name="edit_passkey">Edit passkey</string>
   <string name="copy_password">Copy password</string>
   <string name="share_as_plaintext">Share as plaintext</string>
   <string name="created_date">created on %s</string>
 
   <!-- Preferences -->
-  <string name="pref_category_repository_title">Repository</string>
+  <string name="pref_category_repository_title">Git repository</string>
   <string name="pref_edit_git_server_settings">Git server settings</string>
   <string name="pref_git_server_auth_key">Authentication key</string>
   <string name="pref_edit_git_config">Local Git config &amp; utilities</string>

@@ -12,6 +12,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
@@ -20,18 +21,22 @@ import app.passwordstore.crypto.errors.IncorrectPassphraseException
 import app.passwordstore.crypto.errors.NoDecryptionKeyAvailableException
 import app.passwordstore.data.passfile.PasswordEntry
 import app.passwordstore.data.password.FieldItem
+import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.DecryptLayoutBinding
 import app.passwordstore.injection.prefs.CredentialUsernames
 import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.adapters.FieldItemAdapter
+import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.crypto.AESEncryption
 import app.passwordstore.util.crypto.AESEncryption.KeyType
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.crypto.OpenPgpNfcCard
 import app.passwordstore.util.extensions.base64
+import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.snackbar
+import app.passwordstore.util.extensions.toByteArray
 import app.passwordstore.util.extensions.toCharArray
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.extensions.wipe
@@ -276,6 +281,7 @@ class DecryptActivity : BasePGPActivity() {
   override fun onPrepareOptionsMenu(menu: Menu): Boolean {
     encryptedEntryChars?.let { encrypted ->
       menu.findItem(R.id.edit_password).setVisible(true)
+      menu.findItem(R.id.reencrypt_password).setVisible(true)
       AESEncryption.decrypt(encrypted)?.let { decrypted ->
         val entry = passwordEntryFactory.create(decrypted)
         decrypted.wipe()
@@ -297,11 +303,59 @@ class DecryptActivity : BasePGPActivity() {
       R.id.edit_password -> {
         if (isPasskey) editPasskey() else editPassword()
       }
+      R.id.reencrypt_password ->
+        reencryptAction.launch(PGPKeyListActivity.newIntent(this, keySelection = true))
       R.id.share_password_as_plaintext -> shareAsPlaintext()
       R.id.copy_password -> copyPassword()
       else -> return super.onOptionsItemSelected(item)
     }
     return true
+  }
+
+  private val reencryptAction =
+    registerForActivityResult(StartActivityForResult()) { result ->
+      if (result.resultCode != RESULT_OK) return@registerForActivityResult
+      val identifiers =
+        result.data
+          ?.getStringExtra(PGPKeyListActivity.EXTRA_SELECTED_KEY)
+          ?.split("\n")
+          ?.filter(String::isNotBlank)
+          ?.mapNotNull(PGPIdentifier::fromString)
+          .orEmpty()
+      if (identifiers.isNotEmpty()) reencrypt(identifiers)
+    }
+
+  /**
+   * Writes this entry back, encrypted to [identifiers] instead of whatever it was saved with.
+   *
+   * Only this entry changes: the folder keeps its own key, and pass is content for one file to be
+   * readable by a different key from its neighbours. The plaintext never leaves memory — it is the
+   * copy this screen already decrypted, and it is wiped either way.
+   */
+  private fun reencrypt(identifiers: List<PGPIdentifier>) {
+    val encrypted = encryptedEntryChars ?: return
+    val decrypted = AESEncryption.decrypt(encrypted) ?: return
+    lifecycleScope.launch(dispatcherProvider.main()) {
+      val plaintext = decrypted.toByteArray()
+      decrypted.wipe()
+      val encryptedMessage = ByteArrayOutputStream()
+      val result = repository.encrypt(identifiers, plaintext.inputStream(), encryptedMessage).second
+      plaintext.wipe()
+      if (result.isErr) {
+        snackbar(message = getString(R.string.reencrypt_password_failure))
+        return@launch
+      }
+      withContext(dispatcherProvider.io()) {
+        File(fullPath).writeBytes(encryptedMessage.toByteArray())
+      }
+      commitChange(
+        getString(
+          R.string.git_commit_edit_text,
+          PasswordRepository.getLongName(fullPath, repoPath, name),
+        )
+      )
+      snackbar(message = getString(R.string.reencrypt_password_success))
+    }
   }
 
   private fun copyPassword() {

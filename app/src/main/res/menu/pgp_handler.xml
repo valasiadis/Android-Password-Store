@@ -20,6 +20,11 @@
     android:visible="false"
     pwstore:showAsAction="ifRoom" />
   <item
+    android:id="@+id/reencrypt_password"
+    android:title="@string/reencrypt_password"
+    android:visible="false"
+    pwstore:showAsAction="never" />
+  <item
     android:id="@+id/edit_password"
     android:icon="@drawable/ic_edit_24dp"
     android:title="@string/edit_password"

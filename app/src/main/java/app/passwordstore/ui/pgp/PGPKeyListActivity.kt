@@ -23,9 +23,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -239,22 +241,28 @@ class PGPKeyListActivity : AppCompatActivity() {
                 )
               }
               // There is something to confirm only once the selection differs from what the
-              // caller came in with, and only while it holds something: the action stays away
-              // otherwise, rather than offering to apply nothing. Leaving is what the up arrow
-              // and the back gesture are for.
+              // caller came in with, and only while it holds something. Until then the action
+              // stays in place but unavailable, so the way out of the screen does not move about
+              // as keys are tapped. Leaving without applying anything is what the up arrow and
+              // the back gesture are for.
               val selection = selectedKeyIds.toSet()
-              if (selection.isNotEmpty() && selection != initialKeyIds) {
-                FloatingActionButton(
-                  onClick = { confirmSelection(selectedKeyIds) },
-                  modifier = Modifier.align(Alignment.BottomEnd).padding(SpacingLarge),
-                ) {
-                  Icon(
-                    painter = painterResource(R.drawable.ic_done_24dp),
-                    contentDescription =
-                      if (singleSelection) stringResource(R.string.gpg_key_single_select)
-                      else stringResource(R.string.gpg_key_select),
-                  )
-                }
+              val hasChanges = selection.isNotEmpty() && selection != initialKeyIds
+              FloatingActionButton(
+                onClick = { if (hasChanges) confirmSelection(selectedKeyIds) },
+                containerColor =
+                  if (hasChanges) FloatingActionButtonDefaults.containerColor
+                  else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor =
+                  if (hasChanges) contentColorFor(FloatingActionButtonDefaults.containerColor)
+                  else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_ALPHA),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(SpacingLarge),
+              ) {
+                Icon(
+                  painter = painterResource(R.drawable.ic_done_24dp),
+                  contentDescription =
+                    if (singleSelection) stringResource(R.string.gpg_key_single_select)
+                    else stringResource(R.string.gpg_key_select),
+                )
               }
             }
           }

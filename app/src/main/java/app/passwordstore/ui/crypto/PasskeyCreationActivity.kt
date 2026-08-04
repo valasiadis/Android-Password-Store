@@ -599,18 +599,8 @@ class PasskeyCreationActivity : BasePGPActivity() {
                   MaterialAlertDialogBuilder(this@PasskeyCreationActivity)
                     .setCancelable(false)
                     .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
-                var messageText =
-                  getString(
-                    R.string.password_creation_file_encryption_succeeded_ids_message,
-                    succeededUserEmails.joinToString(),
-                  )
                 if (!failedUserEmails.isEmpty()) {
                   dialog.setTitle(R.string.password_creation_file_encryption_partial_success_title)
-                  messageText +=
-                    getString(
-                      R.string.password_creation_file_encryption_failed_ids_message,
-                      failedUserEmails.joinToString(),
-                    )
                 } else {
                   val title =
                     if (editing)
@@ -618,7 +608,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
                     else getString(R.string.password_creation_new_file_encryption_success_title)
                   dialog.setTitle(title)
                 }
-                dialog.setMessage(messageText)
+                dialog.setMessage(encryptionOutcomeMessage(succeededUserEmails, failedUserEmails))
                 dialog.show()
               }
           }

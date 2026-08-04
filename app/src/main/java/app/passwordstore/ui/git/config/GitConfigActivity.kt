@@ -114,11 +114,7 @@ class GitConfigActivity : BaseGitActivity() {
         lockFile.delete() -> R.string.git_remove_lock_file_success
         else -> R.string.git_remove_lock_file_failed
       }
-    Notice.show(
-      this@GitConfigActivity,
-      messageRes,
-      success = messageRes == R.string.git_remove_lock_file_success,
-    )
+    Notice.show(this@GitConfigActivity, messageRes)
     updateRemoveLockButton()
   }
 

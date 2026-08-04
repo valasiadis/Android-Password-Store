@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import app.passwordstore.R
 import com.google.android.material.R as MaterialR
 import com.google.android.material.color.MaterialColors
+import de.Maxr1998.modernpreferences.PreferencesAdapter
 
 /**
  * Gives each preference a filled container, rounded where its group ends, in the manner of the
@@ -123,18 +124,37 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
 
   /**
    * Where the entry at [position] sits in its group, or null if it is in none: category headers and
-   * accent buttons stand on their own rather than inside a container.
+   * accent buttons stand on their own rather than inside a container, and a preference that is
+   * hidden is nowhere at all.
    */
   private fun placeInGroup(parent: RecyclerView, position: Int): PlaceInGroup? {
     if (position == RecyclerView.NO_POSITION || !isGrouped(parent, position)) return null
+    val itemCount = parent.adapter?.itemCount ?: 0
     return PlaceInGroup(
-      startsGroup = position == 0 || !isGrouped(parent, position - 1),
-      endsGroup =
-        position == (parent.adapter?.itemCount ?: 0) - 1 || !isGrouped(parent, position + 1),
+      startsGroup = !isGrouped(parent, previousShown(parent, position)),
+      endsGroup = !isGrouped(parent, nextShown(parent, position, itemCount)),
     )
   }
 
+  /**
+   * The library keeps a hidden preference in the list and collapses its row to nothing, so the
+   * neighbours on either side of one are neighbours: they belong to the same group, and the space
+   * this decoration puts around entries must not be spent on a row nobody can see.
+   */
+  private fun isShown(parent: RecyclerView, position: Int): Boolean {
+    val adapter = parent.adapter as? PreferencesAdapter ?: return true
+    if (position < 0 || position >= adapter.itemCount) return false
+    return adapter.currentScreen[position].visible
+  }
+
+  private fun previousShown(parent: RecyclerView, position: Int): Int =
+    (position - 1 downTo 0).firstOrNull { isShown(parent, it) } ?: -1
+
+  private fun nextShown(parent: RecyclerView, position: Int, itemCount: Int): Int =
+    (position + 1 until itemCount).firstOrNull { isShown(parent, it) } ?: itemCount
+
   private fun isGrouped(parent: RecyclerView, position: Int): Boolean {
+    if (!isShown(parent, position)) return false
     val viewType = parent.adapter?.getItemViewType(position) ?: return false
     return viewType != CATEGORY_HEADER_VIEW_TYPE && viewType != ACCENT_BUTTON_VIEW_TYPE
   }

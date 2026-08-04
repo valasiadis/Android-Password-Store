@@ -7,6 +7,7 @@ package app.passwordstore.ui.passwords
 import android.content.ComponentName
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Color
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.Menu
@@ -16,6 +17,7 @@ import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.SearchView.OnQueryTextListener
@@ -62,6 +64,8 @@ import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
+import com.google.android.material.R as MaterialR
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
@@ -120,7 +124,9 @@ class PasswordStore : BaseGitActivity() {
       // longer blocks it, as runBlocking did, freezing the screen for the length of a commit.
       lifecycleScope.launch {
         commitChange(getString(R.string.git_commit_gpg_id, getString(R.string.app_name)))
-        refreshPasswordList(folder)
+        // Refreshed where the user is, not moved into the folder: they were looking at the list
+        // that holds it, and re-keying a folder is not a reason to walk into it.
+        refreshPasswordList()
       }
     }
 
@@ -140,14 +146,28 @@ class PasswordStore : BaseGitActivity() {
       launchKeySelection(directory, keys)
       return
     }
-    MaterialAlertDialogBuilder(this)
-      .setTitle(R.string.folder_encryption_key)
-      .setMessage(R.string.folder_key_change_message)
-      .setPositiveButton(R.string.folder_key_change_confirm) { _, _ ->
-        launchKeySelection(directory, keys)
-      }
-      .setNegativeButton(R.string.dialog_cancel, null)
-      .show()
+    val dialog =
+      MaterialAlertDialogBuilder(this)
+        .setTitle(R.string.folder_encryption_key)
+        .setMessage(R.string.folder_key_change_message)
+        .setPositiveButton(R.string.folder_key_change_confirm) { _, _ ->
+          launchKeySelection(directory, keys)
+        }
+        .setNegativeButton(R.string.dialog_cancel, null)
+        .create()
+    // Leaving is not the action being offered, so it does not wear the colour of the one that is.
+    dialog.setOnShowListener {
+      dialog
+        .getButton(AlertDialog.BUTTON_NEGATIVE)
+        .setTextColor(
+          MaterialColors.getColor(
+            dialog.listView ?: binding.root,
+            MaterialR.attr.colorOnSurfaceVariant,
+            Color.TRANSPARENT,
+          )
+        )
+    }
+    dialog.show()
   }
 
   /** The .gpg-id a folder inherits, which is the nearest one above it inside the repository. */

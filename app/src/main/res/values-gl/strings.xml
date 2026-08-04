@@ -76,9 +76,9 @@
   <!-- Preferences -->
   <string name="pref_category_repository_title">Repositorio</string>
   <string name="pref_edit_git_server_settings">Editar axustes do servidor git</string>
-  <string name="pref_edit_git_config">Configuración e Utilidades locais Git</string>
-  <string name="pref_import_ssh_key_title">Importar chave SSH</string>
   <string name="pref_ssh_keygen_title">Crear par de chaves SSH</string>
+  <string name="pref_import_ssh_key_title">Importar chave SSH</string>
+  <string name="pref_edit_git_config">Configuración e Utilidades locais Git</string>
   <string name="pref_ssh_see_key_title">Ver a chave pública SSH creada</string>
   <string name="pref_git_delete_repo_title">Eliminar repositorio</string>
   <string name="pref_dialog_delete_title">Limpar repositorio</string>

@@ -75,9 +75,9 @@
   <!-- Preferences -->
   <string name="pref_category_repository_title">Repository</string>
   <string name="pref_edit_git_server_settings">Modifica impostazioni del server di Git</string>
-  <string name="pref_edit_git_config">Configurazione &amp; utilità della configurazione di Git</string>
-  <string name="pref_import_ssh_key_title">Importa chiave SSH</string>
   <string name="pref_ssh_keygen_title">Genera coppia di chiavi SSH</string>
+  <string name="pref_import_ssh_key_title">Importa chiave SSH</string>
+  <string name="pref_edit_git_config">Configurazione &amp; utilità della configurazione di Git</string>
   <string name="pref_ssh_see_key_title">Visualizza la chiave SSH pubblica generata</string>
   <string name="pref_git_delete_repo_title">Elimina repository</string>
   <string name="pref_dialog_delete_title">Cancella repository</string>

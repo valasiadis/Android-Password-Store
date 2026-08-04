@@ -95,9 +95,9 @@
   <!-- Preferences -->
   <string name="pref_category_repository_title">Depo</string>
   <string name="pref_edit_git_server_settings">Git sunucu ayarlarını düzenle</string>
-  <string name="pref_edit_git_config">Yerel Git yapılandırması ve araçlar</string>
-  <string name="pref_import_ssh_key_title">SSH anahtarını içe aktar</string>
   <string name="pref_ssh_keygen_title">SSH anahtar çifti oluştur</string>
+  <string name="pref_import_ssh_key_title">SSH anahtarını içe aktar</string>
+  <string name="pref_edit_git_config">Yerel Git yapılandırması ve araçlar</string>
   <string name="pref_ssh_see_key_title">Oluşturulan açık SSH anahtarını görüntüle</string>
   <string name="pref_git_delete_repo_title">Depoyu sil</string>
   <string name="pref_dialog_delete_title">Depoyu temizle</string>

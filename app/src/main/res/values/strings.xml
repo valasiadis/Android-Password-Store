@@ -146,13 +146,11 @@
   <string name="created_date">created on %s</string>
 
   <!-- Preferences -->
-  <string name="pref_category_repository_title">Git repository</string>
-  <string name="pref_edit_git_server_settings">Git server settings</string>
-  <string name="pref_git_server_auth_key">Authentication key</string>
-  <string name="pref_edit_git_config">Local Git config &amp; utilities</string>
-  <string name="pref_ssh_use_pgp_key_title">Use PGP key</string>
+  <string name="pref_category_repository_title">Remote</string>
+  <string name="pref_edit_git_server_settings">Repository &amp; authentication</string>
   <string name="pref_ssh_keygen_title">Generate SSH key pair</string>
   <string name="pref_import_ssh_key_title">Import SSH key</string>
+  <string name="pref_edit_git_config">Local Git config &amp; utilities</string>
   <string name="pref_ssh_see_key_title">View public key</string>
   <string name="pref_git_delete_repo_title">Delete repository</string>
   <string name="pref_dialog_delete_title">Clear repository</string>

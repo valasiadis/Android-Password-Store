@@ -71,8 +71,6 @@
     <string name="pref_category_repository_title">Repositori</string>
     <string name="pref_edit_git_server_settings">Edita la configuració del servidor Git</string>
     <string name="pref_edit_git_config">Configuració local de Git i utilitats</string>
-    <string name="pref_import_ssh_key_title">Importa clau SSH</string>
-    <string name="pref_ssh_keygen_title">Genera un parell de claus SSH</string>
     <string name="pref_ssh_see_key_title">Mostra la clau SSH pública generada</string>
     <string name="pref_git_delete_repo_title">Suprimeix el repositori</string>
     <string name="pref_dialog_delete_title">Buida el repositori</string>
@@ -351,4 +349,6 @@
     <string name="pin_entry_title">Verificació del PIN</string>
     <string name="pin_entry_description">Entreu el codi PIN per mostrar aquesta entrada</string>
     <string name="pin_entry_wrong_input">Entrada incorrecta</string>
+  <string name="pref_ssh_keygen_title">Genera un parell de claus SSH</string>
+  <string name="pref_import_ssh_key_title">Importa clau SSH</string>
 </resources>

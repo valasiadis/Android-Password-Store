@@ -29,10 +29,7 @@ import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.git.config.GitConfigActivity
 import app.passwordstore.ui.git.config.GitServerConfigActivity
 import app.passwordstore.ui.proxy.ProxySelectorActivity
-import app.passwordstore.ui.sshkeygen.PgpAuthKeySelectionActivity
 import app.passwordstore.ui.sshkeygen.ShowSshKeyFragment
-import app.passwordstore.ui.sshkeygen.SshKeyGenActivity
-import app.passwordstore.ui.sshkeygen.SshKeyImportActivity
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.credentialUsernames
 import app.passwordstore.util.extensions.getString
@@ -57,7 +54,6 @@ import de.Maxr1998.modernpreferences.Preference
 import de.Maxr1998.modernpreferences.PreferenceScreen
 import de.Maxr1998.modernpreferences.helpers.onClick
 import de.Maxr1998.modernpreferences.helpers.pref
-import de.Maxr1998.modernpreferences.helpers.subScreen
 import de.Maxr1998.modernpreferences.helpers.switch
 import java.io.IOException
 import java.nio.file.FileVisitResult
@@ -197,6 +193,9 @@ class RepositorySettings(private val activity: FragmentActivity) : SettingsProvi
     activity.registerForActivityResult(StartActivityForResult()) {
       proxySettingsPref?.updateProxyPref()
       clearSavedPassPref?.updateClearSavedPassPref()
+      // The same screen is where an authentication key is chosen, so what is known about one may
+      // have changed by the time it closes.
+      showSshKeyPref?.updateShowSshKeyPref()
     }
 
   private fun Preference.updateShowSshKeyPref() {
@@ -224,6 +223,10 @@ class RepositorySettings(private val activity: FragmentActivity) : SettingsProvi
 
   private var clearSavedPassPref: Preference? = null
 
+  /**
+   * Refreshes what is known about the authentication key once another screen has been in a position
+   * to change it — managing PGP keys can drop the SSH registration that used one.
+   */
   val sshKeyAction =
     activity.registerForActivityResult(StartActivityForResult()) {
       showSshKeyPref?.updateShowSshKeyPref()
@@ -239,41 +242,15 @@ class RepositorySettings(private val activity: FragmentActivity) : SettingsProvi
           true
         }
       }
-      subScreen {
-        collapseIcon = true
-        titleRes = R.string.pref_git_server_auth_key
-
-        pref(PreferenceKeys.SSH_USE_PGP_KEY) {
-          titleRes = R.string.pref_ssh_use_pgp_key_title
+      showSshKeyPref =
+        pref(PreferenceKeys.SSH_SEE_KEY) {
+          titleRes = R.string.pref_ssh_see_key_title
           onClick {
-            sshKeyAction.launch(Intent(activity, PgpAuthKeySelectionActivity::class.java))
+            ShowSshKeyFragment().show(activity.supportFragmentManager, "public_key")
             true
           }
+          updateShowSshKeyPref()
         }
-        pref(PreferenceKeys.SSH_KEYGEN) {
-          titleRes = R.string.pref_ssh_keygen_title
-          onClick {
-            sshKeyAction.launch(Intent(activity, SshKeyGenActivity::class.java))
-            true
-          }
-        }
-        pref(PreferenceKeys.SSH_KEY) {
-          titleRes = R.string.pref_import_ssh_key_title
-          onClick {
-            sshKeyAction.launch(Intent(activity, SshKeyImportActivity::class.java))
-            true
-          }
-        }
-        showSshKeyPref =
-          pref(PreferenceKeys.SSH_SEE_KEY) {
-            titleRes = R.string.pref_ssh_see_key_title
-            onClick {
-              ShowSshKeyFragment().show(activity.supportFragmentManager, "public_key")
-              true
-            }
-            updateShowSshKeyPref()
-          }
-      }
       clearSavedPassPref =
         pref(PreferenceKeys.CLEAR_SAVED_PASS) {
           onClick {

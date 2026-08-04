@@ -14,7 +14,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.text.InputType
-import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
@@ -181,6 +180,7 @@ class PasswordCreationActivity : BasePGPActivity() {
       enableEdgeToEdgeView(root)
       setContentView(root)
 
+      saveFab.setOnClickListener { save() }
       generatePassword.setOnClickListener { generatePassword() }
       otpImportButton.setOnClickListener {
         supportFragmentManager.setFragmentResultListener(
@@ -321,13 +321,9 @@ class PasswordCreationActivity : BasePGPActivity() {
     updateViewState()
   }
 
-  override fun onCreateOptionsMenu(menu: Menu): Boolean {
-    menuInflater.inflate(R.menu.pgp_handler_new_password, menu)
-    return true
-  }
-
-  override fun onOptionsItemSelected(item: MenuItem): Boolean {
-    val initBefore =
+  /** Encrypts what has been typed, or says why there is nowhere to put it. */
+  private fun save() {
+    if (PasswordRepository.isEmpty()) {
       MaterialAlertDialogBuilder(this)
         .setCancelable(false)
         .setTitle(R.string.error)
@@ -337,19 +333,19 @@ class PasswordCreationActivity : BasePGPActivity() {
           setResult(RESULT_CANCELED)
           finish()
         }
+        .show()
+      return
+    }
+    requireKeysExist {
+      requireEncryptionKeysExist(binding.directory.text.toString()) { ids -> encrypt(ids) }
+    }
+  }
+
+  override fun onOptionsItemSelected(item: MenuItem): Boolean {
     when (item.itemId) {
       android.R.id.home -> {
         setResult(RESULT_CANCELED)
         onBackPressedDispatcher.onBackPressed()
-      }
-      R.id.save_password -> {
-        if (PasswordRepository.isEmpty()) {
-          initBefore.show()
-        } else {
-          requireKeysExist {
-            requireEncryptionKeysExist(binding.directory.text.toString()) { ids -> encrypt(ids) }
-          }
-        }
       }
       else -> return super.onOptionsItemSelected(item)
     }

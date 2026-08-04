@@ -28,6 +28,7 @@ import app.passwordstore.util.extensions.windowInsetsLambda
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import java.io.File
 import kotlinx.coroutines.launch
@@ -44,73 +45,108 @@ class CloneFragment : Fragment(R.layout.fragment_clone) {
   private val cloneAction =
     registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
       if (result.resultCode == AppCompatActivity.RESULT_OK) {
+        // A cloned pass repository already says which key it uses; anything else is given the
+        // key chosen during setup.
         if (File(PasswordRepository.getRepositoryDirectory(), ".gpg-id").isFile()) {
           settings.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true) }
-          finishSetup()
+          finish()
         } else {
-          // non-pass repository --> go to key selection
-          selectGpgKey()
+          writeChosenKey()
         }
       }
     }
 
+  /** Records the key chosen during setup as the store's own, and opens the app on it. */
+  private fun writeChosenKey() {
+    val keyIds = setupKeyIds ?: return
+    lifecycleScope.launch {
+      File(PasswordRepository.getRepositoryDirectory(), ".gpg-id").writeText(keyIds + "\n")
+      settings.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true) }
+      requireActivity()
+        .commitChange(getString(R.string.git_commit_gpg_id, getString(R.string.app_name)))
+      finish()
+    }
+  }
+
+  /** What to do once every question this store needs answered has been. */
+  private var pendingAfterSetup: (() -> Unit)? = null
+
   /**
-   * Picks the key the repository will encrypt to, then records it. Launches the key list directly
-   * rather than routing through a screen whose only content is a button that opens it.
+   * Walks the questions in the order they make sense in: how entries are written, which key writes
+   * them, and who the commits belong to. Each is asked only while it is unanswered, so a second run
+   * through this screen goes straight to the repository.
    */
-  private val gpgKeySelectAction =
+  private fun askSetupQuestions(proceed: () -> Unit) {
+    pendingAfterSetup = proceed
+    askEncryptionFormat()
+  }
+
+  private fun askEncryptionFormat() {
+    SetupDialogFragment.newInstance().show(parentFragmentManager, "SETUP_DIALOG")
+  }
+
+  private fun askForKey() {
+    if (hasKey()) {
+      askForIdentity()
+      return
+    }
+    // Said before the picker opens rather than left to be inferred from a list of keys.
+    MaterialAlertDialogBuilder(requireContext())
+      .setTitle(R.string.setup_key_title)
+      .setMessage(R.string.setup_key_message)
+      .setPositiveButton(R.string.setup_key_choose) { _, _ ->
+        keySetupAction.launch(PGPKeyListActivity.newIntent(requireContext(), keySelection = true))
+      }
+      .setCancelable(false)
+      .show()
+  }
+
+  private fun askForIdentity() {
+    if (hasIdentity()) {
+      finishSetupQuestions()
+      return
+    }
+    GitIdentityDialogFragment.newInstance().show(parentFragmentManager, "GIT_IDENTITY_DIALOG")
+  }
+
+  private fun finishSetupQuestions() {
+    val proceed = pendingAfterSetup
+    pendingAfterSetup = null
+    proceed?.invoke()
+  }
+
+  private fun hasIdentity(): Boolean {
+    val settings = requireContext().applicationContext.sharedPrefs
+    return !settings.getString(PreferenceKeys.GIT_CONFIG_AUTHOR_NAME, "").isNullOrEmpty() &&
+      !settings.getString(PreferenceKeys.GIT_CONFIG_AUTHOR_EMAIL, "").isNullOrEmpty()
+  }
+
+  private fun hasKey(): Boolean = setupKeyIds != null
+
+  /** The key chosen for this store, remembered until there is a repository to write it into. */
+  private var setupKeyIds: String? = null
+
+  /**
+   * The key is chosen before the store exists, so it is held until there is a .gpg-id to put it in
+   * — written by whichever route created the store.
+   */
+  private val keySetupAction =
     registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-      if (result.resultCode == AppCompatActivity.RESULT_OK) {
-        val selectedKeyId =
+      setupKeyIds =
+        if (result.resultCode == AppCompatActivity.RESULT_OK) {
           result.data?.getStringExtra(PGPKeyListActivity.EXTRA_SELECTED_KEY)
-            ?: return@registerForActivityResult
-        lifecycleScope.launch {
-          File(PasswordRepository.getRepositoryDirectory(), ".gpg-id")
-            .writeText(selectedKeyId + "\n")
-          settings.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true) }
-          requireActivity()
-            .commitChange(getString(R.string.git_commit_gpg_id, getString(R.string.app_name)))
-          finishSetup()
-        }
-      } else {
+        } else null
+      if (setupKeyIds == null) {
         requireActivity()
           .snackbar(
             message = getString(R.string.gpg_key_select_mandatory),
             length = Snackbar.LENGTH_LONG,
           )
+        pendingAfterSetup = null
+        return@registerForActivityResult
       }
+      askForIdentity()
     }
-
-  private fun selectGpgKey() {
-    gpgKeySelectAction.launch(PGPKeyListActivity.newIntent(requireContext(), keySelection = true))
-  }
-
-  /**
-   * Asks who is committing before anything else is decided, since every route from here ends in a
-   * commit. Once answered it stays answered, and the question is not asked again.
-   */
-  private fun withIdentity(proceed: () -> Unit) {
-    val settings = requireContext().applicationContext.sharedPrefs
-    val hasIdentity =
-      !settings.getString(PreferenceKeys.GIT_CONFIG_AUTHOR_NAME, "").isNullOrEmpty() &&
-        !settings.getString(PreferenceKeys.GIT_CONFIG_AUTHOR_EMAIL, "").isNullOrEmpty()
-    if (hasIdentity) {
-      proceed()
-      return
-    }
-    pendingAfterIdentity = proceed
-    GitIdentityDialogFragment.newInstance().show(parentFragmentManager, "GIT_IDENTITY_DIALOG")
-  }
-
-  private var pendingAfterIdentity: (() -> Unit)? = null
-
-  /**
-   * Asks the last of the questions a store needs answered — who commits, and how entries are
-   * written — before the app opens on it.
-   */
-  private fun finishSetup() {
-    SetupDialogFragment.newInstance().show(parentFragmentManager, "SETUP_DIALOG")
-  }
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
@@ -119,18 +155,20 @@ class CloneFragment : Fragment(R.layout.fragment_clone) {
       SetupDialogFragment.SETUP_RESULT_KEY,
       viewLifecycleOwner,
     ) { _, _ ->
-      finish()
+      askForKey()
     }
     parentFragmentManager.setFragmentResultListener(
       GitIdentityDialogFragment.IDENTITY_RESULT_KEY,
       viewLifecycleOwner,
     ) { _, _ ->
-      pendingAfterIdentity?.invoke()
-      pendingAfterIdentity = null
+      finishSetupQuestions()
     }
 
-    binding.cloneRemote.setOnClickListener { withIdentity(::cloneToHiddenDir) }
-    binding.createLocal.setOnClickListener { withIdentity(::createRepository) }
+    // Everything a store needs settled is settled before it exists: how its entries are written,
+    // which key encrypts them, and who the commits belong to. The repository comes last, because
+    // it is the only step that can be answered differently later without rewriting anything.
+    binding.cloneRemote.setOnClickListener { askSetupQuestions(::cloneToHiddenDir) }
+    binding.createLocal.setOnClickListener { askSetupQuestions(::createRepository) }
   }
 
   /** Clones a remote Git repository to the app's private directory */
@@ -146,7 +184,7 @@ class CloneFragment : Fragment(R.layout.fragment_clone) {
       if (!PasswordRepository.isInitialized) {
         PasswordRepository.initialize()
       }
-      selectGpgKey()
+      writeChosenKey()
     }
       .onErr { e ->
         logcat(ERROR) { e.asLog() }

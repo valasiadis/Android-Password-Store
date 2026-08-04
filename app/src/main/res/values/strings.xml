@@ -91,7 +91,11 @@
   <!-- Git Config fragment -->
   <string name="setup_identity_title">Your Git identity</string>
   <string name="setup_encryption_title">How entries are stored</string>
-  <string name="setup_encryption_message">One last thing before the store opens.</string>
+  <string name="setup_key_title">The key that encrypts them</string>
+  <string name="setup_key_message">Pick the PGP key your passwords will be encrypted to, or import one. A key on a smartcard works too — you will be asked for the card when opening an entry.</string>
+  <string name="setup_key_choose">Choose a key</string>
+  <string name="setup_repo_tip">Cloning brings an existing store from a Git server. Creating one keeps it on this device until you add a server later.</string>
+  <string name="setup_encryption_message">Passwords are kept as files, each encrypted to a PGP key. This decides how those files are written, and applies to entries saved from now on.</string>
   <string name="setup_sign_commits_tip">Signing proves the changes came from you. It asks for your PGP key each time something is saved.</string>
   <string name="setup_continue">Continue</string>
   <string name="setup_identity_message">Git records a name and email address with every change you make, and both are needed before the store can be synchronised.</string>

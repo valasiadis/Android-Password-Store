@@ -97,8 +97,10 @@ class GitServerConfigActivity : BaseGitActivity() {
       if (text.isNullOrEmpty()) return@doOnTextChanged
       setAuthModes(text.startsWith("http://") || text.startsWith("https://"))
       // Checked as it is typed, so what is wrong with an address is said while it is being
-      // written. While editing this also stores it, once there is something worth storing.
-      if (!isClone) applySettings()
+      // written. Editing stores it as well, once there is something worth storing; cloning waits
+      // for its button, so it only says what it thinks.
+      if (isClone) reportProblem(problemWith(binding.serverUrl.text.toString().trim()))
+      else applySettings()
     }
 
     // Offered only where a key is what authenticates: password authentication needs none.
@@ -138,14 +140,41 @@ class GitServerConfigActivity : BaseGitActivity() {
    * from the URL's scheme, and an SSH URL without a username is only a problem once a mode that
    * needs one is picked.
    */
+  /** What is wrong with [url] as a repository address, or null when nothing is. */
+  private fun problemWith(url: String): String? =
+    when {
+      url.isEmpty() -> null
+      url.startsWith("git://") -> getString(R.string.git_scheme_disallowed_message)
+      else -> describe(gitSettings.validateConnectionSettings(newAuthMode, url))
+    }
+
+  private fun describe(result: GitSettings.UpdateConnectionSettingsResult): String? =
+    when (result) {
+      GitSettings.UpdateConnectionSettingsResult.FailedToParseUrl ->
+        getString(R.string.git_server_config_save_error)
+      is GitSettings.UpdateConnectionSettingsResult.MissingUsername ->
+        when (result.newProtocol) {
+          Protocol.Https -> getString(R.string.git_server_config_save_missing_username_https)
+          Protocol.Ssh -> getString(R.string.git_server_config_save_missing_username_ssh)
+        }
+      is GitSettings.UpdateConnectionSettingsResult.AuthModeMismatch ->
+        getString(
+          R.string.git_server_config_save_auth_mode_mismatch,
+          result.newProtocol,
+          result.validModes.joinToString(", "),
+        )
+      GitSettings.UpdateConnectionSettingsResult.Valid -> null
+    }
+
+  private fun reportProblem(problem: String?) {
+    binding.labelServerUrl.error = problem
+  }
+
   private fun applySettings(): Boolean {
     val newUrl = binding.serverUrl.text.toString().trim()
-    if (newUrl.isEmpty()) {
-      binding.labelServerUrl.error = null
-      return false
-    }
-    if (newUrl.startsWith("git://")) {
-      binding.labelServerUrl.error = getString(R.string.git_scheme_disallowed_message)
+    val problem = problemWith(newUrl)
+    if (newUrl.isEmpty() || problem != null) {
+      reportProblem(problem)
       return false
     }
     val updateResult =
@@ -154,23 +183,7 @@ class GitServerConfigActivity : BaseGitActivity() {
         newAuthMode = newAuthMode,
         newUrl = newUrl,
       )
-    binding.labelServerUrl.error =
-      when (updateResult) {
-        GitSettings.UpdateConnectionSettingsResult.FailedToParseUrl ->
-          getString(R.string.git_server_config_save_error)
-        is GitSettings.UpdateConnectionSettingsResult.MissingUsername ->
-          when (updateResult.newProtocol) {
-            Protocol.Https -> getString(R.string.git_server_config_save_missing_username_https)
-            Protocol.Ssh -> getString(R.string.git_server_config_save_missing_username_ssh)
-          }
-        is GitSettings.UpdateConnectionSettingsResult.AuthModeMismatch ->
-          getString(
-            R.string.git_server_config_save_auth_mode_mismatch,
-            updateResult.newProtocol,
-            updateResult.validModes.joinToString(", "),
-          )
-        GitSettings.UpdateConnectionSettingsResult.Valid -> null
-      }
+    reportProblem(describe(updateResult))
     if (updateResult != GitSettings.UpdateConnectionSettingsResult.Valid) return false
     // Changing the mode drops the credentials stored for the old one, so the mode now on record
     // becomes the one to compare against: storing again must not drop anything a second time.

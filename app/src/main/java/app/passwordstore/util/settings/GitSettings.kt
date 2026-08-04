@@ -148,8 +148,15 @@ constructor(
     data object FailedToParseUrl : UpdateConnectionSettingsResult()
   }
 
-  fun updateConnectionSettingsIfValid(
-    oldAuthMode: AuthMode,
+  /**
+   * Whether [newUrl] and [newAuthMode] hold together, without storing anything.
+   *
+   * The two are only meaningful as a pair — which authentication modes are allowed follows from the
+   * URL's scheme, and a missing username only matters once a mode that needs one is picked — so
+   * anywhere an address is typed can ask this while it is being typed, and only the screen that
+   * owns the setting goes on to store it.
+   */
+  fun validateConnectionSettings(
     newAuthMode: AuthMode,
     newUrl: String,
   ): UpdateConnectionSettingsResult {
@@ -182,6 +189,17 @@ constructor(
         return UpdateConnectionSettingsResult.AuthModeMismatch(newProtocol, validSshAuth)
       }
     }
+
+    return UpdateConnectionSettingsResult.Valid
+  }
+
+  fun updateConnectionSettingsIfValid(
+    oldAuthMode: AuthMode,
+    newAuthMode: AuthMode,
+    newUrl: String,
+  ): UpdateConnectionSettingsResult {
+    val result = validateConnectionSettings(newAuthMode, newUrl)
+    if (result != UpdateConnectionSettingsResult.Valid) return result
 
     if (newAuthMode != oldAuthMode) {
       gitSecrets.edit {

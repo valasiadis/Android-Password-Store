@@ -17,17 +17,21 @@ import android.content.pm.PackageManager
 import android.content.pm.PackageManager.ApplicationInfoFlags
 import android.content.pm.PackageManager.PackageInfoFlags
 import android.os.Build
+import android.text.TextUtils
+import android.text.TextUtils.TruncateAt
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.view.autofill.AutofillManager
 import android.view.inputmethod.InputMethodManager
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.BuildConfig
@@ -48,6 +52,26 @@ val Context.autofillManager: AutofillManager?
  * keyboard over a dialog, snackbar, or the status bar once overlaying dialogs close. Must be called
  * on the main thread.
  */
+/**
+ * Shows [text] on one line, cut short with an ellipsis where it does not fit.
+ *
+ * The value fields that name chosen keys can hold several of them, and a text field that is not
+ * typed into still refuses to ellipsize what it is given: it scrolls it instead, so a long value
+ * ends mid-word against the edge as if the rest were merely off screen. Measuring against the
+ * field's own width says where it really ends.
+ */
+fun TextView.setEllipsizedText(text: CharSequence) {
+  setText(text)
+  // Measured just before drawing, which is the first moment the field's width is the width it
+  // will actually be drawn at — a layout pass earlier it is still the full row's.
+  doOnPreDraw {
+    val available = width - paddingStart - paddingEnd
+    if (available <= 0) return@doOnPreDraw
+    val shown = TextUtils.ellipsize(text, paint, available.toFloat(), TruncateAt.END)
+    if (shown.toString() != getText().toString()) setText(shown)
+  }
+}
+
 fun FragmentActivity.hideKeyboard() {
   val imm = getSystemService<InputMethodManager>() ?: return
   val focus = currentFocus

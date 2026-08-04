@@ -28,10 +28,12 @@
       android:layout_height="wrap_content"
       android:clickable="true"
       android:cursorVisible="false"
-      android:ellipsize="middle"
+      android:ellipsize="end"
       android:focusable="false"
-      android:inputType="none"
-      android:maxLines="1"
+      android:inputType="textNoSuggestions"
+      android:paddingStart="@dimen/spacing_large"
+      android:paddingEnd="@dimen/text_field_end_icon_room"
+      android:singleLine="true"
       android:text="@string/setup_key_none_chosen" />
 
   </com.google.android.material.textfield.TextInputLayout>
@@ -52,18 +54,42 @@
     android:textAppearance="?attr/textAppearanceBodyMedium"
     android:textColor="?attr/colorOnSurfaceVariant" />
 
-  <com.google.android.material.switchmaterial.SwitchMaterial
-    android:id="@+id/ascii_armor"
+  <!-- What ASCII armor is stays behind the question mark, out of the way of the switch. -->
+  <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginTop="@dimen/spacing_medium"
-    android:text="@string/pref_pgp_ascii_armor_title" />
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
 
-  <androidx.appcompat.widget.AppCompatTextView
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:text="@string/setup_ascii_armor_explanation"
-    android:textAppearance="?attr/textAppearanceBodySmall"
-    android:textColor="?attr/colorOnSurfaceVariant" />
+    <androidx.appcompat.widget.AppCompatTextView
+      android:id="@+id/ascii_armor_label"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/pref_pgp_ascii_armor_title"
+      android:textAppearance="?attr/textAppearanceBodyLarge"
+      android:textColor="?attr/colorOnSurface" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+      android:id="@+id/ascii_armor_help"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="@dimen/spacing_small"
+      android:background="?attr/selectableItemBackgroundBorderless"
+      android:padding="@dimen/spacing_small"
+      android:src="@drawable/ic_help_20dp"
+      app:tint="?attr/colorOnSurfaceVariant" />
+
+    <Space
+      android:layout_width="0dp"
+      android:layout_height="1dp"
+      android:layout_weight="1" />
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+      android:id="@+id/ascii_armor"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content" />
+
+  </LinearLayout>
 
 </LinearLayout>

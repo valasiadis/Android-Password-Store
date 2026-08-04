@@ -17,11 +17,11 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.FragmentCloneBinding
+import app.passwordstore.ui.dialogs.showsTip
 import app.passwordstore.ui.git.config.GitServerConfigActivity
 import app.passwordstore.ui.onboarding.activity.GitIdentitySetupActivity
 import app.passwordstore.ui.onboarding.activity.PgpSetupActivity
 import app.passwordstore.ui.onboarding.activity.SetupStepActivity
-import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.finish
 import app.passwordstore.util.extensions.sharedPrefs
@@ -45,27 +45,14 @@ import logcat.logcat
  * The questions are asked as a flow of screens rather than a stack of dialogs, each step storing
  * its own answer where the settings keep it: the key that encrypts the entries and how they are
  * written, then who the commits belong to, then — for a store that comes from a server — where it
- * lives. A step already answered is skipped, so coming back here goes straight to the repository.
+ * lives. Every step shows what is already stored, so a second walk through the flow is a matter of
+ * pressing on rather than answering again.
  */
 class CloneFragment : Fragment(R.layout.fragment_clone) {
 
   private val binding by viewBinding(FragmentCloneBinding::bind)
 
   private val settings by unsafeLazy { requireActivity().applicationContext.sharedPrefs }
-
-  private val cloneAction =
-    registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-      if (result.resultCode == AppCompatActivity.RESULT_OK) {
-        // A cloned pass repository already says which key it uses; anything else is given the
-        // key chosen during setup.
-        if (File(PasswordRepository.getRepositoryDirectory(), ".gpg-id").isFile()) {
-          settings.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true) }
-          finish()
-        } else {
-          writeChosenKey()
-        }
-      }
-    }
 
   /** Records the key chosen during setup as the store's own, and opens the app on it. */
   private fun writeChosenKey() {
@@ -85,70 +72,67 @@ class CloneFragment : Fragment(R.layout.fragment_clone) {
   /** The key chosen for this store, remembered until there is a repository to write it into. */
   private var setupKeyIds: String? = null
 
-  private val stepCount
-    get() = if (isCloning) STEPS_WITH_REMOTE else STEPS_WITHOUT_REMOTE
-
   /**
-   * Starts the flow, or resumes it where it was left. Steps that already have an answer are not
-   * asked again: a store set up over two attempts is still set up once.
+   * Builds the flow and starts it. The steps carry each other, so back walks it in reverse rather
+   * than dropping the user here, and only the first step reports to this screen — by then the store
+   * has been cloned or is about to be created, and the key it belongs to is in hand.
    */
-  private fun continueSetup() {
-    when {
-      setupKeyIds == null ->
-        startStep(Intent(requireContext(), PgpSetupActivity::class.java), STEP_KEY)
-      !hasIdentity() ->
-        startStep(
-          Intent(requireContext(), GitIdentitySetupActivity::class.java)
-            .putExtra(GitIdentitySetupActivity.EXTRA_KEY_IDS, setupKeyIds),
-          STEP_IDENTITY,
+  private fun startSetup() {
+    val stepCount = if (isCloning) STEPS_WITH_REMOTE else STEPS_WITHOUT_REMOTE
+    val remote =
+      if (isCloning) {
+        GitServerConfigActivity.createCloneIntent(
+          context = requireContext(),
+          step = STEP_REMOTE,
+          stepCount = stepCount,
         )
-      isCloning -> cloneAction.launch(cloneIntent())
-      else -> createRepository()
-    }
+      } else null
+    val identity =
+      Intent(requireContext(), GitIdentitySetupActivity::class.java)
+        .asStep(STEP_IDENTITY, stepCount)
+        .putExtra(SetupStepActivity.EXTRA_NEXT_STEP, remote)
+    val key =
+      Intent(requireContext(), PgpSetupActivity::class.java)
+        .asStep(STEP_KEY, stepCount)
+        .putExtra(SetupStepActivity.EXTRA_KEY_IDS, setupKeyIds)
+        .putExtra(SetupStepActivity.EXTRA_NEXT_STEP, identity)
+    setupAction.launch(key)
   }
 
-  private fun startStep(intent: Intent, step: Int) {
-    intent.putExtra(SetupStepActivity.EXTRA_STEP, step)
-    intent.putExtra(SetupStepActivity.EXTRA_STEP_COUNT, stepCount)
-    currentStep = step
-    setupStepAction.launch(intent)
-  }
-
-  /** The step being answered, so that leaving one can say why the flow stopped. */
-  private var currentStep = 0
-
-  private fun cloneIntent() =
-    GitServerConfigActivity.createCloneIntent(
-      context = requireContext(),
-      step = STEP_REMOTE,
-      stepCount = stepCount,
-    )
+  private fun Intent.asStep(step: Int, stepCount: Int) =
+    putExtra(SetupStepActivity.EXTRA_STEP, step)
+      .putExtra(SetupStepActivity.EXTRA_STEP_COUNT, stepCount)
 
   /**
-   * A step answered moves the flow on; a step left without an answer stops it where it is. Nothing
-   * is undone by that: what a step stored stays stored, and coming back resumes from there.
+   * The flow is through: everything the store needs has been answered, and a cloned store already
+   * exists. What is left is the store this screen was asked for.
    */
-  private val setupStepAction =
+  private val setupAction =
     registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
       if (result.resultCode != AppCompatActivity.RESULT_OK) {
-        // Nothing to encrypt to is the one answer a store cannot do without, and the one worth
-        // saying out loud: the other steps are either already answered or asked again next time.
-        if (currentStep == STEP_KEY) {
-          requireActivity()
-            .snackbar(
-              message = getString(R.string.gpg_key_select_mandatory),
-              length = Snackbar.LENGTH_LONG,
-            )
-        }
+        // Backing out of the first step ends setup, and the one thing a store cannot do without
+        // is a key to encrypt to — so that, and not the flow, is what is worth saying.
+        requireActivity()
+          .snackbar(
+            message = getString(R.string.gpg_key_select_mandatory),
+            length = Snackbar.LENGTH_LONG,
+          )
         return@registerForActivityResult
       }
-      result.data?.getStringExtra(PGPKeyListActivity.EXTRA_SELECTED_KEY)?.let { setupKeyIds = it }
-      continueSetup()
+      setupKeyIds = result.data?.getStringExtra(SetupStepActivity.EXTRA_KEY_IDS)
+      if (!isCloning) {
+        createRepository()
+        return@registerForActivityResult
+      }
+      // A cloned pass repository already says which key it uses; anything else is given the key
+      // chosen during setup.
+      if (File(PasswordRepository.getRepositoryDirectory(), ".gpg-id").isFile()) {
+        settings.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true) }
+        finish()
+      } else {
+        writeChosenKey()
+      }
     }
-
-  private fun hasIdentity(): Boolean =
-    !settings.getString(PreferenceKeys.GIT_CONFIG_AUTHOR_NAME, "").isNullOrEmpty() &&
-      !settings.getString(PreferenceKeys.GIT_CONFIG_AUTHOR_EMAIL, "").isNullOrEmpty()
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
@@ -162,13 +146,14 @@ class CloneFragment : Fragment(R.layout.fragment_clone) {
     // entries and how they are written, and who the commits belong to. The repository comes last,
     // because it is the only step that can be answered differently later without rewriting
     // anything.
+    binding.repoTypeHelp.showsTip(R.string.setup_repo_tip)
     binding.cloneRemote.setOnClickListener {
       isCloning = true
-      continueSetup()
+      startSetup()
     }
     binding.createLocal.setOnClickListener {
       isCloning = false
-      continueSetup()
+      startSetup()
     }
   }
 

@@ -14,6 +14,8 @@
   <dimen name="spacing_medium">12dp</dimen>
   <dimen name="spacing_large">16dp</dimen>
   <dimen name="spacing_xlarge">24dp</dimen>
+  <!-- What a text field leaves free at its end for the icon drawn over it. -->
+  <dimen name="text_field_end_icon_room">48dp</dimen>
 
   <!--
     Corner radius for drawables we draw by hand, matching the "medium" step of

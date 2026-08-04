@@ -424,7 +424,7 @@
 
   <!-- Onboarding flow -->
   <string name="let_s_go">Let\'s Go</string>
-  <string name="select_n_repository_type">Select \nRepository Type</string>
+  <string name="select_n_repository_type">Select repository type</string>
   <string name="select_repo_type_text">Select if you want to create a local repo or clone a remote repo.</string>
   <string name="clone_remote_repo">Clone Remote Repo</string>
   <string name="create_local_repo">Create Local Repo</string>

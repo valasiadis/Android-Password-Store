@@ -68,13 +68,6 @@ class GitIdentitySetupActivity : SetupStepActivity() {
 
   override fun onNext() {
     identity.save()
-    setResult(RESULT_OK)
-    finish()
-  }
-
-  companion object {
-
-    /** The keys chosen in the step before, to read an identity off when there is only one. */
-    const val EXTRA_KEY_IDS = "PGP_KEY_IDS"
+    proceed()
   }
 }

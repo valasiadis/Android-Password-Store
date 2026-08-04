@@ -59,14 +59,4 @@
   <color name="seed">#003E5B</color>
   <color name="error">#BA1B1B</color>
 
-  <!-- Multiselect color -->
-  <color name="list_multiselect_background">#668eacbb</color>
-  <!--
-    Outline around password rows. Deliberately a literal black rather than
-    ?attr/colorOutline so the row edge stays hard in both themes; override in
-    values-night if that reads too heavy against the dark surface.
-  -->
-  <color name="password_row_outline">#000000</color>
-  <color name="git_commit_signature_signed">#2E7D32</color>
-  <color name="git_commit_signature_unsigned">#8A8A8A</color>
 </resources>

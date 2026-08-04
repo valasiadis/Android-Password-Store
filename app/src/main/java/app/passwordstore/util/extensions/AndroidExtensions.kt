@@ -166,10 +166,16 @@ fun PackageManager.getApplicationInfoCompat(packageName: String, flags: Int): Ap
   }
 }
 
-/** Allows conditionally applying the given [modifier] if [isEnabled] is `true`. */
+/**
+ * Allows conditionally applying the given [modifier] if [isEnabled] is `true`.
+ *
+ * The block builds on an empty [Modifier], not on the chain it is appended to: calling it on the
+ * receiver would append a second copy of everything before it, so a conditional background would
+ * bring a duplicate of the padding, clip and shape along with it and draw a nested box.
+ */
 fun Modifier.conditional(isEnabled: Boolean, modifier: Modifier.() -> Modifier): Modifier {
   return if (isEnabled) {
-    then(modifier())
+    then(Modifier.modifier())
   } else {
     this
   }

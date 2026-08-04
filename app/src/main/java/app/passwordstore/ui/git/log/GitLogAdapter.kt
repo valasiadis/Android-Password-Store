@@ -5,14 +5,16 @@
 
 package app.passwordstore.ui.git.log
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import app.passwordstore.R
 import app.passwordstore.databinding.GitLogRowLayoutBinding
 import app.passwordstore.util.git.GitCommit
 import app.passwordstore.util.git.GitLogModel
+import com.google.android.material.R as MaterialR
+import com.google.android.material.color.MaterialColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -65,11 +67,14 @@ class GitLogAdapter : RecyclerView.Adapter<GitLogAdapter.ViewHolder>() {
         gitLogRowSignature.setImageResource(
           if (commit.isSigned) R.drawable.ic_lock_closed_24px else R.drawable.ic_lock_open_24px
         )
+        // From the scheme rather than a pair of fixed greens and greys, so both follow the
+        // theme: tertiary is the scheme's accent for a positive state.
         gitLogRowSignature.setColorFilter(
-          ContextCompat.getColor(
-            root.context,
-            if (commit.isSigned) R.color.git_commit_signature_signed
-            else R.color.git_commit_signature_unsigned,
+          MaterialColors.getColor(
+            root,
+            if (commit.isSigned) MaterialR.attr.colorTertiary
+            else MaterialR.attr.colorOnSurfaceVariant,
+            Color.TRANSPARENT,
           )
         )
         gitLogRowSignature.contentDescription =

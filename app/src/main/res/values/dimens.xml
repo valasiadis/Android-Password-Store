@@ -22,6 +22,8 @@
     only when something uses them: lint fails the build on unused resources.
   -->
   <dimen name="corner_radius_medium">12dp</dimen>
+  <dimen name="corner_radius_small">4dp</dimen>
+  <dimen name="corner_radius_large">16dp</dimen>
 
   <!--
     List item metrics. Rows carry their own filled, rounded container and are

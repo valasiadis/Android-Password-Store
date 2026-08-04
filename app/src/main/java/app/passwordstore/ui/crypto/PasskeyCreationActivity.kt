@@ -142,7 +142,10 @@ class PasskeyCreationActivity : BasePGPActivity() {
             binding.extraContent.append("\n$contents")
           else binding.extraContent.append(contents)
         }
-        Notice.show(this@PasskeyCreationActivity, R.string.otp_import_success, success = true)
+        Notice.show(
+          this@PasskeyCreationActivity,
+          R.string.otp_import_success,
+        )
       } else {
         ErrorDialog.show(this@PasskeyCreationActivity, R.string.otp_import_failure_generic)
       }
@@ -176,7 +179,10 @@ class PasskeyCreationActivity : BasePGPActivity() {
             binding.extraContent.append("\n$text")
           else binding.extraContent.append(text)
         }
-        Notice.show(this@PasskeyCreationActivity, R.string.otp_import_success, success = true)
+        Notice.show(
+          this@PasskeyCreationActivity,
+          R.string.otp_import_success,
+        )
         binding.otpImportButton.isVisible = false
       }
         .onErr {

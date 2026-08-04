@@ -122,7 +122,12 @@ class DecryptActivity : BasePGPActivity() {
     intent.removeExtra(PasswordCreationActivity.EXTRA_ENTRY)
     intent.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)?.let { message ->
       intent.removeExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
-      binding.root.post { Notice.show(this@DecryptActivity, message, success = true) }
+      binding.root.post {
+        Notice.show(
+          this@DecryptActivity,
+          message,
+        )
+      }
     }
     // An entry arrived here straight from being written, so what it changed still wants committing.
     lifecycleScope.launch { commitSavedChange(intent) }
@@ -516,7 +521,10 @@ class DecryptActivity : BasePGPActivity() {
           // copy on screen is still the one that was just written.
           setResult(RESULT_OK)
           if (failedUserIds.isEmpty()) {
-            Notice.show(this@DecryptActivity, R.string.change_keys_success, success = true)
+            Notice.show(
+              this@DecryptActivity,
+              R.string.change_keys_success,
+            )
           } else {
             Notice.show(
               this@DecryptActivity,
@@ -600,7 +608,10 @@ class DecryptActivity : BasePGPActivity() {
         recreate()
       }
       data.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)?.let { message ->
-        Notice.show(this@DecryptActivity, message, success = true)
+        Notice.show(
+          this@DecryptActivity,
+          message,
+        )
       }
       lifecycleScope.launch { commitSavedChange(data) }
     }
@@ -625,7 +636,6 @@ class DecryptActivity : BasePGPActivity() {
         Notice.show(
           this@DecryptActivity,
           resources.getQuantityString(R.plurals.password_delete_success, 1),
-          success = true,
         )
         setResult(RESULT_OK)
         finish()

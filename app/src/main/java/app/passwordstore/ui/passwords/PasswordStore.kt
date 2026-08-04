@@ -650,7 +650,6 @@ class PasswordStore : BaseGitActivity() {
             Notice.show(
               this@PasswordStore,
               resources.getQuantityString(R.plurals.password_delete_success, size),
-              success = true,
             )
           }
           .onErr { e ->

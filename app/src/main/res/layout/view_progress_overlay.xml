@@ -16,7 +16,7 @@
   android:layout_height="wrap_content"
   android:layout_gravity="top|center_horizontal"
   android:layout_marginHorizontal="@dimen/spacing_large"
-  android:layout_marginTop="@dimen/spacing_small"
+  android:layout_marginTop="@dimen/spacing_large"
   android:background="@drawable/progress_overlay_background"
   android:elevation="6dp"
   android:gravity="center_vertical"

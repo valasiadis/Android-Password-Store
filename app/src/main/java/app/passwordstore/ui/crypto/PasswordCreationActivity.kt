@@ -110,7 +110,10 @@ class PasswordCreationActivity : BasePGPActivity() {
             binding.extraContent.append("\n$contents")
           else binding.extraContent.append(contents)
         }
-        Notice.show(this@PasswordCreationActivity, R.string.otp_import_success, success = true)
+        Notice.show(
+          this@PasswordCreationActivity,
+          R.string.otp_import_success,
+        )
       } else {
         ErrorDialog.show(this@PasswordCreationActivity, R.string.otp_import_failure_generic)
       }
@@ -144,7 +147,10 @@ class PasswordCreationActivity : BasePGPActivity() {
             binding.extraContent.append("\n$text")
           else binding.extraContent.append(text)
         }
-        Notice.show(this@PasswordCreationActivity, R.string.otp_import_success, success = true)
+        Notice.show(
+          this@PasswordCreationActivity,
+          R.string.otp_import_success,
+        )
         binding.otpImportButton.isVisible = false
       }
         .onErr {
@@ -618,9 +624,12 @@ class PasswordCreationActivity : BasePGPActivity() {
           }
           if (failedUserEmails.isEmpty()) {
             // Nothing went wrong, so it is said in passing — on whichever screen comes next, since
-            // this one is on its way out and would take the message with it.
+            // this one is on its way out and would take the message with it. Which keys it went to
+            // is not news; that it was saved is.
             val message =
-              encryptionOutcomeMessage(succeededUserEmails, failedUserEmails, true).toString()
+              getString(
+                if (editing) R.string.notice_password_updated else R.string.notice_password_created
+              )
             returnIntent.putExtra(RETURN_EXTRA_MESSAGE, message)
             savedMessage = message
             leave()

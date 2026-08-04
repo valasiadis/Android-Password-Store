@@ -30,8 +30,8 @@
     <item quantity="other">Are you sure you want to delete the %d selected items?</item>
   </plurals>
   <plurals name="password_delete_success">
-    <item quantity="one">Successfully deleted password item.</item>
-    <item quantity="other">Successfully deleted password items.</item>
+    <item quantity="one">Password deleted</item>
+    <item quantity="other">Passwords deleted</item>
   </plurals>
   <string name="delete_directory_progress_text">Deleting…</string>
   <string name="move">Move</string>
@@ -65,7 +65,7 @@
   <string name="git_commit_signature_unsigned">Unsigned commit</string>
 
   <!-- PGPHandler -->
-  <string name="clipboard_copied_text">Copied to clipboard.</string>
+  <string name="clipboard_copied_text">Copied</string>
   <string name="file_toast_text">Please provide a file name.</string>
   <string name="empty_toast_text">You need to fill in at least a password or some extra content.</string>
 
@@ -99,6 +99,8 @@
   <string name="setup_identity_message">Git records a name and email address with every change you make, and both are needed before the store can be synchronised.</string>
   <string name="setup_ascii_armor_explanation">Stores passwords as text rather than binary. The files are larger, but survive tools that would mangle binary data.</string>
   <string name="pgp_key_creation_in_progress">Creating key…</string>
+  <string name="notice_password_created">Password created</string>
+  <string name="notice_password_updated">Password updated</string>
   <string name="setup_next">Next</string>
   <string name="setup_back">Back</string>
   <string name="setup_step_counter">Step %1$d of %2$d</string>
@@ -137,7 +139,7 @@
   <string name="change_keys_unopenable_title">Nothing here could open it</string>
   <string name="change_keys_unopenable_message">None of the selected keys has a private half in this app, so this entry would be readable only by whoever holds them. You would not be able to open it again.</string>
   <string name="change_keys_unopenable_confirm">Change anyway</string>
-  <string name="change_keys_success">Saved with the selected key(s)</string>
+  <string name="change_keys_success">Keys changed</string>
   <string name="change_keys_failure">Could not save with the selected key(s)</string>
   <string name="change_keys_partial">Saved, but not for %1$s</string>
   <string name="edit_passkey">Edit passkey</string>
@@ -384,7 +386,7 @@
   <string name="password_creation_no_keys_provided_message">No matching PGP keys found.</string>
   <string name="password_creation_duplicate_error">File already exists, please use a different name.</string>
   <string name="add_otp">Add OTP</string>
-  <string name="otp_import_success">Successfully imported TOTP configuration</string>
+  <string name="otp_import_success">One-time password added</string>
   <string name="otp_import_failure_generic">Failed to import TOTP configuration</string>
   <string name="otp_import_failure_no_selection">No image file was selected</string>
   <string name="invalid_gpg_id">Found .gpg-id, but it contains an invalid key ID.</string>
@@ -442,7 +444,7 @@
   <string name="invalid_proxy_port">Invalid port</string>
   <string name="oreo_autofill_password_fill_and_conditional_save_support">Fill and save passwords (saving requires that no accessibility services are enabled)</string>
   <string name="clear_saved_host_key">Clear saved host key</string>
-  <string name="clear_saved_host_key_success">Successfully cleared saved host key!</string>
+  <string name="clear_saved_host_key_success">Host key cleared</string>
   <string name="otp_import_qr_code">Scan QR code</string>
   <string name="otp_import_from_file">Choose an image</string>
   <string name="otp_import_manual_entry">Enter manually</string>
@@ -506,7 +508,7 @@
     <item quantity="other">Keys with the following IDs were not imported:</item>
   </plurals>
   <string name="pgp_key_export_failed">Failed to export PGP key</string>
-  <string name="pgp_key_export_succeeded">Successfully exported PGP key</string>
+  <string name="pgp_key_export_succeeded">Key exported</string>
   <string name="pgp_full_name_hint">Full name</string>
   <string name="pgp_email_hint">Email</string>
   <string name="pgp_email_input_invalid_error">invalid</string>

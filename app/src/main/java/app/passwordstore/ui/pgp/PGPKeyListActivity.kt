@@ -495,7 +495,10 @@ class PGPKeyListActivity : AppCompatActivity() {
       source?.inputStream().use { src -> outputStream.use { dest -> src?.copyTo(dest) } }
     }
       .onOk {
-        Notice.show(this@PGPKeyListActivity, R.string.pgp_key_export_succeeded, success = true)
+        Notice.show(
+          this@PGPKeyListActivity,
+          R.string.pgp_key_export_succeeded,
+        )
       }
       .onErr { e ->
         logcat(ERROR) { e.asLog() }

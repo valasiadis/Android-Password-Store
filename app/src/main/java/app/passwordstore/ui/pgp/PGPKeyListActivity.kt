@@ -19,12 +19,15 @@ import androidx.activity.result.contract.ActivityResultContracts.StartActivityFo
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.mutableStateSetOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -38,6 +41,7 @@ import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.ui.APSAppBar
 import app.passwordstore.ui.compose.theme.APSTheme
+import app.passwordstore.ui.compose.theme.SpacingLarge
 import app.passwordstore.ui.dialogs.AddPgpKeyBottomSheet
 import app.passwordstore.ui.dialogs.PasswordDialog
 import app.passwordstore.ui.pgp.PGPKeyImportActivity.Companion.EXTRA_IMPORT_FROM_NFC
@@ -56,6 +60,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.security.SecureRandom
 import javax.inject.Inject
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 import logcat.LogPriority.ERROR
 import logcat.asLog
@@ -112,10 +117,21 @@ class PGPKeyListActivity : AppCompatActivity() {
 
     val singleSelection = intent.extras?.getBoolean(EXTRA_KEY_FOR_SSH) ?: false
     val isSelectingKeys = intent.extras?.getBoolean(EXTRA_KEY_SELECTION) ?: false
-    val selectedKeyIds = mutableSetOf<String>()
+    // Observable, so the confirm action can follow whether anything is selected.
+    val selectedKeyIds = mutableStateSetOf<String>()
 
+    // Keys already in use by whatever opened this screen, so it starts out showing them.
+    val preselectedKeys =
+      intent
+        .getStringExtra(EXTRA_PRESELECTED_KEYS)
+        ?.split("\n")
+        ?.filter { it.isNotBlank() }
+        .orEmpty()
+    selectedKeyIds.addAll(preselectedKeys)
+    // What the caller arrived with, to tell an actual change from merely looking.
+    val initialKeyIds = preselectedKeys.toSet()
     // initial selection of a PGP key for authentication
-    if (singleSelection && SshKey.pgpLongKeyId != 0L)
+    if (singleSelection && SshKey.pgpLongKeyId != 0L && selectedKeyIds.isEmpty())
       selectedKeyIds.add(KeyId(SshKey.pgpLongKeyId).toString())
 
     supportFragmentManager.setFragmentResultListener(PGP_KEY_ADD_REQUEST_KEY, this) { _, bundle ->
@@ -161,97 +177,107 @@ class PGPKeyListActivity : AppCompatActivity() {
                 finish()
               },
               backgroundColor = MaterialTheme.colorScheme.surface,
-              actions = {
-                if (isSelectingKeys) {
-                  IconButton(onClick = { confirmSelection(singleSelection, selectedKeyIds) }) {
-                    Icon(
-                      painter = painterResource(R.drawable.ic_done_24dp),
-                      contentDescription =
-                        if (singleSelection) stringResource(R.string.gpg_key_single_select)
-                        else stringResource(R.string.gpg_key_select),
-                    )
-                  }
-                }
-              },
             )
           },
+          // Outside selection mode the only action is adding a key, which keeps the ordinary
+          // trailing position. While selecting, that position belongs to the confirm action and
+          // adding moves to the leading edge, as in the folder picker.
           floatingActionButton = {
-            FloatingActionButton(
-              onClick = {
-                AddPgpKeyBottomSheet().show(supportFragmentManager, "ADD_PGP_KEY_BOTTOM_SHEET")
+            if (!isSelectingKeys) {
+              FloatingActionButton(onClick = ::showAddKeySheet) {
+                Icon(
+                  painter = painterResource(R.drawable.ic_add_48dp),
+                  stringResource(R.string.pref_import_pgp_key_title),
+                )
               }
-            ) {
-              Icon(
-                painter = painterResource(R.drawable.ic_add_48dp),
-                stringResource(R.string.pref_import_pgp_key_title),
-              )
             }
           },
         ) { paddingValues ->
-          KeyList(
-            identifiers = viewModel.keys, // Pair<KeyId,UserId>
-            isSecretKey = ::isSecretKey,
-            isStubKey = ::isStubKey,
-            onKeyInfoClick = ::showKeyInfo,
-            onChangePassphraseClick = ::changeKeyPassphrase,
-            onDeleteItemClick = ::deleteKey,
-            onExportItemClick = ::exportKey,
-            onExportPublicClick = ::exportPublicKey,
-            modifier = Modifier.padding(paddingValues),
-            onKeySelected =
-              if (isSelectingKeys) {
-                { identifier, isSelected ->
-                  val keyId = run { // ensure numeric key ID
-                    val key = pgpKeyManager.getKeyById(identifier).getOrThrow()
-                    KeyUtils.tryGetKeyId(key) ?: throw NullPointerException()
+          Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+            KeyList(
+              identifiers = viewModel.keys, // Pair<KeyId,UserId>
+              isSecretKey = ::isSecretKey,
+              isStubKey = ::isStubKey,
+              onKeyInfoClick = ::showKeyInfo,
+              onChangePassphraseClick = ::changeKeyPassphrase,
+              onDeleteItemClick = ::deleteKey,
+              onExportItemClick = ::exportKey,
+              onExportPublicClick = ::exportPublicKey,
+              onKeySelected =
+                if (isSelectingKeys) {
+                  { identifier, isSelected ->
+                    val keyId = run { // ensure numeric key ID
+                      val key = pgpKeyManager.getKeyById(identifier).getOrThrow()
+                      KeyUtils.tryGetKeyId(key) ?: throw NullPointerException()
+                    }
+                    if (singleSelection) selectedKeyIds.clear()
+                    if (isSelected) selectedKeyIds.add(keyId.toString())
+                    else selectedKeyIds.remove(keyId.toString())
                   }
-                  if (singleSelection) selectedKeyIds.clear()
-                  if (isSelected) selectedKeyIds.add(keyId.toString())
-                  else selectedKeyIds.remove(keyId.toString())
+                } else null,
+              singleSelection = singleSelection,
+              initiallySelectedKeys =
+                preselectedKeys
+                  .mapNotNull { PGPIdentifier.fromString(it) as? KeyId }
+                  .toImmutableList(),
+              // Selecting an SSH authentication key (single-selection mode): grey out keys that
+              // can't authenticate — public-only keys, and stubs without an associated smartcard.
+              isKeyEnabled =
+                if (singleSelection) cryptoRepository::canUseForSshAuth
+                else {
+                  { true }
+                },
+            )
+            if (isSelectingKeys) {
+              FloatingActionButton(
+                onClick = ::showAddKeySheet,
+                modifier = Modifier.align(Alignment.BottomStart).padding(SpacingLarge),
+              ) {
+                Icon(
+                  painter = painterResource(R.drawable.ic_add_48dp),
+                  stringResource(R.string.pref_import_pgp_key_title),
+                )
+              }
+              // There is something to confirm only once the selection differs from what the
+              // caller came in with, and only while it holds something: the action stays away
+              // otherwise, rather than offering to apply nothing. Leaving is what the up arrow
+              // and the back gesture are for.
+              val selection = selectedKeyIds.toSet()
+              if (selection.isNotEmpty() && selection != initialKeyIds) {
+                FloatingActionButton(
+                  onClick = { confirmSelection(selectedKeyIds) },
+                  modifier = Modifier.align(Alignment.BottomEnd).padding(SpacingLarge),
+                ) {
+                  Icon(
+                    painter = painterResource(R.drawable.ic_done_24dp),
+                    contentDescription =
+                      if (singleSelection) stringResource(R.string.gpg_key_single_select)
+                      else stringResource(R.string.gpg_key_select),
+                  )
                 }
-              } else null,
-            singleSelection = singleSelection,
-            // Selecting an SSH authentication key (single-selection mode): grey out keys that can't
-            // authenticate — public-only keys, and stubs without an associated smartcard.
-            isKeyEnabled =
-              if (singleSelection) cryptoRepository::canUseForSshAuth
-              else {
-                { true }
-              },
-          )
+              }
+            }
+          }
         }
       }
     }
   }
 
+  private fun showAddKeySheet() {
+    AddPgpKeyBottomSheet().show(supportFragmentManager, "ADD_PGP_KEY_BOTTOM_SHEET")
+  }
+
   /**
    * Apply the current selection and finish. Deliberately separate from up/back navigation: a
-   * selection screen should only commit when the user says so.
+   * selection screen should only commit when the user says so, and only ever with a selection — the
+   * confirm action is unavailable until there is one.
    */
-  private fun confirmSelection(singleSelection: Boolean, selectedKeyIds: Set<String>) {
-    if (selectedKeyIds.isNotEmpty()) {
-      val result = Intent()
-      result.putExtra(EXTRA_SELECTED_KEY, selectedKeyIds.joinToString(separator = "\n"))
-      intent.getStringExtra("SUB_PATH")?.let { result.putExtra("SUB_PATH", it) }
-      setResult(RESULT_OK, result)
-      finish()
-    } else {
-      val okButtonText =
-        if (singleSelection) resources.getString(R.string.gpg_key_single_select)
-        else resources.getString(R.string.gpg_key_select)
-      MaterialAlertDialogBuilder(this)
-        .setTitle(R.string.no_keys_selected_dialog_title)
-        .setPositiveButton(okButtonText, null)
-        .setNegativeButton(
-          R.string.pgp_key_insecure_passphrase_warning_confirm // continue anyway
-        ) { _, _ ->
-          if (singleSelection && SshKey.pgpLongKeyId != 0L) SshKey.delete()
-          setResult(RESULT_CANCELED)
-          finish()
-        }
-        .setCancelable(false)
-        .show()
-    }
+  private fun confirmSelection(selectedKeyIds: Set<String>) {
+    val result = Intent()
+    result.putExtra(EXTRA_SELECTED_KEY, selectedKeyIds.joinToString(separator = "\n"))
+    intent.getStringExtra("SUB_PATH")?.let { result.putExtra("SUB_PATH", it) }
+    setResult(RESULT_OK, result)
+    finish()
   }
 
   private fun isSecretKey(identifier: PGPIdentifier): Boolean =
@@ -451,6 +477,7 @@ class PGPKeyListActivity : AppCompatActivity() {
     const val EXTRA_SELECTED_KEY = "SELECTED_KEY"
     const val EXTRA_KEY_SELECTION = "KEY_SELECTION_MODE"
     const val EXTRA_KEY_FOR_SSH = "EXTRA_KEY_FOR_SSH"
+    const val EXTRA_PRESELECTED_KEYS = "PRESELECTED_KEYS"
 
     const val PGP_KEY_ADD_REQUEST_KEY = "add_pgp_key"
     const val ACTION_KEY = "action"
@@ -462,10 +489,12 @@ class PGPKeyListActivity : AppCompatActivity() {
       context: Context,
       keySelection: Boolean = false,
       singleSelection: Boolean = false,
+      preselectedKeyIds: String? = null,
     ): Intent {
       val intent = Intent(context, PGPKeyListActivity::class.java)
       intent.putExtra(EXTRA_KEY_SELECTION, singleSelection || keySelection)
       intent.putExtra(EXTRA_KEY_FOR_SSH, singleSelection)
+      preselectedKeyIds?.let { intent.putExtra(EXTRA_PRESELECTED_KEYS, it) }
       return intent
     }
   }

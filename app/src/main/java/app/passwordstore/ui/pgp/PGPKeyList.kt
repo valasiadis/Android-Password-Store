@@ -8,20 +8,24 @@ package app.passwordstore.ui.pgp
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -33,32 +37,35 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.crypto.PGPIdentifier.KeyId
 import app.passwordstore.crypto.PGPIdentifier.UserId
 import app.passwordstore.ui.compose.theme.APSTheme
 import app.passwordstore.ui.compose.theme.SpacingLarge
-import app.passwordstore.ui.compose.theme.SpacingSmall
 import app.passwordstore.util.extensions.conditional
 import app.passwordstore.util.git.sshj.SshKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
-/** Opacity applied to key rows that are not selectable in the current context. */
-private const val DISABLED_KEY_ALPHA = 0.38f
+/** Opacity of anything on the key screens that is present but currently unavailable. */
+internal const val DISABLED_ALPHA = 0.38f
 
 @Composable
 fun KeyList(
@@ -74,9 +81,19 @@ fun KeyList(
   onKeySelected: ((identifier: PGPIdentifier, isSelected: Boolean) -> Unit)? = null,
   singleSelection: Boolean = false,
   isKeyEnabled: (identifier: PGPIdentifier) -> Boolean = { true },
+  initiallySelectedKeys: ImmutableList<KeyId> = persistentListOf(),
 ) {
-  var selectedId by remember {
-    mutableStateOf(if (singleSelection) KeyId(SshKey.pgpLongKeyId) else KeyId(0L))
+  // The one place that knows what is selected. Rows deliberately keep no selection state of
+  // their own: when each row remembered its own checked flag, a row selected earlier stayed
+  // checked after another row was picked, so tapping it again toggled that stale flag off
+  // instead of selecting it and the screen ended up with nothing selected at all.
+  val selectedKeys = remember {
+    mutableStateListOf<KeyId>().apply {
+      // Whatever is already in use starts out selected, so the screen opens showing the state
+      // it is about to change rather than an empty one.
+      addAll(initiallySelectedKeys)
+      if (singleSelection && SshKey.pgpLongKeyId != 0L && isEmpty()) add(KeyId(SshKey.pgpLongKeyId))
+    }
   }
   if (identifiers.isEmpty()) {
     Column(
@@ -91,7 +108,15 @@ fun KeyList(
       Text(stringResource(R.string.pgp_key_manager_no_keys_guidance))
     }
   } else {
-    LazyColumn(modifier = modifier) {
+    LazyColumn(
+      modifier = modifier,
+      // Clearance for the floating actions, so the last key can scroll out from under them.
+      contentPadding =
+        PaddingValues(
+          top = dimensionResource(R.dimen.spacing_xsmall),
+          bottom = dimensionResource(R.dimen.list_scroll_bottom_padding),
+        ),
+    ) {
       items(identifiers) { identifier ->
         KeyItem(
           identifier = identifier,
@@ -102,16 +127,20 @@ fun KeyList(
           onDeleteItemClick = onDeleteItemClick,
           onExportItemClick = onExportItemClick,
           onExportPublicClick = onExportPublicClick,
-          onKeySelected = onKeySelected,
           isKeyEnabled = isKeyEnabled,
-          /* For single key selection mode: The next two arguments serve to
-           * detect key selection and to recompose whole list of keys */
-          selectedId = selectedId,
-          /* A Lambda passed to KeyItem that changes mutable state var `selectedId`
-           * in the outer function `KeyList` which then triggers recomposition */
+          isSelected = onKeySelected != null && identifier.first in selectedKeys,
+          // Null outside selection mode, which is what tells a row it is not selectable.
           onSelectedChange =
-            if (singleSelection) {
-              { id, checked -> selectedId = if (checked) id else KeyId(0L) }
+            if (onKeySelected != null) {
+              { isSelected ->
+                identifier.first?.let { keyId ->
+                  // A single selection replaces whatever was selected before, so picking a
+                  // second key cannot leave two rows looking selected.
+                  if (singleSelection) selectedKeys.clear()
+                  if (isSelected) selectedKeys.add(keyId) else selectedKeys.remove(keyId)
+                  onKeySelected(keyId, isSelected)
+                }
+              }
             } else null,
         )
       }
@@ -131,9 +160,9 @@ private fun KeyItem(
   onExportItemClick: (identifier: PGPIdentifier) -> Unit,
   onExportPublicClick: (identifier: PGPIdentifier) -> Unit,
   modifier: Modifier = Modifier,
-  onKeySelected: ((identifier: PGPIdentifier, isSelected: Boolean) -> Unit)? = null,
-  selectedId: KeyId,
-  onSelectedChange: ((KeyId, Boolean) -> Unit)? = null,
+  isSelected: Boolean = false,
+  /** Null when the list is not a selection screen, which makes the row unselectable. */
+  onSelectedChange: ((Boolean) -> Unit)? = null,
   isKeyEnabled: (identifier: PGPIdentifier) -> Boolean = { true },
 ) {
   var isDeleting by remember { mutableStateOf(false) }
@@ -150,52 +179,81 @@ private fun KeyItem(
       isDeleting = false
     },
   )
-  var checked by remember { mutableStateOf(keyId.id == selectedId.id) }
+  val rowShape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium))
+  val outlineColor = MaterialTheme.colorScheme.outlineVariant
   Row(
+    // Laid out like a password row, from the same dimensions, so the two lists cannot drift
+    // apart: a filled, rounded container separated from its neighbours by margins on the row
+    // itself, tinted while selected.
     modifier =
       modifier
         .fillMaxWidth()
-        .conditional(enabled && onKeySelected != null) {
-          toggleable(
-            value = checked, // set value to the current checked status
-            onValueChange = {
-              onSelectedChange?.invoke(keyId, it)
-              onKeySelected?.invoke(keyId, it)
-              checked = it
-            },
-          )
+        .padding(
+          horizontal = dimensionResource(R.dimen.spacing_small),
+          vertical = dimensionResource(R.dimen.spacing_xsmall),
+        )
+        .conditional(!enabled) { alpha(DISABLED_ALPHA) }
+        .clip(rowShape)
+        .background(
+          if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+          else MaterialTheme.colorScheme.surfaceVariant
+        )
+        .border(1.dp, outlineColor, rowShape)
+        .conditional(enabled && onSelectedChange != null) {
+          toggleable(value = isSelected, onValueChange = { onSelectedChange?.invoke(it) })
         }
         // Outside selection mode, tapping a key opens its info dialog.
-        .conditional(onKeySelected == null) { clickable { onKeyInfoClick(keyId) } }
-        .conditional(!enabled) { alpha(DISABLED_KEY_ALPHA) }
-        .padding(horizontal = SpacingLarge, vertical = SpacingSmall),
+        .conditional(onSelectedChange == null) { clickable { onKeyInfoClick(keyId) } }
+        // Tighter than a password row: a key is a single line of text with no counts or
+        // affordances stacked beside it, so it does not need that row's height. The height comes
+        // from this minimum alone, with no vertical padding, so that the key manager's overflow
+        // button — a full 48dp touch target — does not make its rows taller than the selection
+        // screen's.
+        .heightIn(min = 48.dp)
+        .padding(horizontal = dimensionResource(R.dimen.activity_horizontal_margin)),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    if (isStubKey(keyId)) {
+    // As in the password list, the leading icon doubles as the selection indicator: while the
+    // row is selected it shows a check instead of the key's type.
+    if (isSelected) {
+      Icon(
+        painter = painterResource(id = R.drawable.ic_done_24dp),
+        contentDescription = stringResource(R.string.pgp_key_selected_indicator),
+        tint = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.size(24.dp),
+      )
+      Spacer(modifier = Modifier.width(SpacingLarge))
+    } else if (isStubKey(keyId)) {
       Icon(
         painter = painterResource(id = R.drawable.ic_hardware_key_24dp),
         contentDescription = stringResource(R.string.pgp_key_hardware_indicator),
         tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(20.dp),
+        modifier = Modifier.size(24.dp),
       )
-      Spacer(modifier = Modifier.width(SpacingSmall))
+      Spacer(modifier = Modifier.width(SpacingLarge))
     } else if (isSecretKey(keyId)) {
       Icon(
         painter = painterResource(id = R.drawable.ic_software_key_24dp),
         contentDescription = stringResource(R.string.pgp_key_software_indicator),
         tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(20.dp),
+        modifier = Modifier.size(24.dp),
       )
-      Spacer(modifier = Modifier.width(SpacingSmall))
+      Spacer(modifier = Modifier.width(SpacingLarge))
+    } else if (onSelectedChange != null) {
+      // Keeps the label aligned with the rows that do carry an icon, so a selection check
+      // appearing here does not shift the text.
+      Spacer(modifier = Modifier.width(24.dp + SpacingLarge))
     }
     Text(
       text = identifier.second.toString(),
       modifier = Modifier.weight(1f),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      fontSize = 18.sp,
       overflow = TextOverflow.Ellipsis,
       maxLines = 1,
     )
-    if (onKeySelected == null) {
+    if (onSelectedChange == null) {
       Box() {
         var isMenuExpanded by remember { mutableStateOf(false) }
 
@@ -246,20 +304,6 @@ private fun KeyItem(
             },
           )
         }
-      }
-    } else if ( // checkmark visibility
-      checked &&
-        (
-        // single-key selection mode
-        onSelectedChange != null && selectedId == keyId ||
-          // multi-key selection mode
-          onSelectedChange == null)
-    ) {
-      Box() {
-        Icon(
-          painter = painterResource(id = R.drawable.ic_done_24dp),
-          contentDescription = "PGP key actions",
-        )
       }
     }
   }

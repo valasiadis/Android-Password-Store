@@ -43,6 +43,7 @@ import org.bouncycastle.asn1.x509.DigestInfo
 import org.bouncycastle.bcpg.ArmoredOutputStream
 import org.bouncycastle.bcpg.HashAlgorithmTags
 import org.bouncycastle.bcpg.PublicKeyAlgorithmTags
+import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags
 import org.bouncycastle.openpgp.PGPException
 import org.bouncycastle.openpgp.PGPPrivateKey
 import org.bouncycastle.openpgp.PGPPublicKey
@@ -127,19 +128,24 @@ class OpenPgpCommitSigner(
     if (secretKey.isPrivateKeyEmpty) {
       throw PGPException("Git commit signing key is a smartcard stub without a card association")
     }
+    // A key stored without a passphrase has none to ask for, as decryption already recognises.
+    // Asking anyway teaches the user to answer a prompt that no answer can satisfy.
     val passphrase =
-      runBlocking {
-        OpenPgpCardPrompt(activity, R.string.git_signing_passphrase_title, dispatcherProvider)
-          .askSecret(
-            titleRes = R.string.git_signing_passphrase_title,
-            hintRes = R.string.ssh_keygen_passphrase,
-            identityLabel = identityLabel(key),
-          )
-      }
-        ?.secret ?: throw CanceledException(activity.getString(R.string.dialog_cancel))
+      if (secretKey.keyEncryptionAlgorithm == SymmetricKeyAlgorithmTags.NULL) null
+      else
+        runBlocking {
+          OpenPgpCardPrompt(activity, R.string.git_signing_passphrase_title, dispatcherProvider)
+            .askSecret(
+              titleRes = R.string.git_signing_passphrase_title,
+              hintRes = R.string.ssh_keygen_passphrase,
+              identityLabel = identityLabel(key),
+            )
+        }
+          ?.secret ?: throw CanceledException(activity.getString(R.string.dialog_cancel))
     try {
-      val decryptor =
-        BcPBESecretKeyDecryptorBuilder(BcPGPDigestCalculatorProvider()).build(passphrase)
+      val decryptor = passphrase?.let {
+        BcPBESecretKeyDecryptorBuilder(BcPGPDigestCalculatorProvider()).build(it)
+      }
       val privateKey = secretKey.extractPrivateKey(decryptor)
       return buildDetachedSignature(
         secretKey.publicKey,
@@ -148,7 +154,7 @@ class OpenPgpCommitSigner(
         payload,
       )
     } finally {
-      passphrase.wipe()
+      passphrase?.wipe()
     }
   }
 

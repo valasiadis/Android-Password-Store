@@ -15,7 +15,6 @@ import android.view.ViewGroup.MarginLayoutParams
 import android.widget.ImageView
 import androidx.appcompat.R as AppCompatR
 import androidx.core.view.updateLayoutParams
-import androidx.core.view.updatePaddingRelative
 import androidx.recyclerview.widget.RecyclerView
 import app.passwordstore.R
 import com.google.android.material.R as MaterialR
@@ -38,7 +37,6 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
   private val entrySpacing = context.resources.getDimensionPixelSize(R.dimen.spacing_xsmall)
   private val groupSpacing = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
   private val contentMargin = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
-  private val entryStartPadding = context.resources.getDimensionPixelSize(R.dimen.spacing_xsmall)
 
   /**
    * Adds this decoration to [recyclerView] and takes over its entries' background, padding and icon
@@ -58,9 +56,6 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
           if (place != null) {
             view.background = containerDrawable(view, place)
             trimContentMargins(view)
-            // Closer to the container's leading edge than the stock list padding puts it, which
-            // was sized for rows that have no container of their own.
-            view.updatePaddingRelative(start = entryStartPadding)
           }
           view.findViewById<ImageView>(android.R.id.icon)?.imageTintList =
             ColorStateList.valueOf(

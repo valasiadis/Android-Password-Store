@@ -9,14 +9,11 @@ import android.content.SharedPreferences
 import android.net.InetAddresses
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Patterns
 import android.view.MenuItem
-import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
-import androidx.core.os.postDelayed
+import androidx.core.widget.doOnTextChanged
 import app.passwordstore.R
 import app.passwordstore.databinding.ActivityProxySelectorBinding
 import app.passwordstore.injection.prefs.SettingsPreferences
@@ -56,19 +53,40 @@ class ProxySelectorActivity : AppCompatActivity() {
         proxyPassword.setText(charBuf)
         charBuf.array().wipe()
       }
-      save.setOnClickListener { saveSettings() }
-      proxyHost.setOnFocusChangeListener { v, hasFocus ->
-        if (!hasFocus) {
-          val text = (v as EditText).text.toString()
-          proxyHost.error =
-            if (isNumericAddress(text) || text.matches(WEB_ADDRESS_REGEX)) {
-              null
-            } else {
-              getString(R.string.invalid_proxy_url)
-            }
-        }
-      }
+      // Checked as it is typed, so a mistake is reported where it is made rather than on the way
+      // out. Storing waits until host and port are both usable: half a proxy is worse than none,
+      // and a port is briefly unusable on the way to being typed.
+      proxyHost.doOnTextChanged { _, _, _, _ -> saveIfValid() }
+      proxyPort.doOnTextChanged { _, _, _, _ -> saveIfValid() }
+      proxyUser.doOnTextChanged { _, _, _, _ -> saveIfValid() }
+      proxyPassword.doOnTextChanged { _, _, _, _ -> saveIfValid() }
     }
+  }
+
+  override fun onPause() {
+    saveIfValid()
+    super.onPause()
+  }
+
+  private fun saveIfValid() {
+    if (validateHost() and validatePort()) saveSettings()
+  }
+
+  /** Reports an unusable host under the field, and returns whether it can be stored. */
+  private fun validateHost(): Boolean {
+    val host = binding.proxyHost.text.toString()
+    val isValid = host.isEmpty() || isNumericAddress(host) || host.matches(WEB_ADDRESS_REGEX)
+    binding.proxyHostInputLayout.error =
+      if (isValid) null else getString(R.string.invalid_proxy_url)
+    return isValid
+  }
+
+  private fun validatePort(): Boolean {
+    val port = binding.proxyPort.text.toString()
+    val isValid = port.isEmpty() || port.toIntOrNull() in 1..MAX_PORT
+    binding.proxyPortInputLayout.error =
+      if (isValid) null else getString(R.string.invalid_proxy_port)
+    return isValid
   }
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -107,10 +125,10 @@ class ProxySelectorActivity : AppCompatActivity() {
         .let { gitSettings.proxyPassword = it }
     }
     proxyUtils.setDefaultProxy()
-    Handler(Looper.getMainLooper()).postDelayed(500) { finish() }
   }
 
   private companion object {
+    private const val MAX_PORT = 65535
     private val WEB_ADDRESS_REGEX = Patterns.WEB_URL.toRegex()
   }
 }

@@ -201,8 +201,11 @@ class PasswordStore : BaseGitActivity() {
       if (result.resultCode == RESULT_OK) {
         refreshPasswordList()
         // The editor left as soon as it had written the entry; recording it in git is this
-        // screen's to finish, behind whatever the user is looking at now.
-        lifecycleScope.launch { commitSavedChange(result.data) }
+        // screen's to finish, behind whatever the user is looking at now. A commit that fails
+        // puts the entry back, which the list should show.
+        lifecycleScope.launch {
+          commitSavedChange(result.data, onRolledBack = { refreshPasswordList() })
+        }
       }
     }
 

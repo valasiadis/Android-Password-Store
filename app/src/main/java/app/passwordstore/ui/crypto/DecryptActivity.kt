@@ -616,9 +616,16 @@ class DecryptActivity : BasePGPActivity() {
       }
       val savedMessage = data.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
       lifecycleScope.launch {
-        commitSavedChange(data).onOk { savedMessage?.let { Notice.show(this@DecryptActivity, it) } }
+        commitSavedChange(data, onRolledBack = { showEntryAsStored() }).onOk {
+          savedMessage?.let { Notice.show(this@DecryptActivity, it) }
+        }
       }
     }
+
+  /** Shows the entry as the store now has it, or leaves if the store no longer has it at all. */
+  private fun showEntryAsStored() {
+    if (File(fullPath).isFile) recreate() else finish()
+  }
 
   /** Deletes this entry, after asking, and leaves — there is nothing left to show. */
   private fun deleteEntry() {

@@ -282,7 +282,6 @@
   <string name="message_category_error_empty_field">Der Name der Kategorie darf nicht leer sein.</string>
   <string name="message_category_error_category_exists">Der Kategoriename existiert bereits.</string>
   <string name="message_error_destination_outside_repo">Ziel muss innerhalb des Repositorys sein.</string>
-  <string name="message_rename_folder">Ziel für %1$s angeben</string>
   <string name="button_create">Erstellen</string>
   <string name="pref_search_on_start_title">Suchfeld beim Start öffnen</string>
   <string name="pref_search_on_start_summary">Suchleiste beim Start der App anzeigen.</string>

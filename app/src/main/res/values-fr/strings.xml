@@ -213,7 +213,6 @@
   <string name="message_category_error_empty_field">Le nom de la catégorie ne peut pas être vide</string>
   <string name="message_category_error_category_exists">Une catégorie du même nom existe déjà</string>
   <string name="message_error_destination_outside_repo">La destination doit être à l\'intérieur du dépôt</string>
-  <string name="message_rename_folder">Entrez le chemin pour %1$s</string>
   <string name="button_create">Créer</string>
   <string name="pref_search_on_start_title">Ouvrir la recherche au démarrage</string>
   <string name="pref_search_on_start_summary">Ouvrir la barre de recherche au démarrage de l\'application</string>

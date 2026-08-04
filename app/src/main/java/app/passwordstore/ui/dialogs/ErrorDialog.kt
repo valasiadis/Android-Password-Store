@@ -34,6 +34,7 @@ object ErrorDialog {
       return
     }
     MaterialAlertDialogBuilder(activity)
+      .outlined(activity)
       .setIcon(R.drawable.ic_crossmark_red_24dp)
       .setTitle(titleRes)
       .setMessage(message)

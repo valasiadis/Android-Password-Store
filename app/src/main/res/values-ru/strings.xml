@@ -217,7 +217,6 @@
   <string name="message_category_error_empty_field">Название категории не может быть пустым</string>
   <string name="message_category_error_category_exists">Название категории уже существует</string>
   <string name="message_error_destination_outside_repo">Путь должен указывать на область внутри репозитория</string>
-  <string name="message_rename_folder">Введите адрес назначения для %1$s</string>
   <string name="button_create">Создать</string>
   <string name="pref_search_on_start_title">Открыть поиск на старте</string>
   <string name="pref_search_on_start_summary">Открыть панель поиска при запуске приложения</string>

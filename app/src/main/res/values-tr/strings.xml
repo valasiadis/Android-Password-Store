@@ -256,7 +256,6 @@
   <string name="message_category_error_empty_field">Kategori adı boş bırakılamaz</string>
   <string name="message_category_error_category_exists">Kategori adı zaten mevcut</string>
   <string name="message_error_destination_outside_repo">Hedef, depo içinde olmalıdır</string>
-  <string name="message_rename_folder">%1$s için hedefi girin</string>
   <string name="button_create">Oluştur</string>
   <string name="pref_search_on_start_title">Başlangıçta aramayı aç</string>
   <string name="pref_search_on_start_summary">Uygulama başlatıldığında arama çubuğunu aç</string>

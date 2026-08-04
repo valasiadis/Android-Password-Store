@@ -723,7 +723,6 @@ class PasswordStore : BaseGitActivity() {
       MaterialAlertDialogBuilder(this)
         .setTitle(R.string.title_rename_folder)
         .setView(view)
-        .setMessage(getString(R.string.message_rename_folder, oldCategory.name))
         .setPositiveButton(R.string.dialog_ok) { _, _ ->
           val newCategory = File("${oldCategory.file.parent}/${newCategoryEditText.text}")
           when {

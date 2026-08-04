@@ -218,7 +218,6 @@
   <string name="message_category_error_empty_field">카테고리 이름은 비워 둘 수 없습니다</string>
   <string name="message_category_error_category_exists">카테고리가 이미 있습니다</string>
   <string name="message_error_destination_outside_repo">대상은 리포지토리 내에 있어야 합니다</string>
-  <string name="message_rename_folder">%1$s의 목적지 입력</string>
   <string name="button_create">생성</string>
   <string name="pref_search_on_start_title">시작 시 검색 열기</string>
   <string name="pref_search_on_start_summary">앱 실행 시 검색창 열기</string>

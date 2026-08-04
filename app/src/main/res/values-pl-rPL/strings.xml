@@ -216,7 +216,6 @@
   <string name="message_category_error_empty_field">Nazwa kategorii nie może być pusta</string>
   <string name="message_category_error_category_exists">Kategoria już istnieje</string>
   <string name="message_error_destination_outside_repo">Miejsce docelowe musi znajdować się w repozytorium</string>
-  <string name="message_rename_folder">Wprowadź miejsce docelowe dla %1$s</string>
   <string name="button_create">Utwórz</string>
   <string name="pref_search_on_start_title">Otwórz wyszukiwanie przy starcie</string>
   <string name="pref_search_on_start_summary">Otwórz wyszukiwanie po uruchomieniu aplikacji</string>

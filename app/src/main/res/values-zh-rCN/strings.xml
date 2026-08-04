@@ -222,7 +222,6 @@
   <string name="message_category_error_empty_field">类别名称不能为空</string>
   <string name="message_category_error_category_exists">类别名称已存在</string>
   <string name="message_error_destination_outside_repo">目标必须在存储库中</string>
-  <string name="message_rename_folder">输入%1$s的目标</string>
   <string name="button_create">创建</string>
   <string name="pref_search_on_start_title">开始时打开搜索</string>
   <string name="pref_search_on_start_summary">启动应用时打开搜索栏</string>

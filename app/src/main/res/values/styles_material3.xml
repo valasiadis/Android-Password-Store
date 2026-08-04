@@ -33,18 +33,6 @@
   </style>
 
   <!--
-    A card prompt appears over screens that are blanked out for the camera's sake, where a dialog
-    with no edge of its own is a shape floating in the dark. Given the outline the app's other
-    containers carry, it reads as a thing on top of the screen rather than a hole in it.
-  -->
-  <style name="APSThemeM3.Dialog.Outlined" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-    <item name="materialAlertDialogBodyTextStyle">
-      @style/MaterialAlertDialog.Material3.Body.Text
-    </item>
-    <item name="android:background">@drawable/dialog_outlined_background</item>
-  </style>
-
-  <!--
     The menu behind the three dots is drawn by the platform, which gives it the platform's own
     surface rather than the scheme's — a grey that belongs to no other part of the app. Its
     background and its rounding come from the theme instead, like every other container.

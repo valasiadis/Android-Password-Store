@@ -259,7 +259,6 @@
   <string name="message_category_error_empty_field">El nombre de la categoría no puede estar vacío</string>
   <string name="message_category_error_category_exists">El nombre de la categoría ya existe</string>
   <string name="message_error_destination_outside_repo">El destino debe estar dentro del repositorio</string>
-  <string name="message_rename_folder">Introduzca el destino para %1$s</string>
   <string name="button_create">Crear</string>
   <string name="pref_search_on_start_title">Abrir búsqueda al inicio</string>
   <string name="pref_search_on_start_summary">Abrir la barra de búsqueda cuando se inicia la aplicación</string>

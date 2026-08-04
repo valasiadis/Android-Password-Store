@@ -3,7 +3,7 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
   <!--
     Spacing scale. Material 3 lays out on a 4dp grid; these are the steps we
     actually use. Prefer these over raw dp values so spacing stays consistent
@@ -53,6 +53,15 @@
   <!-- The search field between the two buttons, as tall as they are. -->
   <!-- Narrow enough that the sentence under the heading falls into two lines. -->
   <dimen name="repo_type_description_width">260dp</dimen>
+  <!--
+    Material leaves 14dp above and below a dialog's buttons on top of the padding the panel itself
+    carries, which on a two-line question reads as a gap rather than as spacing. Overriding the
+    library's own dimensions keeps every dialog in step, wherever it is built.
+  -->
+  <dimen name="m3_alert_dialog_action_top_padding" tools:ignore="UnusedResources" tools:override="true">4dp</dimen>
+  <dimen name="m3_alert_dialog_action_bottom_padding" tools:ignore="UnusedResources" tools:override="true">8dp</dimen>
+  <!-- What a dialog leaves free at each side of the screen. -->
+  <dimen name="dialog_inset">24dp</dimen>
   <dimen name="search_bar_height">56dp</dimen>
   <!-- What that field leaves free on each side for those buttons. -->
   <dimen name="search_bar_side_room">88dp</dimen>

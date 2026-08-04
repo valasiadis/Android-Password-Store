@@ -622,6 +622,11 @@ class DecryptActivity : BasePGPActivity() {
             PasswordRepository.getLongName(fullPath, repoPath, name),
           )
         )
+        Notice.show(
+          this@DecryptActivity,
+          resources.getQuantityString(R.plurals.password_delete_success, 1),
+          success = true,
+        )
         setResult(RESULT_OK)
         finish()
       }

@@ -26,11 +26,11 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
+import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.git.config.GitConfigActivity
 import app.passwordstore.ui.git.config.GitServerConfigActivity
 import app.passwordstore.ui.proxy.ProxySelectorActivity
-import app.passwordstore.ui.sshkeygen.ShowSshKeyFragment
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.credentialUsernames
 import app.passwordstore.util.extensions.getString
@@ -38,9 +38,7 @@ import app.passwordstore.util.extensions.gitSecrets
 import app.passwordstore.util.extensions.launchActivity
 import app.passwordstore.util.extensions.passwordHistory
 import app.passwordstore.util.extensions.sharedPrefs
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.unsafeLazy
-import app.passwordstore.util.git.sshj.SshKey
 import app.passwordstore.util.settings.GitSettings
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.fold
@@ -194,17 +192,7 @@ class RepositorySettings(private val activity: FragmentActivity) : SettingsProvi
     activity.registerForActivityResult(StartActivityForResult()) {
       proxySettingsPref?.updateProxyPref()
       clearSavedPassPref?.updateClearSavedPassPref()
-      // The same screen is where an authentication key is chosen, so what is known about one may
-      // have changed by the time it closes.
-      showSshKeyPref?.updateShowSshKeyPref()
     }
-
-  private fun Preference.updateShowSshKeyPref() {
-    visible = SshKey.canShowSshPublicKey
-    requestRebind()
-  }
-
-  private var showSshKeyPref: Preference? = null
 
   private fun Preference.updateClearSavedPassPref() {
     val sshPass = activity.gitSecrets.getString(PreferenceKeys.SSH_KEY_LOCAL_PASSPHRASE)
@@ -230,7 +218,6 @@ class RepositorySettings(private val activity: FragmentActivity) : SettingsProvi
    */
   val sshKeyAction =
     activity.registerForActivityResult(StartActivityForResult()) {
-      showSshKeyPref?.updateShowSshKeyPref()
       clearSavedPassPref?.updateClearSavedPassPref()
     }
 
@@ -243,15 +230,6 @@ class RepositorySettings(private val activity: FragmentActivity) : SettingsProvi
           true
         }
       }
-      showSshKeyPref =
-        pref(PreferenceKeys.SSH_SEE_KEY) {
-          titleRes = R.string.pref_ssh_see_key_title
-          onClick {
-            ShowSshKeyFragment().show(activity.supportFragmentManager, "public_key")
-            true
-          }
-          updateShowSshKeyPref()
-        }
       clearSavedPassPref =
         pref(PreferenceKeys.CLEAR_SAVED_PASS) {
           onClick {
@@ -337,7 +315,7 @@ class RepositorySettings(private val activity: FragmentActivity) : SettingsProvi
               PasswordRepository.deleteRepository()
               PasswordRepository.getRepositoryDirectory().mkdirs()
             }
-              .onErr { it.message?.let { message -> activity.snackbar(message = message) } }
+              .onErr { it.message?.let { message -> ErrorDialog.show(activity, message) } }
 
             activity.getSystemService<ShortcutManager>()?.apply {
               removeDynamicShortcuts(dynamicShortcuts.map { it.id }.toMutableList())

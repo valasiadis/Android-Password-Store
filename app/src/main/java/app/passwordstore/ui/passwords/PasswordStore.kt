@@ -110,9 +110,11 @@ class PasswordStore : BaseGitActivity() {
         if (result.resultCode == AppCompatActivity.RESULT_OK) {
           result.data?.getStringExtra(PGPKeyListActivity.EXTRA_SELECTED_KEY)
         } else null
-      val folder = pendingKeyFolder ?: currentDir
+      // Never guessed at: writing a .gpg-id into whichever folder happens to be on screen would
+      // re-key the wrong one silently, so a lost target is a no-op instead.
+      val folder = pendingKeyFolder
       pendingKeyFolder = null
-      if (selectedKeyId == null) return@registerForActivityResult
+      if (selectedKeyId == null || folder == null) return@registerForActivityResult
       File(folder, ".gpg-id").writeText(selectedKeyId + "\n")
       // Committing can ask for a signing passphrase, so it stays on the main thread — but it no
       // longer blocks it, as runBlocking did, freezing the screen for the length of a commit.

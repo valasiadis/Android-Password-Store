@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  What a setup step is asking, and where in the flow it is being asked. Shared so that the steps
+  written for the flow and the settings screen borrowed into it introduce themselves alike.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="vertical">
+
+  <androidx.appcompat.widget.AppCompatImageView
+    android:id="@+id/setup_icon"
+    android:layout_width="32dp"
+    android:layout_height="32dp"
+    android:importantForAccessibility="no"
+    app:tint="?attr/colorPrimary"
+    tools:src="@drawable/ic_key_24dp" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/setup_step_counter"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_large"
+    android:textAppearance="?attr/textAppearanceLabelMedium"
+    android:textColor="?attr/colorPrimary"
+    android:visibility="gone"
+    tools:text="Step 1 of 3"
+    tools:visibility="visible" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/setup_title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_small"
+    android:textAppearance="?attr/textAppearanceHeadlineSmall"
+    android:textColor="?attr/colorOnSurface"
+    tools:text="The key that encrypts them" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/setup_message"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_medium"
+    android:textAppearance="?attr/textAppearanceBodyMedium"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    tools:text="Pick the PGP key your passwords will be encrypted to." />
+
+</LinearLayout>

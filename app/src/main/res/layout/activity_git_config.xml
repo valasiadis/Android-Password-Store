@@ -19,50 +19,14 @@
   tools:layout_editor_absoluteX="0dp"
   tools:layout_editor_absoluteY="81dp">
 
-  <com.google.android.material.textfield.TextInputLayout
-    android:id="@+id/username_input_layout"
+  <include
+    android:id="@+id/identity"
+    layout="@layout/git_identity_fields"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginTop="8dp"
-    android:hint="@string/git_user_name_hint"
     app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toTopOf="parent"
-    tools:layout_editor_absoluteY="64dp">
-
-    <com.google.android.material.textfield.TextInputEditText
-      android:id="@+id/git_user_name"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:inputType="textPersonName" />
-
-  </com.google.android.material.textfield.TextInputLayout>
-
-  <com.google.android.material.textfield.TextInputLayout
-    android:id="@+id/email_input_layout"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    android:hint="@string/git_user_email"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/username_input_layout">
-
-    <com.google.android.material.textfield.TextInputEditText
-      android:id="@+id/git_user_email"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:inputType="textEmailAddress" />
-
-  </com.google.android.material.textfield.TextInputLayout>
-
-  <com.google.android.material.switchmaterial.SwitchMaterial
-    android:id="@+id/sign_commits"
-    android:layout_width="0dp"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    android:text="@string/git_sign_commits"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/email_input_layout" />
+    app:layout_constraintTop_toTopOf="parent" />
 
   <androidx.appcompat.widget.AppCompatTextView
     android:id="@+id/git_tools_title"
@@ -73,7 +37,7 @@
     android:textAppearance="?attr/textAppearanceTitleLarge"
     android:textColor="?attr/colorOnSurface"
     app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/sign_commits" />
+    app:layout_constraintTop_toBottomOf="@id/identity" />
 
   <androidx.appcompat.widget.AppCompatTextView
     android:id="@+id/git_head_status"

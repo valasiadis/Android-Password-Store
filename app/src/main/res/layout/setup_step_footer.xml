@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  The way onwards, in the corner a setup flow puts it, with the way back beside it. Shared with the
+  settings screens the flow borrows, so a step never moves its buttons about between screens.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:gravity="center_vertical"
+  android:orientation="horizontal"
+  android:paddingHorizontal="@dimen/activity_horizontal_margin"
+  android:paddingVertical="@dimen/spacing_medium">
+
+  <com.google.android.material.button.MaterialButton
+    android:id="@+id/setup_back"
+    style="?attr/borderlessButtonStyle"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="@string/setup_back" />
+
+  <Space
+    android:layout_width="0dp"
+    android:layout_height="1dp"
+    android:layout_weight="1" />
+
+  <com.google.android.material.button.MaterialButton
+    android:id="@+id/setup_next"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="@string/setup_next" />
+
+</LinearLayout>

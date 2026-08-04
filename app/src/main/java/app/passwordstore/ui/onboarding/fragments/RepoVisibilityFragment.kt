@@ -46,7 +46,7 @@ class RepoVisibilityFragment : Fragment(R.layout.fragment_repo_visibility) {
       if (result.resultCode == AppCompatActivity.RESULT_OK) {
         if (File(PasswordRepository.getRepositoryDirectory(), ".gpg-id").isFile()) {
           settings.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true) }
-          finishSetup()
+          finish()
         } else {
           // non-pass repository --> go to key selection
           selectGpgKey()
@@ -70,7 +70,7 @@ class RepoVisibilityFragment : Fragment(R.layout.fragment_repo_visibility) {
           settings.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true) }
           requireActivity()
             .commitChange(getString(R.string.git_commit_gpg_id, getString(R.string.app_name)))
-          finishSetup()
+          finish()
         }
       } else {
         requireActivity()
@@ -85,23 +85,9 @@ class RepoVisibilityFragment : Fragment(R.layout.fragment_repo_visibility) {
     gpgKeySelectAction.launch(PGPKeyListActivity.newIntent(requireContext(), keySelection = true))
   }
 
-  /**
-   * Asks the last of the questions a store needs answered — who commits, and how entries are
-   * written — before the app opens on it.
-   */
-  private fun finishSetup() {
-    SetupDialogFragment.newInstance().show(parentFragmentManager, "SETUP_DIALOG")
-  }
-
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
     ViewCompat.setOnApplyWindowInsetsListener(view, windowInsetsLambda)
-    parentFragmentManager.setFragmentResultListener(
-      SetupDialogFragment.SETUP_RESULT_KEY,
-      viewLifecycleOwner,
-    ) { _, _ ->
-      finish()
-    }
 
     with(binding) {
       if (requireArguments().getBoolean(SHOULD_CLONE_EXTRA))
@@ -155,7 +141,7 @@ class RepoVisibilityFragment : Fragment(R.layout.fragment_repo_visibility) {
       PasswordRepository.initialize()
       if (File(PasswordRepository.getRepositoryDirectory(), ".gpg-id").isFile()) {
         settings.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, true) }
-        finishSetup()
+        finish()
       } else {
         // non-pass repository --> go to key selection
         selectGpgKey()

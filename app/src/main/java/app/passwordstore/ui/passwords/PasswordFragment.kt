@@ -13,10 +13,13 @@ import android.view.MenuItem
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.appcompat.view.ActionMode
 import androidx.core.content.edit
+import androidx.core.content.getSystemService
 import androidx.core.view.isVisible
+import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.flowWithLifecycle
@@ -39,6 +42,7 @@ import app.passwordstore.ui.util.OnOffItemAnimator
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.base64
 import app.passwordstore.util.extensions.getString
+import app.passwordstore.util.extensions.hideKeyboard
 import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.extensions.substringBefore
 import app.passwordstore.util.extensions.viewBinding
@@ -90,6 +94,17 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     super.onViewCreated(view, savedInstanceState)
     settings = requireContext().sharedPrefs
     initializePasswordList()
+    // The field is the list's; what a query means is the store screen's.
+    binding.searchInput.doOnTextChanged { text, _, _, _ ->
+      val query = text?.toString().orEmpty()
+      binding.searchClear.isVisible = query.isNotEmpty()
+      requireStore().searchFor(query)
+    }
+    binding.searchInput.setOnEditorActionListener { _, _, _ ->
+      requireActivity().hideKeyboard()
+      true
+    }
+    binding.searchClear.setOnClickListener { clearSearch() }
     binding.fabSync.setOnClickListener {
       if (!PasswordRepository.isInitialized) {
         MaterialAlertDialogBuilder(requireContext())
@@ -234,6 +249,26 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
       }
     }
     updateFabSync()
+  }
+
+  /**
+   * Puts the cursor in the search field, and starts it off with [query] where typing on the list is
+   * what opened it. Returns whether there was a field to focus at all.
+   */
+  fun focusSearch(query: String? = null): Boolean {
+    val field = view?.let { binding.searchInput } ?: return false
+    query?.let { field.setText(it) }
+    field.setSelection(field.text?.length ?: 0)
+    field.requestFocus()
+    requireContext().getSystemService<InputMethodManager>()?.showSoftInput(field, 0)
+    return true
+  }
+
+  /** Empties the field, which puts the folder that was being looked at back on the screen. */
+  fun clearSearch() {
+    view ?: return
+    binding.searchInput.text?.clear()
+    binding.searchInput.clearFocus()
   }
 
   private var fabVisible = true

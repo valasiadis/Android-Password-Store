@@ -4,47 +4,43 @@
   -->
 
 <!--
-  Shown over whatever screen started a piece of work that takes a while. It says what is happening
-  and swallows taps meant for the screen underneath, which is not accepting them anyway.
+  Shown over whatever screen started a piece of work that takes a while, at the top and out of the
+  way: a small spinner and a line saying what is happening. The screen underneath stays visible and
+  usable, which is why this is not a scrim.
 -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:id="@+id/progress_overlay"
-  android:layout_width="match_parent"
-  android:layout_height="match_parent"
-  android:background="#99000000"
-  android:clickable="true"
-  android:focusable="true"
-  tools:ignore="Overdraw">
+  android:layout_width="wrap_content"
+  android:layout_height="wrap_content"
+  android:layout_gravity="top|center_horizontal"
+  android:layout_marginHorizontal="@dimen/spacing_large"
+  android:layout_marginTop="@dimen/spacing_small"
+  android:background="@drawable/progress_overlay_background"
+  android:elevation="6dp"
+  android:gravity="center_vertical"
+  android:orientation="horizontal"
+  android:paddingHorizontal="@dimen/spacing_large"
+  android:paddingVertical="@dimen/spacing_medium">
 
-  <LinearLayout
+  <com.google.android.material.progressindicator.CircularProgressIndicator
+    android:id="@+id/progress_spinner"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_gravity="center"
-    android:background="@drawable/progress_overlay_background"
-    android:gravity="center_horizontal"
-    android:minWidth="200dp"
-    android:orientation="vertical"
-    android:padding="@dimen/spacing_xlarge">
+    android:indeterminate="true"
+    app:indicatorColor="?attr/colorPrimary"
+    app:indicatorSize="18dp"
+    app:trackColor="?attr/colorSurfaceVariant"
+    app:trackThickness="2dp" />
 
-    <com.google.android.material.progressindicator.CircularProgressIndicator
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:indeterminate="true"
-      app:indicatorColor="?attr/colorPrimary"
-      app:trackColor="?attr/colorSurfaceVariant" />
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/progress_message"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/spacing_medium"
+    android:textAppearance="?attr/textAppearanceBodyMedium"
+    android:textColor="?attr/colorOnSurface"
+    tools:text="Running git operation…" />
 
-    <androidx.appcompat.widget.AppCompatTextView
-      android:id="@+id/progress_message"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="@dimen/spacing_large"
-      android:gravity="center"
-      android:textAppearance="?attr/textAppearanceBodyMedium"
-      android:textColor="?attr/colorOnSurface"
-      tools:text="Running git operation…" />
-
-  </LinearLayout>
-
-</FrameLayout>
+</LinearLayout>

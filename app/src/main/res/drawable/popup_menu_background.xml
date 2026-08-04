@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!-- What a menu is drawn on: the scheme's own container colour, shaped like the app's others. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+  android:inset="0dp">
+  <shape android:shape="rectangle">
+    <corners android:radius="@dimen/corner_radius_medium" />
+    <solid android:color="?attr/colorSurfaceContainerHigh" />
+  </shape>
+</inset>

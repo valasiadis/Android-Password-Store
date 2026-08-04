@@ -57,6 +57,9 @@ class GitServerConfigActivity : BaseGitActivity() {
   private lateinit var newAuthMode: AuthMode
   private var isClone = false
 
+  /** Whether a clone is under way, which is the one time the button that starts it is shut. */
+  private var cloning = false
+
   private val authKeyAction =
     registerForActivityResult(StartActivityForResult()) { showAuthKeyState() }
 
@@ -127,7 +130,6 @@ class GitServerConfigActivity : BaseGitActivity() {
       Notice.show(
         this@GitServerConfigActivity,
         R.string.clear_saved_host_key_success,
-        success = true,
       )
       it.isVisible = false
     }
@@ -156,6 +158,10 @@ class GitServerConfigActivity : BaseGitActivity() {
     binding.setupFooter.setupNext.setOnClickListener {
       if (applySettings()) {
         if (PasswordRepository.repository == null) PasswordRepository.initialize()
+        // One clone at a time: it takes as long as the server takes, and a second one started
+        // over the first would be cloning into a directory the first is still filling.
+        cloning = true
+        binding.setupFooter.setupNext.isEnabled = false
         cloneRepository()
       }
     }
@@ -206,7 +212,7 @@ class GitServerConfigActivity : BaseGitActivity() {
     val url = binding.serverUrl.text.toString().trim()
     val problem = problemWith(url)
     reportProblem(problem)
-    binding.setupFooter.setupNext.isEnabled = url.isNotEmpty() && problem == null
+    binding.setupFooter.setupNext.isEnabled = !cloning && url.isNotEmpty() && problem == null
   }
 
   /**
@@ -312,7 +318,11 @@ class GitServerConfigActivity : BaseGitActivity() {
                     setResult(RESULT_OK)
                     finish()
                   },
-                  failure = { err -> promptOnErrorHandler(err) { finish() } },
+                  failure = { err ->
+                    cloning = false
+                    reportUrlState()
+                    promptOnErrorHandler(err) { finish() }
+                  },
                 )
             }
           }
@@ -342,7 +352,11 @@ class GitServerConfigActivity : BaseGitActivity() {
               setResult(RESULT_OK)
               finish()
             },
-            failure = { promptOnErrorHandler(it) },
+            failure = {
+              cloning = false
+              reportUrlState()
+              promptOnErrorHandler(it)
+            },
           )
       }
     }

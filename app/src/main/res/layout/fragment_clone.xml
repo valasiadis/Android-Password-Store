@@ -92,5 +92,17 @@
       app:layout_constraintStart_toStartOf="@id/clone_remote"
       app:layout_constraintTop_toBottomOf="@id/clone_remote" />
 
+    <TextView
+      android:id="@+id/repo_tip"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="@dimen/spacing_medium"
+      android:text="@string/setup_repo_tip"
+      android:textAppearance="?attr/textAppearanceBodySmall"
+      android:textColor="?attr/colorOnSurfaceVariant"
+      app:layout_constraintEnd_toEndOf="@id/clone_remote"
+      app:layout_constraintStart_toStartOf="@id/clone_remote"
+      app:layout_constraintTop_toBottomOf="@id/create_local" />
+
   </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

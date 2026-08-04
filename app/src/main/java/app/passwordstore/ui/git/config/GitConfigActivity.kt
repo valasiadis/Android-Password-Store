@@ -6,13 +6,12 @@ package app.passwordstore.ui.git.config
 
 import android.os.Bundle
 import android.view.MenuItem
-import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitConfigBinding
+import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
-import app.passwordstore.ui.dialogs.TextInputDialog
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.ui.git.log.GitLogActivity
 import app.passwordstore.util.extensions.asLog
@@ -123,14 +122,26 @@ class GitConfigActivity : BaseGitActivity() {
     updateRemoveLockButton()
   }
 
+  /**
+   * Asks which branch to reset onto, from the ones the remote is known to have.
+   *
+   * The branch used to be typed in, which asks the user to remember what a `git branch -r` would
+   * have told them — and answers a typo by creating a branch that tracks nothing.
+   */
   private fun resetToRemote() {
-    val dialog =
-      TextInputDialog.newInstance(getString(R.string.git_utils_reset_remote_branch_title))
-    dialog.show(supportFragmentManager, "BRANCH_INPUT_DIALOG")
-    dialog.setFragmentResultListener(TextInputDialog.REQUEST_KEY) { _, bundle ->
-      val result = bundle.getString(TextInputDialog.BUNDLE_KEY_TEXT)
-      if (!result.isNullOrEmpty()) {
-        remoteBranch = result
+    val branches = remoteBranches()
+    if (branches.isEmpty()) {
+      ErrorDialog.show(this, R.string.git_utils_no_remote_branches)
+      return
+    }
+    val current = PasswordRepository.getCurrentBranch()
+    var chosen = branches.indexOf(current).coerceAtLeast(0)
+    MaterialAlertDialogBuilder(this)
+      .setTitle(R.string.git_utils_reset_remote_branch_title)
+      .setSingleChoiceItems(branches.toTypedArray(), chosen) { _, which -> chosen = which }
+      .setNegativeButton(R.string.dialog_cancel, null)
+      .setPositiveButton(R.string.dialog_ok) { _, _ ->
+        remoteBranch = branches[chosen]
         lifecycleScope.launch {
           launchGitOperation(GitOp.RESET)
             .fold(
@@ -139,8 +150,19 @@ class GitConfigActivity : BaseGitActivity() {
             )
         }
       }
-    }
+      .show()
   }
+
+  /** The branches the remote had when it was last spoken to, under their bare names. */
+  private fun remoteBranches(): List<String> =
+    PasswordRepository.repository
+      ?.refDatabase
+      ?.getRefsByPrefix("${Constants.R_REMOTES}origin/")
+      ?.map { it.name.removePrefix("${Constants.R_REMOTES}origin/") }
+      ?.filter { it != Constants.HEAD }
+      ?.distinct()
+      ?.sorted()
+      .orEmpty()
 
   private fun abortRebase() {
     lifecycleScope.launch {

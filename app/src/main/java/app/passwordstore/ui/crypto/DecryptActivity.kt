@@ -116,7 +116,12 @@ class DecryptActivity : BasePGPActivity() {
       return
     }
     requireKeysExist {
-      requireDecryptionKeysExist(relativeParentPath) { ids -> getPersistentAndDecrypt(ids) }
+      requireDecryptionKeysExist(relativeParentPath) { ids ->
+        lifecycleScope.launch {
+          val keys = withContext(dispatcherProvider.io()) { keysForEntry(ids) }
+          getPersistentAndDecrypt(keys)
+        }
+      }
     }
   }
 
@@ -126,6 +131,47 @@ class DecryptActivity : BasePGPActivity() {
     itemsAdapter?.clearItems()
     super.onDestroy()
   }
+
+  /**
+   * The keys to open this entry with, which is a question about the entry rather than about the
+   * folder holding it: one saved under another key — moved off a smartcard, say — would otherwise
+   * be sent to the key the folder names, and refused by a card it was never a recipient of.
+   *
+   * Answered with the folder's own identifiers wherever they name the same keys the entry does, so
+   * that what is asked for, what is cached against it, and what decrypts stay one and the same
+   * list. Only an entry encrypted outside its folder's .gpg-id is described by the message alone.
+   */
+  private fun keysForEntry(folderIds: List<PGPIdentifier>): List<PGPIdentifier> {
+    val recipients = File(fullPath).inputStream().use { repository.recipientKeyIds(it) }
+    if (recipients.isEmpty()) return preferringLocal(folderIds)
+    // Every recipient this store holds a key for, named the way the folder names it where the
+    // folder names it at all — the folder's wording is what cached passphrases are filed under, so
+    // it is kept where possible. A recipient the folder does not mention is still one of the
+    // entry's keys, though, and dropping it for that reason is what kept sending an entry with a
+    // local key to the card the folder does mention.
+    val folderByKey = folderIds.associateBy { repository.getLongKeyIdFromKeyId(it) }
+    val entryKeys =
+      recipients
+        .mapNotNull { recipient ->
+          folderByKey[repository.getLongKeyIdFromKeyId(recipient)]
+            ?: recipient.takeIf { repository.hasKey(it) && repository.hasDecKey(it) }
+        }
+        .distinct()
+    return preferringLocal(entryKeys.ifEmpty { folderIds })
+  }
+
+  /**
+   * The keys among [keys] that are held locally, or all of them when none is.
+   *
+   * A local key is always to hand, while a card has to be found, presented and its PIN entered, so
+   * an entry encrypted to both is opened by the local one and never asks for the card. Chosen here
+   * rather than at decryption time so that the passphrase gathered, the passphrase cached and the
+   * key that decrypts are all the same key.
+   */
+  private fun preferringLocal(keys: List<PGPIdentifier>): List<PGPIdentifier> =
+    keys
+      .filter { !repository.isSmartcardBacked(it) && !repository.hasOnlyStubDecKey(it) }
+      .ifEmpty { keys }
 
   override suspend fun decryptWithPassphrase(
     passphrases: Map<String, CharArray?>,

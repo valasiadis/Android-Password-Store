@@ -23,6 +23,7 @@ import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.filterOk
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.getError
+import com.github.michaelbull.result.getOr
 import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.map
 import com.github.michaelbull.result.mapBoth
@@ -30,6 +31,7 @@ import com.github.michaelbull.result.mapError
 import com.github.michaelbull.result.runCatching
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import javax.inject.Inject
 import logcat.asLog
 import logcat.logcat
@@ -101,6 +103,15 @@ constructor(
    */
   fun canUseForSshAuth(id: PGPIdentifier): Boolean =
     hasPrivateAuthKey(id) || (isSmartcardBacked(id) && hasAuthKey(id))
+
+  /**
+   * The keys [message] is encrypted to, or an empty list if that cannot be read from it — in which
+   * case the caller is no worse off than before asking.
+   */
+  fun recipientKeyIds(message: InputStream): List<PGPIdentifier> = runCatching {
+    pgpCryptoHandler.recipientKeyIds(message)
+  }
+    .getOr(emptyList())
 
   fun isPasswordProtected(identifiers: List<PGPIdentifier>, anySubkey: Boolean = false): Boolean {
     val keys = identifiers.map { pgpKeyManager.getKeyById(it) }.filterOk()

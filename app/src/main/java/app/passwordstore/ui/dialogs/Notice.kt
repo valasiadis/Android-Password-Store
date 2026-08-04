@@ -5,6 +5,7 @@
 package app.passwordstore.ui.dialogs
 
 import android.app.Activity
+import android.os.SystemClock
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import app.passwordstore.R
@@ -18,24 +19,68 @@ import app.passwordstore.databinding.ViewTopNoticeBinding
  * password or a failure — while the app already says what it is *doing* at the top. So that is
  * where it now says what it has *done*, in green when the news is good, and a failure is given a
  * dialog instead: something that went wrong is worth stopping for.
+ *
+ * A notice belongs to the news, not to the screen that happened to raise it. The screens that say
+ * something often close in the same breath — an entry deleted, an editor saved and left — so what
+ * was said is held for its few seconds and picked up again by whichever screen comes next.
  */
 object Notice {
 
+  private var pending: Pending? = null
+
   fun show(activity: Activity, message: CharSequence, success: Boolean = false) {
-    val binding =
-      ViewTopNoticeBinding.inflate(activity.layoutInflater, topBarParent(activity), false)
-    binding.root.text = message
-    if (success) {
-      binding.root.setTextColor(
-        ContextCompat.getColor(activity, R.color.git_commit_signature_valid)
-      )
-    }
-    placeAtTopOf(activity, binding.root)
-    binding.root.postDelayed({ removeFromTop(binding.root) }, VISIBLE_FOR_MS)
+    pending = Pending(message, success, SystemClock.elapsedRealtime() + VISIBLE_FOR_MS)
+    display(activity)
   }
 
   fun show(activity: Activity, @StringRes message: Int, success: Boolean = false): Unit =
     show(activity, activity.getString(message), success)
+
+  /**
+   * Shows again, on [activity], whatever is still being said — called as each screen comes to the
+   * front, so a message outlives the screen that raised it.
+   */
+  fun resumeOn(activity: Activity) {
+    val current = pending ?: return
+    if (current.until <= SystemClock.elapsedRealtime()) {
+      pending = null
+      return
+    }
+    display(activity)
+  }
+
+  private fun display(activity: Activity) {
+    val current = pending ?: return
+    val binding =
+      ViewTopNoticeBinding.inflate(activity.layoutInflater, topBarParent(activity), false)
+    binding.root.text = current.message
+    if (current.success) {
+      binding.root.setTextColor(
+        ContextCompat.getColor(activity, R.color.git_commit_signature_valid)
+      )
+    }
+    // Whatever this screen is already showing is the same message; a second copy would only stack.
+    topBarParent(activity)
+      .findViewById<android.view.View>(R.id.notice_message)
+      ?.let(::removeFromTop)
+    placeAtTopOf(activity, binding.root)
+    binding.root.postDelayed(
+      {
+        removeFromTop(binding.root)
+        if (pending === current) pending = null
+      },
+      current.until - SystemClock.elapsedRealtime(),
+    )
+  }
+
+  /**
+   * What is being said, and until when — so a screen arriving late shows only what is left of it.
+   */
+  private data class Pending(
+    val message: CharSequence,
+    val success: Boolean,
+    val until: Long,
+  )
 
   /** Long enough to read a line, short enough not to sit over the screen it is talking about. */
   private const val VISIBLE_FOR_MS = 3_000L

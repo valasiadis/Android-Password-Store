@@ -22,6 +22,7 @@ import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.injection.context.FilesDirPath
 import app.passwordstore.injection.prefs.SettingsPreferences
 import app.passwordstore.ui.crypto.BasePGPActivity.Companion.cachedPassphrases
+import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.AESEncryption
 import app.passwordstore.util.extensions.getString
@@ -88,6 +89,9 @@ class Application : android.app.Application(), SharedPreferences.OnSharedPrefere
     registerActivityLifecycleCallbacks(
       object : ActivityLifecycleCallbacks {
         override fun onActivityResumed(activity: Activity) {
+          // What the app has just said outlives the screen that said it: an entry deleted or an
+          // editor saved takes its screen with it, and the message belongs to the news.
+          Notice.resumeOn(activity)
           // Determine the desired navigation bar color and icon style
           /* val isNightMode = when (AppCompatDelegate.getDefaultNightMode()) {
               AppCompatDelegate.MODE_NIGHT_YES -> true

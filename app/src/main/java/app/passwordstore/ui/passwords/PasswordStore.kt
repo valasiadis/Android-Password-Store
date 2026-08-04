@@ -48,6 +48,7 @@ import app.passwordstore.util.autofill.AutofillMatcher
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.extensions.base64
 import app.passwordstore.util.extensions.commitChange
+import app.passwordstore.util.extensions.commitSavedChange
 import app.passwordstore.util.extensions.contains
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
@@ -187,6 +188,9 @@ class PasswordStore : BaseGitActivity() {
     registerForActivityResult(StartActivityForResult()) { result ->
       if (result.resultCode == RESULT_OK) {
         refreshPasswordList()
+        // The editor left as soon as it had written the entry; recording it in git is this
+        // screen's to finish, behind whatever the user is looking at now.
+        lifecycleScope.launch { commitSavedChange(result.data) }
       }
     }
 

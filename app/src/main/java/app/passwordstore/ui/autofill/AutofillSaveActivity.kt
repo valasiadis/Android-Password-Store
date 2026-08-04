@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.view.autofill.AutofillManager
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import app.passwordstore.data.passfile.joinToCharArray
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.ui.crypto.BasePGPActivity
@@ -20,6 +21,7 @@ import app.passwordstore.util.autofill.AutofillMatcher
 import app.passwordstore.util.autofill.AutofillPreferences
 import app.passwordstore.util.autofill.AutofillResponseBuilder
 import app.passwordstore.util.crypto.AESEncryption
+import app.passwordstore.util.extensions.commitSavedChange
 import app.passwordstore.util.extensions.unsafeLazy
 import app.passwordstore.util.extensions.wipe
 import app.passwordstore.util.settings.DirectoryStructure
@@ -28,6 +30,7 @@ import com.github.androidpasswordstore.autofillparser.Credentials
 import com.github.androidpasswordstore.autofillparser.FormOrigin
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
+import kotlinx.coroutines.launch
 import logcat.LogPriority.ERROR
 import logcat.logcat
 
@@ -155,42 +158,51 @@ class AutofillSaveActivity : AppCompatActivity() {
       }
     registerForActivityResult(StartActivityForResult()) { result ->
         val data = result.data
-        if (result.resultCode == RESULT_OK && data != null) {
-          val createdPath = data.getStringExtra("CREATED_FILE") ?: throw NullPointerException()
-          formOrigin?.let { AutofillMatcher.addMatchFor(this, it, File(createdPath)) }
-          val password = data.getCharArrayExtra("PASSWORD")
-          val resultIntent =
-            if (password != null) {
-              // Password was generated and should be filled into a form.
-              val username = data.getCharArrayExtra("USERNAME")
-              val clientState =
-                intent?.getBundleExtra(AutofillManager.EXTRA_CLIENT_STATE)
-                  ?: run {
-                    logcat(ERROR) { "AutofillDecryptActivity started without EXTRA_CLIENT_STATE" }
-                    finish()
-                    return@registerForActivityResult
-                  }
-              val credentials = Credentials(username, password, null)
-              val fillInDataset =
-                AutofillResponseBuilder.makeFillInDataset(
-                  this,
-                  credentials,
-                  clientState,
-                  AutofillAction.Generate,
-                )
-              Intent().apply {
-                putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, fillInDataset)
-              }
-            } else {
-              // Password was extracted from a form, there is nothing to fill.
-              Intent()
-            }
-          setResult(RESULT_OK, resultIntent)
-        } else {
-          setResult(RESULT_CANCELED)
+        // Saving from a form ends here rather than on a screen of the app, so the commit the
+        // editor handed over is waited for instead of passed on to a screen that never comes.
+        lifecycleScope.launch {
+          commitSavedChange(data)
+          finishWithSaveResult(result.resultCode, data)
         }
-        finish()
       }
       .launch(saveIntent)
+  }
+
+  private fun finishWithSaveResult(resultCode: Int, data: Intent?) {
+    if (resultCode == RESULT_OK && data != null) {
+      val createdPath = data.getStringExtra("CREATED_FILE") ?: throw NullPointerException()
+      formOrigin?.let { AutofillMatcher.addMatchFor(this, it, File(createdPath)) }
+      val password = data.getCharArrayExtra("PASSWORD")
+      val resultIntent =
+        if (password != null) {
+          // Password was generated and should be filled into a form.
+          val username = data.getCharArrayExtra("USERNAME")
+          val clientState =
+            intent?.getBundleExtra(AutofillManager.EXTRA_CLIENT_STATE)
+              ?: run {
+                logcat(ERROR) { "AutofillDecryptActivity started without EXTRA_CLIENT_STATE" }
+                finish()
+                return
+              }
+          val credentials = Credentials(username, password, null)
+          val fillInDataset =
+            AutofillResponseBuilder.makeFillInDataset(
+              this,
+              credentials,
+              clientState,
+              AutofillAction.Generate,
+            )
+          Intent().apply {
+            putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, fillInDataset)
+          }
+        } else {
+          // Password was extracted from a form, there is nothing to fill.
+          Intent()
+        }
+      setResult(RESULT_OK, resultIntent)
+    } else {
+      setResult(RESULT_CANCELED)
+    }
+    finish()
   }
 }

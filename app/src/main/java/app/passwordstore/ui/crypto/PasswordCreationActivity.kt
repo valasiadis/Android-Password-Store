@@ -41,10 +41,8 @@ import app.passwordstore.ui.folderselect.SelectFolderActivity
 import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.util.autofill.AutofillPreferences
 import app.passwordstore.util.crypto.AESEncryption
-import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.extensions.asLog
 import app.passwordstore.util.extensions.base64
-import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.isInsideRepository
@@ -53,12 +51,10 @@ import app.passwordstore.util.extensions.toByteArray
 import app.passwordstore.util.extensions.unsafeLazy
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.extensions.wipe
-import app.passwordstore.util.git.ErrorMessages
 import app.passwordstore.util.settings.DirectoryStructure
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.onErr
-import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import com.github.michaelbull.result.unwrapError
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -87,7 +83,6 @@ import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.asLog
 import logcat.logcat
-import org.eclipse.jgit.api.errors.CanceledException
 
 @AndroidEntryPoint
 class PasswordCreationActivity : BasePGPActivity() {
@@ -390,13 +385,14 @@ class PasswordCreationActivity : BasePGPActivity() {
 
   /** Encrypts the password and the extra content */
   /** Opens a newly written entry on the copy kept from writing it, rather than decrypting it. */
-  private fun openSavedEntry(path: String, savedEntry: CharArray?) {
+  private fun openSavedEntry(path: String, savedEntry: CharArray?, commitMessage: String) {
     startActivity(
       Intent(this, DecryptActivity::class.java)
         .putExtra(EXTRA_FILE_PATH, path)
         .putExtra(EXTRA_REPO_PATH, repoPath)
         .putExtra(EXTRA_ENTRY, savedEntry)
         .putExtra(RETURN_EXTRA_MESSAGE, savedMessage)
+        .putExtra(RETURN_EXTRA_COMMIT_MESSAGE, commitMessage)
     )
   }
 
@@ -529,20 +525,22 @@ class PasswordCreationActivity : BasePGPActivity() {
             return@runCatching
           }
 
-          val passwordFileExisted = passwordFile.exists()
-          val previousPasswordBytes =
-            withContext(dispatcherProvider.io()) {
-              if (passwordFileExisted) passwordFile.toFile().readBytes() else null
-            }
+          // Renaming an entry moves it: the file it was is the file it becomes, so the old name
+          // goes away with the same save rather than lingering as a second copy of the entry.
+          val renamedFrom =
+            suggestedName
+              ?.takeIf { editing }
+              ?.let { File("${fullPath.trimEnd('/')}/$it.gpg") }
+              ?.takeIf { it.isFile && it.absolutePath != passwordFile.absolutePathString() }
+
           val newFilePathHash = passwordFile.absolutePathString().base64()
           val oldFilePathHash = suggestedName?.let { oldFile ->
             "${fullPath.trimEnd('/')}/$oldFile.gpg".base64()
           }
-          val previousNewHistory = passwordHistory.getString(newFilePathHash, null)
-          val previousOldHistory = oldFilePathHash?.let { passwordHistory.getString(it, null) }
 
           withContext(dispatcherProvider.io()) {
             passwordFile.writeBytes(result.getOrThrow().toByteArray())
+            renamedFrom?.delete()
           }
 
           // create/update timestamp on the current password file
@@ -580,72 +578,50 @@ class PasswordCreationActivity : BasePGPActivity() {
             entry.clear()
           }
 
+          // Committing is left to the screen this one returns to, which does it in the background
+          // while the entry is already on show. Waiting for git here held the editor open over the
+          // entry it had just written, for as long as a commit takes — signing prompt and all.
           val commitMessageRes =
             if (editing) R.string.git_commit_edit_text else R.string.git_commit_add_text
-          commitChange(
-              resources.getString(
-                commitMessageRes,
-                PasswordRepository.getLongName(fullPath, repoPath, editName),
-              )
+          val commitMessage =
+            resources.getString(
+              commitMessageRes,
+              PasswordRepository.getLongName(fullPath, repoPath, editName),
             )
-            .onOk {
-              editPass?.wipe()
-              editUsername?.wipe()
-              editExtra?.wipe()
-              setResult(RESULT_OK, returnIntent)
-              // A new entry opens on itself, so the password can be copied or read without
-              // finding it in the list again. Editing returns to the entry it came from instead,
-              // which is already behind this screen.
-              val leave = {
-                if (!editing) openSavedEntry(passwordFile.absolutePathString(), savedEntry)
-                finish()
-              }
-              if (failedUserEmails.isEmpty()) {
-                // Nothing went wrong, so it is said in passing — on whichever screen comes next,
-                // since this one is on its way out and would take the message with it.
-                returnIntent.putExtra(
-                  RETURN_EXTRA_MESSAGE,
-                  encryptionOutcomeMessage(succeededUserEmails, failedUserEmails, true).toString(),
-                )
-                savedMessage =
-                  encryptionOutcomeMessage(succeededUserEmails, failedUserEmails, true).toString()
-                leave()
-                return@onOk
-              }
-              val dialog =
-                MaterialAlertDialogBuilder(this@PasswordCreationActivity)
-                  .setCancelable(false)
-                  .setPositiveButton(android.R.string.ok) { _, _ -> leave() }
-              dialog.setTitle(R.string.password_creation_file_encryption_partial_success_title)
-              dialog.setMessage(encryptionOutcomeMessage(succeededUserEmails, failedUserEmails))
-              dialog.show()
+
+          editPass?.wipe()
+          editUsername?.wipe()
+          editExtra?.wipe()
+          // A new entry opens on itself, so the password can be copied or read without finding it
+          // in the list again. Editing returns to the entry it came from instead, which is already
+          // behind this screen.
+          // Whoever ends up in front does the committing, and only one of them: a new entry is
+          // opened here and hands it that screen, while an edit goes back to the entry it came
+          // from, which is waiting behind this one.
+          val leave = {
+            if (editing) returnIntent.putExtra(RETURN_EXTRA_COMMIT_MESSAGE, commitMessage)
+            setResult(RESULT_OK, returnIntent)
+            if (!editing) {
+              openSavedEntry(passwordFile.absolutePathString(), savedEntry, commitMessage)
             }
-            .onErr { e ->
-              logcat(ERROR) { e.asLog("Failed to commit password changes") }
-              withContext(dispatcherProvider.io()) {
-                if (passwordFileExisted && previousPasswordBytes != null) {
-                  passwordFile.writeBytes(previousPasswordBytes)
-                } else {
-                  passwordFile.toFile().delete()
-                }
-              }
-              passwordHistory.edit {
-                if (previousNewHistory == null) remove(newFilePathHash)
-                else putString(newFilePathHash, previousNewHistory)
-                oldFilePathHash?.let { key ->
-                  if (previousOldHistory == null) remove(key)
-                  else putString(key, previousOldHistory)
-                }
-              }
-              // Don't nag with a bar when the user cancelled signing, or when the failure was
-              // already shown in a dialog (e.g. a blocked smartcard PIN).
-              if (
-                !OpenPgpCardPrompt.isHandled(e) &&
-                  generateSequence(e) { it.cause }.none { it is CanceledException }
-              ) {
-                snackbar(message = ErrorMessages[e])
-              }
-            }
+            finish()
+          }
+          if (failedUserEmails.isEmpty()) {
+            // Nothing went wrong, so it is said in passing — on whichever screen comes next, since
+            // this one is on its way out and would take the message with it.
+            val message =
+              encryptionOutcomeMessage(succeededUserEmails, failedUserEmails, true).toString()
+            returnIntent.putExtra(RETURN_EXTRA_MESSAGE, message)
+            savedMessage = message
+            leave()
+            return@runCatching
+          }
+          MaterialAlertDialogBuilder(this@PasswordCreationActivity)
+            .setCancelable(false)
+            .setPositiveButton(android.R.string.ok) { _, _ -> leave() }
+            .setTitle(R.string.password_creation_file_encryption_partial_success_title)
+            .setMessage(encryptionOutcomeMessage(succeededUserEmails, failedUserEmails))
+            .show()
         }
           .onErr { e ->
             logcat(ERROR) { e.asLog() }
@@ -679,6 +655,9 @@ class PasswordCreationActivity : BasePGPActivity() {
     const val OTP_RESULT_REQUEST_KEY = "OTP_IMPORT"
     const val RESULT = "RESULT"
     const val RETURN_EXTRA_CREATED_FILE = "CREATED_FILE"
+
+    /** What the screen this returns to should commit, once it is showing the saved entry. */
+    const val RETURN_EXTRA_COMMIT_MESSAGE = "COMMIT_MESSAGE"
     const val RETURN_EXTRA_MESSAGE = "SAVE_MESSAGE"
     const val RETURN_EXTRA_NAME = "NAME"
     const val RETURN_EXTRA_LONG_NAME = "LONG_NAME"

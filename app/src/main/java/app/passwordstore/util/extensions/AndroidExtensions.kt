@@ -5,6 +5,7 @@
 
 package app.passwordstore.util.extensions
 
+import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.ClipboardManager
 import android.content.Context
@@ -17,10 +18,10 @@ import android.content.pm.PackageManager
 import android.content.pm.PackageManager.ApplicationInfoFlags
 import android.content.pm.PackageManager.PackageInfoFlags
 import android.os.Build
-import android.text.TextUtils
-import android.text.TextUtils.TruncateAt
 import android.util.TypedValue
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.autofill.AutofillManager
 import android.view.inputmethod.InputMethodManager
@@ -31,17 +32,23 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.doOnPreDraw
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.BuildConfig
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
+import app.passwordstore.ui.crypto.PasswordCreationActivity
+import app.passwordstore.util.crypto.OpenPgpCardPrompt
+import app.passwordstore.util.git.ErrorMessages
 import app.passwordstore.util.git.operation.GitOperation
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.onErr
 import com.google.android.material.snackbar.Snackbar
+import kotlin.math.abs
+import kotlin.math.max
 import logcat.logcat
+import org.eclipse.jgit.api.errors.CanceledException
 
 /** Get an instance of [AutofillManager]. Only available on Android Oreo and above */
 val Context.autofillManager: AutofillManager?
@@ -53,22 +60,43 @@ val Context.autofillManager: AutofillManager?
  * on the main thread.
  */
 /**
- * Shows [text] on one line, cut short with an ellipsis where it does not fit.
+ * Shows [text] on one line, draggable sideways where it does not fit.
  *
- * The value fields that name chosen keys can hold several of them, and a text field that is not
- * typed into still refuses to ellipsize what it is given: it scrolls it instead, so a long value
- * ends mid-word against the edge as if the rest were merely off screen. Measuring against the
- * field's own width says where it really ends.
+ * The value fields that name chosen keys can hold several of them, and long names besides. Wrapping
+ * grows the field and shuffles its contents about; cutting the text hides the end of it for good.
+ * Kept inline, all of it stays reachable and the field keeps its shape.
+ *
+ * The dragging is done here rather than left to a movement method because these fields open a
+ * picker when tapped, and a view that is clickable treats a drag ending inside it as a tap. A drag
+ * therefore scrolls and does not open anything; a tap opens and does not scroll.
  */
-fun TextView.setEllipsizedText(text: CharSequence) {
+@SuppressLint("ClickableViewAccessibility")
+fun TextView.setInlineText(text: CharSequence) {
+  setHorizontallyScrolling(true)
   setText(text)
-  // Measured just before drawing, which is the first moment the field's width is the width it
-  // will actually be drawn at — a layout pass earlier it is still the full row's.
-  doOnPreDraw {
-    val available = width - paddingStart - paddingEnd
-    if (available <= 0) return@doOnPreDraw
-    val shown = TextUtils.ellipsize(text, paint, available.toFloat(), TruncateAt.END)
-    if (shown.toString() != getText().toString()) setText(shown)
+  scrollTo(0, 0)
+  val slop = ViewConfiguration.get(context).scaledTouchSlop
+  var lastX = 0f
+  var dragged = false
+  setOnTouchListener { _, event ->
+    when (event.actionMasked) {
+      MotionEvent.ACTION_DOWN -> {
+        lastX = event.x
+        dragged = false
+      }
+      MotionEvent.ACTION_MOVE -> {
+        val moved = lastX - event.x
+        if (dragged || abs(moved) > slop) {
+          dragged = true
+          lastX = event.x
+          val room =
+            (layout?.getLineWidth(0) ?: 0f) - (width - compoundPaddingStart - compoundPaddingEnd)
+          scrollX = (scrollX + moved.toInt()).coerceIn(0, max(0, room.toInt()))
+        }
+      }
+      MotionEvent.ACTION_UP -> if (!dragged) performClick()
+    }
+    true
   }
 }
 
@@ -139,6 +167,31 @@ suspend fun FragmentActivity.commitChange(message: String): Result<Unit, Throwab
       }
     }
     .execute()
+}
+
+/**
+ * Commits what a saved entry changed, on the screen the editor handed back to.
+ *
+ * The editor used to wait for git before closing, which left it sitting over the entry it had just
+ * written for the length of a commit — signing prompt included. It now returns straight away and
+ * passes the commit message along, so the entry is on screen while this runs behind it. A commit
+ * that fails says so and leaves the file where it is: it is saved either way, and the next commit
+ * picks it up.
+ */
+suspend fun FragmentActivity.commitSavedChange(data: Intent?): Result<Unit, Throwable> {
+  val message =
+    data?.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_COMMIT_MESSAGE) ?: return Ok(Unit)
+  data.removeExtra(PasswordCreationActivity.RETURN_EXTRA_COMMIT_MESSAGE)
+  return commitChange(message).onErr { error ->
+    // Cancelling the signing prompt is an answer, not a fault, and a card that refused already
+    // said so in its own dialog.
+    if (
+      !OpenPgpCardPrompt.isHandled(error) &&
+        generateSequence(error) { it.cause }.none { it is CanceledException }
+    ) {
+      snackbar(message = ErrorMessages[error])
+    }
+  }
 }
 
 /** Check if [permission] has been granted to the app. */

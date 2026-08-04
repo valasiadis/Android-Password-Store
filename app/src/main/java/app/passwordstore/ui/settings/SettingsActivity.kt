@@ -7,13 +7,10 @@ package app.passwordstore.ui.settings
 
 import android.content.Context
 import android.os.Bundle
-import android.os.SystemClock
-import android.view.Choreographer
 import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.BundleCompat
-import app.passwordstore.BuildConfig
 import app.passwordstore.R
 import app.passwordstore.databinding.ActivityPreferenceRecyclerviewBinding
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
@@ -24,7 +21,6 @@ import de.Maxr1998.modernpreferences.Preference
 import de.Maxr1998.modernpreferences.PreferencesAdapter
 import de.Maxr1998.modernpreferences.helpers.screen
 import de.Maxr1998.modernpreferences.helpers.subScreen
-import logcat.logcat
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
@@ -104,7 +100,6 @@ class SettingsActivity : AppCompatActivity() {
           } else {
             getString(subScreen.titleRes)
           }
-        reportScreenChangeCost(subScreen.size())
       }
     if (savedInstanceState != null) {
       BundleCompat.getParcelable(
@@ -124,20 +119,6 @@ class SettingsActivity : AppCompatActivity() {
       PREFERENCE_VIEW_POOL_SIZE,
     )
     binding.preferenceRecyclerView.setItemViewCacheSize(PREFERENCE_VIEW_POOL_SIZE)
-  }
-
-  /**
-   * Logs how long the list took to reach the screen after a screen change, so that the cost of
-   * opening a sub-screen can be read off logcat rather than guessed at. Debug builds only.
-   */
-  private fun reportScreenChangeCost(entryCount: Int) {
-    if (!BuildConfig.DEBUG) return
-    val start = SystemClock.uptimeMillis()
-    Choreographer.getInstance().postFrameCallback {
-      logcat(SCREEN_CHANGE_LOG_TAG) {
-        "screen with $entryCount entries drawn ${SystemClock.uptimeMillis() - start}ms after change"
-      }
-    }
   }
 
   /**
@@ -171,6 +152,5 @@ class SettingsActivity : AppCompatActivity() {
     /** What the library reports for preferences that have no widget layout of their own. */
     const val DEFAULT_PREFERENCE_VIEW_TYPE = 0
     const val PREFERENCE_VIEW_POOL_SIZE = 20
-    const val SCREEN_CHANGE_LOG_TAG = "SettingsScreenChange"
   }
 }

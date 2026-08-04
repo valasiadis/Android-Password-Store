@@ -82,11 +82,20 @@ fun KeyList(
   singleSelection: Boolean = false,
   isKeyEnabled: (identifier: PGPIdentifier) -> Boolean = { true },
   initiallySelectedKeys: ImmutableList<KeyId> = persistentListOf(),
+  /**
+   * Whether "the folder above decides" is one of the choices, and what it currently is. A folder
+   * with no key of its own uses its parent's, which is a real answer to "which key?" and belongs in
+   * the same list as the keys — it is how a folder goes back to following its parent.
+   */
+  offerInherit: Boolean = false,
+  inheritInitially: Boolean = false,
+  onInheritChanged: (Boolean) -> Unit = {},
 ) {
   // The one place that knows what is selected. Rows deliberately keep no selection state of
   // their own: when each row remembered its own checked flag, a row selected earlier stayed
   // checked after another row was picked, so tapping it again toggled that stale flag off
   // instead of selecting it and the screen ended up with nothing selected at all.
+  var inheritSelected by remember { mutableStateOf(inheritInitially) }
   val selectedKeys = remember {
     mutableStateListOf<KeyId>().apply {
       // Whatever is already in use starts out selected, so the screen opens showing the state
@@ -117,6 +126,21 @@ fun KeyList(
           bottom = dimensionResource(R.dimen.list_scroll_bottom_padding),
         ),
     ) {
+      if (offerInherit) {
+        item {
+          InheritItem(
+            isSelected = inheritSelected,
+            onSelected = {
+              // The two answers exclude each other: a folder either has keys of its own or has
+              // whatever its parent has.
+              inheritSelected = true
+              selectedKeys.forEach { onKeySelected?.invoke(it, false) }
+              selectedKeys.clear()
+              onInheritChanged(true)
+            },
+          )
+        }
+      }
       items(identifiers) { identifier ->
         KeyItem(
           identifier = identifier,
@@ -138,6 +162,10 @@ fun KeyList(
                   // second key cannot leave two rows looking selected.
                   if (singleSelection) selectedKeys.clear()
                   if (isSelected) selectedKeys.add(keyId) else selectedKeys.remove(keyId)
+                  if (isSelected && inheritSelected) {
+                    inheritSelected = false
+                    onInheritChanged(false)
+                  }
                   onKeySelected(keyId, isSelected)
                 }
               }
@@ -145,6 +173,55 @@ fun KeyList(
         )
       }
     }
+  }
+}
+
+/** The choice of having no key of one's own, drawn like the keys it sits above. */
+@Composable
+private fun InheritItem(isSelected: Boolean, onSelected: () -> Unit) {
+  val rowShape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium))
+  Row(
+    modifier =
+      Modifier.fillMaxWidth()
+        .padding(
+          horizontal = dimensionResource(R.dimen.spacing_small),
+          vertical = dimensionResource(R.dimen.spacing_xsmall),
+        )
+        .clip(rowShape)
+        .background(
+          if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+          else MaterialTheme.colorScheme.surfaceVariant
+        )
+        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, rowShape)
+        .clickable { onSelected() }
+        .heightIn(min = 48.dp)
+        .padding(horizontal = dimensionResource(R.dimen.activity_horizontal_margin)),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    if (isSelected) {
+      Icon(
+        painter = painterResource(id = R.drawable.ic_done_24dp),
+        contentDescription = stringResource(R.string.pgp_key_selected_indicator),
+        tint = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.size(24.dp),
+      )
+    } else {
+      Icon(
+        painter = painterResource(id = R.drawable.ic_call_merge_24px),
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.size(24.dp),
+      )
+    }
+    Spacer(modifier = Modifier.width(SpacingLarge))
+    Text(
+      text = stringResource(R.string.folder_encryption_key_inherited),
+      modifier = Modifier.weight(1f),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      fontSize = 18.sp,
+      overflow = TextOverflow.Ellipsis,
+      maxLines = 1,
+    )
   }
 }
 

@@ -121,7 +121,10 @@ class PasswordStore : BaseGitActivity() {
       val folder = pendingKeyFolder
       pendingKeyFolder = null
       if (selectedKeyId == null || folder == null) return@registerForActivityResult
-      File(folder, ".gpg-id").writeText(selectedKeyId + "\n")
+      // Nothing chosen means the folder keeps no key of its own and follows the one above it,
+      // which on disk is simply the absence of a .gpg-id.
+      val keyFile = File(folder, ".gpg-id")
+      if (selectedKeyId.isEmpty()) keyFile.delete() else keyFile.writeText(selectedKeyId + "\n")
       // Committing can ask for a signing passphrase, so it stays on the main thread — but it no
       // longer blocks it, as runBlocking did, freezing the screen for the length of a commit.
       lifecycleScope.launch {
@@ -141,8 +144,14 @@ class PasswordStore : BaseGitActivity() {
    */
   fun showFolderEncryptionKey(folder: PasswordItem) {
     val directory = folder.file
-    val keyFile = File(directory, ".gpg-id").takeIf(File::isFile) ?: inheritedKeyFile(directory)
-    val keys = keyFile?.readLines()?.filter(String::isNotBlank).orEmpty()
+    // Only the folder's own key counts as its answer: with none, it is following the folder above
+    // it, and that is what the picker should open on.
+    val keys =
+      File(directory, ".gpg-id")
+        .takeIf(File::isFile)
+        ?.readLines()
+        ?.filter(String::isNotBlank)
+        .orEmpty()
     val holdsEntries = directory.walkTopDown().any { it.isFile && it.extension == "gpg" }
     if (!holdsEntries) {
       launchKeySelection(directory, keys)
@@ -180,6 +189,9 @@ class PasswordStore : BaseGitActivity() {
         keySelection = true,
         // Opens on what the folder uses now, so a change starts from the current state.
         preselectedKeyIds = currentKeys.joinToString("\n").takeIf { it.isNotEmpty() },
+        // Every folder but the store's root can follow the one above it; the root has nothing
+        // above it to follow.
+        offerInherit = directory != PasswordRepository.getRepositoryDirectory(),
       )
     )
   }

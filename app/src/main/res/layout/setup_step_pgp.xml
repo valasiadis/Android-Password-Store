@@ -38,21 +38,31 @@
 
   </com.google.android.material.textfield.TextInputLayout>
 
-  <androidx.appcompat.widget.AppCompatTextView
+  <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginTop="@dimen/spacing_xlarge"
-    android:text="@string/setup_encryption_title"
-    android:textAppearance="?attr/textAppearanceTitleMedium"
-    android:textColor="?attr/colorOnSurface" />
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
 
-  <androidx.appcompat.widget.AppCompatTextView
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_small"
-    android:text="@string/setup_encryption_message"
-    android:textAppearance="?attr/textAppearanceBodyMedium"
-    android:textColor="?attr/colorOnSurfaceVariant" />
+    <androidx.appcompat.widget.AppCompatTextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/setup_encryption_title"
+      android:textAppearance="?attr/textAppearanceTitleMedium"
+      android:textColor="?attr/colorOnSurface" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+      android:id="@+id/encryption_help"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="@dimen/spacing_small"
+      android:background="?attr/selectableItemBackgroundBorderless"
+      android:padding="@dimen/spacing_small"
+      android:src="@drawable/ic_help_20dp"
+      app:tint="?attr/colorOnSurfaceVariant" />
+
+  </LinearLayout>
 
   <!-- What ASCII armor is stays behind the question mark, out of the way of the switch. -->
   <LinearLayout

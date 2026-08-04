@@ -16,22 +16,29 @@ import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
+import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.databinding.FolderDialogFragmentBinding
 import app.passwordstore.ui.folderselect.SelectFolderActivity
 import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.ui.pgp.PGPKeyListActivity
+import app.passwordstore.ui.pgp.keyNames
 import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.hideKeyboard
 import app.passwordstore.util.extensions.isInsideRepository
-import app.passwordstore.util.extensions.setEllipsizedText
+import app.passwordstore.util.extensions.setInlineText
 import app.passwordstore.util.extensions.unsafeLazy
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
+import javax.inject.Inject
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class FolderCreationDialogFragment : DialogFragment() {
+
+  @Inject lateinit var repository: CryptoRepository
 
   private val binding by unsafeLazy { FolderDialogFragmentBinding.inflate(layoutInflater) }
 
@@ -101,9 +108,10 @@ class FolderCreationDialogFragment : DialogFragment() {
     }
 
   private fun showChosenKeys() {
-    binding.gpgKeyValue.setEllipsizedText(
-      chosenKeyIds?.split("\n")?.filter(String::isNotBlank)?.joinToString(separator = ", ")
-        ?: getString(R.string.folder_encryption_key_inherited)
+    val names = repository.keyNames(chosenKeyIds)
+    binding.gpgKeyValue.setInlineText(
+      if (names.isEmpty()) getString(R.string.folder_encryption_key_inherited)
+      else names.joinToString(separator = ", ")
     )
   }
 

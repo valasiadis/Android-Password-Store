@@ -6,6 +6,7 @@
 package app.passwordstore.ui.pgp
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -341,7 +341,13 @@ private fun KeyItem(
           )
         }
 
-        DropdownMenu(expanded = isMenuExpanded, onDismissRequest = { isMenuExpanded = false }) {
+        DropdownMenu(
+          expanded = isMenuExpanded,
+          onDismissRequest = { isMenuExpanded = false },
+          shape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium)),
+          containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
           if (isSecretKey(keyId)) {
             DropdownMenuItem(
               text = { Text(stringResource(id = R.string.pref_pgp_key_manager_change_passphrase)) },
@@ -397,35 +403,39 @@ private inline fun DeleteConfirmationDialog(
   if (isDeleting) {
     AlertDialog(
       onDismissRequest = onDismiss,
+      icon = {
+        Icon(
+          painter = painterResource(id = R.drawable.ic_warning_red_24dp),
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.error,
+        )
+      },
       title = {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          if (isSecretKey) {
-            Icon(
-              painter = painterResource(id = R.drawable.ic_warning_red_24dp),
-              contentDescription = null,
-              tint = Color.Unspecified,
-            )
-            Spacer(modifier = Modifier.width(SpacingLarge))
-            Text(
-              text =
-                stringResource(R.string.pgp_key_manager_delete_secret_key_confirmation_dialog_title)
-            )
-          } else
-            Text(
-              text = stringResource(R.string.pgp_key_manager_delete_key_confirmation_dialog_title)
-            )
-        }
+        Text(
+          text =
+            if (isSecretKey)
+              stringResource(R.string.pgp_key_manager_delete_secret_key_confirmation_dialog_title)
+            else stringResource(R.string.pgp_key_manager_delete_key_confirmation_dialog_title)
+        )
       },
       text = {
         if (isSecretKey)
           Text(text = stringResource(R.string.pgp_key_manager_delete_confirmation_dialog_message))
       },
       confirmButton = {
-        TextButton(onClick = onConfirm) { Text(text = stringResource(R.string.delete)) }
+        TextButton(onClick = onConfirm) {
+          Text(
+            text = stringResource(R.string.delete),
+            color = MaterialTheme.colorScheme.error,
+          )
+        }
       },
       dismissButton = {
         TextButton(onClick = onDismiss) {
-          Text(text = stringResource(R.string.dialog_do_not_delete))
+          Text(
+            text = stringResource(R.string.dialog_do_not_delete),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
         }
       },
     )

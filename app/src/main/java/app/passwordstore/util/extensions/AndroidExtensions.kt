@@ -20,9 +20,7 @@ import android.content.pm.PackageManager.PackageInfoFlags
 import android.os.Build
 import android.util.TypedValue
 import android.view.MotionEvent
-import android.view.View
 import android.view.ViewConfiguration
-import android.view.ViewGroup
 import android.view.autofill.AutofillManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
@@ -30,21 +28,17 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.BuildConfig
-import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.ui.crypto.PasswordCreationActivity
+import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.git.ErrorMessages
 import app.passwordstore.util.git.operation.GitOperation
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.onErr
-import com.google.android.material.snackbar.Snackbar
 import kotlin.math.abs
 import kotlin.math.max
 import logcat.logcat
@@ -189,7 +183,7 @@ suspend fun FragmentActivity.commitSavedChange(data: Intent?): Result<Unit, Thro
       !OpenPgpCardPrompt.isHandled(error) &&
         generateSequence(error) { it.cause }.none { it is CanceledException }
     ) {
-      snackbar(message = ErrorMessages[error])
+      ErrorDialog.show(this, ErrorMessages[error])
     }
   }
 }
@@ -197,33 +191,6 @@ suspend fun FragmentActivity.commitSavedChange(data: Intent?): Result<Unit, Thro
 /** Check if [permission] has been granted to the app. */
 fun FragmentActivity.isPermissionGranted(permission: String): Boolean {
   return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
-}
-
-/**
- * Show a [Snackbar] in a [FragmentActivity] and correctly anchor it to a
- * [com.google.android.material.floatingactionbutton.FloatingActionButton] if one exists in the
- * [view]
- */
-fun FragmentActivity.snackbar(
-  view: View = findViewById(android.R.id.content),
-  message: CharSequence,
-  length: Int = Snackbar.LENGTH_SHORT,
-): Snackbar {
-  val snackbar = Snackbar.make(view, message, length)
-  snackbar.anchorView = findViewById(R.id.fab)
-  // Lifted over the soft keyboard rather than dismissing it: a message about what just happened
-  // has no business closing the field the user is typing in, and one shown behind the keyboard is
-  // a message nobody reads.
-  ViewCompat.setOnApplyWindowInsetsListener(snackbar.view) { snackbarView, windowInsets ->
-    val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
-    val bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-    snackbarView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-      bottomMargin = maxOf(ime.bottom - bars.bottom, 0)
-    }
-    windowInsets
-  }
-  snackbar.show()
-  return snackbar
 }
 
 /** Launch an activity denoted by [clazz]. */

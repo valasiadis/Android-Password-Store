@@ -21,10 +21,10 @@ import app.passwordstore.data.passfile.PasswordEntry
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.crypto.BasePGPActivity
+import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.util.autofill.AutofillPreferences
 import app.passwordstore.util.autofill.AutofillResponseBuilder
 import app.passwordstore.util.extensions.base64
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.toCharArray
 import app.passwordstore.util.extensions.wipe
 import app.passwordstore.util.settings.PreferenceKeys
@@ -165,11 +165,14 @@ class AutofillDecryptActivity : BasePGPActivity() {
       } else if (
         results.filter { it.second.getError() is NoDecryptionKeyAvailableException }.any()
       ) {
-        snackbar(message = resources.getString(R.string.password_decryption_no_decryption_key))
+        ErrorDialog.show(
+          this@AutofillDecryptActivity,
+          R.string.password_decryption_no_decryption_key,
+        )
         val timer = Executors.newSingleThreadScheduledExecutor()
         timer.schedule({ finish() }, 4.toLong(), TimeUnit.SECONDS)
       } else {
-        snackbar(message = resources.getString(R.string.password_decryption_unknown_error))
+        ErrorDialog.show(this@AutofillDecryptActivity, R.string.password_decryption_unknown_error)
         val timer = Executors.newSingleThreadScheduledExecutor()
         timer.schedule({ finish() }, 4.toLong(), TimeUnit.SECONDS)
       }

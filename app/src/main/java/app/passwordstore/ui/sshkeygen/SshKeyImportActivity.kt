@@ -11,7 +11,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.appcompat.app.AppCompatActivity
 import app.passwordstore.R
-import app.passwordstore.util.extensions.snackbar
+import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.util.git.sshj.SshKey
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
@@ -72,7 +72,7 @@ class SshKeyImportActivity : AppCompatActivity() {
     runCatching { sshKeyImportAction.launch("*/*") }
       .onErr { e ->
         logcat(ERROR) { e.asLog() }
-        e.message?.let { message -> snackbar(message = message) }
+        e.message?.let { message -> ErrorDialog.show(this@SshKeyImportActivity, message) }
       }
   }
 }

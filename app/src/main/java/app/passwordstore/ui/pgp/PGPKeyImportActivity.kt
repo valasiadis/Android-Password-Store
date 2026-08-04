@@ -23,12 +23,12 @@ import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.crypto.errors.KeyAlreadyExistsException
 import app.passwordstore.crypto.errors.UnusableKeyException
 import app.passwordstore.data.crypto.CryptoRepository
+import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.TextInputDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.OpenPgpCardInfo
 import app.passwordstore.util.crypto.OpenPgpNfcCard
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
-import app.passwordstore.util.extensions.snackbar
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.getError
@@ -98,7 +98,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
     runCatching { pgpKeyImportAction.launch("*/*") }
       .onErr { e ->
         logcat(ERROR) { e.asLog() }
-        e.message?.let { message -> snackbar(message = message) }
+        e.message?.let { message -> ErrorDialog.show(this@PGPKeyImportActivity, message) }
       }
   }
 

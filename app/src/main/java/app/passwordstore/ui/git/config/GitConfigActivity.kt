@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitConfigBinding
+import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.TextInputDialog
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.ui.git.log.GitLogActivity
@@ -23,7 +24,6 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import logcat.LogPriority.ERROR
 import logcat.logcat
@@ -115,7 +115,11 @@ class GitConfigActivity : BaseGitActivity() {
         lockFile.delete() -> R.string.git_remove_lock_file_success
         else -> R.string.git_remove_lock_file_failed
       }
-    Snackbar.make(binding.root, getString(messageRes), Snackbar.LENGTH_SHORT).show()
+    Notice.show(
+      this@GitConfigActivity,
+      messageRes,
+      success = messageRes == R.string.git_remove_lock_file_success,
+    )
     updateRemoveLockButton()
   }
 

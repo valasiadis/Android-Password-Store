@@ -5,15 +5,7 @@
 package app.passwordstore.ui.dialogs
 
 import android.app.Activity
-import android.view.View
-import android.view.ViewGroup
 import androidx.annotation.StringRes
-import androidx.appcompat.R as AppCompatR
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.isVisible
-import androidx.core.view.marginTop
-import androidx.core.view.updateLayoutParams
 import app.passwordstore.databinding.ViewProgressOverlayBinding
 
 /**
@@ -36,40 +28,16 @@ class ProgressOverlay private constructor(private val binding: ViewProgressOverl
   }
 
   fun dismiss() {
-    (binding.root.parent as? ViewGroup)?.removeView(binding.root)
+    removeFromTop(binding.root)
   }
 
   companion object {
 
     fun show(activity: Activity, message: CharSequence): ProgressOverlay {
-      // The window's own root rather than its content: an action bar is drawn over the top of the
-      // content on some screens, and would swallow a bar that sits there.
-      val content = activity.window.decorView as ViewGroup
-      val binding = ViewProgressOverlayBinding.inflate(activity.layoutInflater, content, false)
+      val binding =
+        ViewProgressOverlayBinding.inflate(activity.layoutInflater, topBarParent(activity), false)
       binding.progressMessage.text = message
-      // Below the status bar and whatever the screen puts at its top edge, so it reads as being
-      // about the screen rather than as part of it.
-      val margin = binding.root.marginTop
-      ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, windowInsets ->
-        val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-        view.updateLayoutParams<ViewGroup.MarginLayoutParams> { topMargin = insets.top + margin }
-        windowInsets
-      }
-      content.addView(binding.root)
-      // Under whatever the screen already has up there — its title bar, or failing that the
-      // status bar. Added long after the window handed its insets out, so they are read off it
-      // rather than waited for; otherwise the first thing the bar does is sit on the clock.
-      val actionBar =
-        content.findViewById<View>(AppCompatR.id.action_bar_container)?.takeIf {
-          it.isVisible && it.height > 0
-        }
-      val top =
-        actionBar?.bottom
-          ?: ViewCompat.getRootWindowInsets(content)
-            ?.getInsets(WindowInsetsCompat.Type.systemBars())
-            ?.top
-          ?: 0
-      binding.root.updateLayoutParams<ViewGroup.MarginLayoutParams> { topMargin = top + margin }
+      placeAtTopOf(activity, binding.root)
       return ProgressOverlay(binding)
     }
 

@@ -45,9 +45,10 @@ import app.passwordstore.ui.APSAppBar
 import app.passwordstore.ui.compose.theme.APSTheme
 import app.passwordstore.ui.compose.theme.SpacingLarge
 import app.passwordstore.ui.dialogs.AddPgpKeyBottomSheet
+import app.passwordstore.ui.dialogs.ErrorDialog
+import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.PasswordDialog
 import app.passwordstore.ui.pgp.PGPKeyImportActivity.Companion.EXTRA_IMPORT_FROM_NFC
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.wipe
 import app.passwordstore.util.git.sshj.SshKey
 import app.passwordstore.util.viewmodel.PGPKeyListViewModel
@@ -463,7 +464,7 @@ class PGPKeyListActivity : AppCompatActivity() {
       val fileName = "keyID-${keyNumericId}." + (code?.let { "sec" } ?: "pub") + ".pgp"
       keyExportAction.launch(fileName)
     } else {
-      snackbar(message = resources.getString(R.string.pgp_key_export_failed))
+      ErrorDialog.show(this@PGPKeyListActivity, R.string.pgp_key_export_failed)
     }
   }
 
@@ -472,10 +473,12 @@ class PGPKeyListActivity : AppCompatActivity() {
       val outputStream = contentResolver.openOutputStream(uri) ?: throw IOException()
       source?.inputStream().use { src -> outputStream.use { dest -> src?.copyTo(dest) } }
     }
-      .onOk { snackbar(message = resources.getString(R.string.pgp_key_export_succeeded)) }
+      .onOk {
+        Notice.show(this@PGPKeyListActivity, R.string.pgp_key_export_succeeded, success = true)
+      }
       .onErr { e ->
         logcat(ERROR) { e.asLog() }
-        snackbar(message = resources.getString(R.string.pgp_key_export_failed))
+        ErrorDialog.show(this@PGPKeyListActivity, R.string.pgp_key_export_failed)
       }
   }
 

@@ -31,6 +31,8 @@ import app.passwordstore.data.passfile.PasswordEntry
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.injection.prefs.PGPPassphrases
 import app.passwordstore.injection.prefs.SettingsPreferences
+import app.passwordstore.ui.dialogs.ErrorDialog
+import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.PasswordDialog
 import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.auth.BiometricAuthenticator
@@ -43,7 +45,6 @@ import app.passwordstore.util.extensions.clipboard
 import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.isInsideRepository
-import app.passwordstore.util.extensions.snackbar
 import app.passwordstore.util.extensions.substringBefore
 import app.passwordstore.util.extensions.unsafeLazy
 import app.passwordstore.util.extensions.wipe
@@ -371,14 +372,14 @@ open class BasePGPActivity : AppCompatActivity() {
 
   /**
    * Copies a provided [password] string to the clipboard. This wraps [copyTextToClipboard] to
-   * optionally hide the default [Snackbar] and starts off a timer to clear the clipboard.
+   * optionally hide the default notice and starts off a timer to clear the clipboard.
    */
   protected fun copyPasswordToClipboard(
     password: CharArray?,
     isSensitive: Boolean = true,
-    showSnackbar: Boolean = true,
+    showNotice: Boolean = true,
   ): ScheduledExecutorService? {
-    copyTextToClipboard(password, isSensitive = isSensitive, showSnackbar)
+    copyTextToClipboard(password, isSensitive = isSensitive, showNotice)
 
     val clearAfter = settings.getString(PreferenceKeys.GENERAL_SHOW_TIME)?.toIntOrNull() ?: 45
     val deepClear = settings.getBoolean(PreferenceKeys.CLEAR_CLIPBOARD_HISTORY, false)
@@ -390,11 +391,11 @@ open class BasePGPActivity : AppCompatActivity() {
         {
           logcat { "Clearing the clipboard" }
           var randomNum = (100000000000000000..999999999999999999).random().toString().toCharArray()
-          copyTextToClipboard(randomNum, isSensitive = false, showSnackbar = false)
+          copyTextToClipboard(randomNum, isSensitive = false, showNotice = false)
           if (deepClear) {
             repeat(CLIPBOARD_CLEAR_COUNT) {
               randomNum = (100000000000000000..999999999999999999).random().toString().toCharArray()
-              copyTextToClipboard(randomNum, isSensitive = false, showSnackbar = false)
+              copyTextToClipboard(randomNum, isSensitive = false, showNotice = false)
             }
           }
         },
@@ -408,14 +409,14 @@ open class BasePGPActivity : AppCompatActivity() {
   }
 
   /**
-   * Copies provided [text] to the clipboard. Shows a [Snackbar] which can be disabled by passing
-   * [showSnackbar] as false.
+   * Copies provided [text] to the clipboard, saying so unless [showNotice] is false — and never on
+   * the versions of Android that say it themselves.
    */
   protected fun copyTextToClipboard(
     text: CharArray?,
     isSensitive: Boolean = true,
-    showSnackbar: Boolean = true,
-    @StringRes snackbarTextRes: Int = R.string.clipboard_copied_text,
+    showNotice: Boolean = true,
+    @StringRes noticeTextRes: Int = R.string.clipboard_copied_text,
   ) {
     val clipboard = clipboard ?: return
     val charBuf = text?.let { CharBuffer.wrap(it) }
@@ -429,8 +430,8 @@ open class BasePGPActivity : AppCompatActivity() {
     clipboard.setPrimaryClip(clip)
     charBuf?.array()?.wipe()
     text?.wipe()
-    if (showSnackbar && Build.VERSION.SDK_INT < Build.VERSION_CODES.S_V2) {
-      snackbar(message = getString(snackbarTextRes))
+    if (showNotice && Build.VERSION.SDK_INT < Build.VERSION_CODES.S_V2) {
+      Notice.show(this@BasePGPActivity, noticeTextRes)
     }
   }
 
@@ -449,7 +450,7 @@ open class BasePGPActivity : AppCompatActivity() {
     val gpgIdentifierFile =
       File(repoRoot, subDir).findTillRoot(".gpg-id", repoRoot)
         ?: run {
-          snackbar(message = getString(R.string.missing_gpg_id))
+          ErrorDialog.show(this@BasePGPActivity, R.string.missing_gpg_id)
           return null
         }
 
@@ -476,11 +477,11 @@ open class BasePGPActivity : AppCompatActivity() {
 
     if (gpgIdentifiers.isEmpty()) {
       if (shortIdCount == 0 && invalidIdCount == 0) {
-        snackbar(message = getString(R.string.empty_gpg_id))
+        ErrorDialog.show(this@BasePGPActivity, R.string.empty_gpg_id)
       } else if (shortIdCount > 0 && invalidIdCount == 0) {
-        snackbar(message = getString(R.string.short_gpg_id))
+        ErrorDialog.show(this@BasePGPActivity, R.string.short_gpg_id)
       } else {
-        snackbar(message = getString(R.string.invalid_gpg_id))
+        ErrorDialog.show(this@BasePGPActivity, R.string.invalid_gpg_id)
       }
     }
 

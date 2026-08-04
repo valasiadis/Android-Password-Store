@@ -59,4 +59,11 @@
   <color name="seed">#003E5B</color>
   <color name="error">#BA1B1B</color>
 
+  <!--
+    A signature that checked out. Material 3 has no "valid" role — error is the only judgement
+    colour it defines — so the green is named here, and its opposite is ?attr/colorError, the same
+    red the warning dialogs use.
+  -->
+  <color name="git_commit_signature_valid">#2E7D32</color>
+
 </resources>

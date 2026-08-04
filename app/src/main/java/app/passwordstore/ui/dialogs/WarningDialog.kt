@@ -42,17 +42,17 @@ object WarningDialog {
         .setCancelable(false)
         .setOnDismissListener { onDismiss() }
         .create()
-    // Going back is not the action being offered, so it does not wear the colour of the one that
-    // is — the same distinction the rest of the app's prompts draw.
     dialog.setOnShowListener {
+      val view = dialog.listView ?: dialog.window?.decorView ?: return@setOnShowListener
+      // Material 3 has no "warning" role; error is what it gives destructive actions, and that is
+      // what these are. Going back is not the action being offered, so it stays quiet.
+      dialog
+        .getButton(AlertDialog.BUTTON_POSITIVE)
+        .setTextColor(MaterialColors.getColor(view, AppCompatR.attr.colorError, Color.TRANSPARENT))
       dialog
         .getButton(AlertDialog.BUTTON_NEGATIVE)
         .setTextColor(
-          MaterialColors.getColor(
-            dialog.listView ?: dialog.window?.decorView ?: return@setOnShowListener,
-            MaterialR.attr.colorOnSurfaceVariant,
-            Color.TRANSPARENT,
-          )
+          MaterialColors.getColor(view, MaterialR.attr.colorOnSurfaceVariant, Color.TRANSPARENT)
         )
     }
     dialog.show()

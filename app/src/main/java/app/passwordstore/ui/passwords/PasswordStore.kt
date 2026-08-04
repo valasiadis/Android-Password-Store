@@ -325,11 +325,21 @@ class PasswordStore : BaseGitActivity() {
       },
     )
 
+    supportActionBar?.apply {
+      setLogo(R.mipmap.ic_launcher)
+      setDisplayUseLogoEnabled(true)
+      setDisplayShowHomeEnabled(true)
+    }
+
     lifecycleScope.launch {
       model.currentDir.flowWithLifecycle(lifecycle).collect { dir ->
         val basePath = PasswordRepository.getRepositoryDirectory().absoluteFile
         supportActionBar?.apply {
-          if (dir != basePath) title = dir.name else setTitle(R.string.app_name)
+          // The icon belongs to the store as a whole, not to a folder inside it.
+          val atRoot = dir == basePath
+          setDisplayUseLogoEnabled(atRoot)
+          setDisplayShowHomeEnabled(atRoot)
+          if (atRoot) setTitle(R.string.app_name) else title = dir.name
         }
       }
     }
@@ -559,79 +569,77 @@ class PasswordStore : BaseGitActivity() {
       refreshPasswordList()
       return
     }
-    MaterialAlertDialogBuilder(this)
-      .setTitle(R.string.delete_dialog_title)
-      .setMessage(resources.getQuantityString(R.plurals.delete_dialog_text, size, size))
-      .setPositiveButton(R.string.dialog_yes) { _, _ ->
-        val filesToDelete = arrayListOf<File>()
-        selectedItems.forEach { item ->
-          if (item.file.isDirectory) filesToDelete.addAll(item.file.listFilesRecursively())
-          else filesToDelete.add(item.file)
-        }
-        val fmt =
-          selectedItems.joinToString(separator = ", ") { item ->
-            item.file.toRelativeString(PasswordRepository.getRepositoryDirectory())
-          }
-        lifecycleScope.launch {
-          withContext(dispatcherProvider.io()) {
-            selectedItems.forEach { item -> item.file.deleteRecursively() }
-          }
-          refreshPasswordList()
-          commitChange(resources.getString(R.string.git_commit_remove_text, fmt))
-            .onOk {
-              // The deletion is committed (and signed, if requested): finalise the bookkeeping.
-              // remove to-be-deleted files from history
-              passwordHistory.edit {
-                filesToDelete.forEach { file -> remove(file.absolutePath.base64()) }
-              }
-              // remove cached passkey hex ID (filename without extension) <--> webauthn username
-              // associations
-              credentialUsernames.edit {
-                filesToDelete.forEach { file ->
-                  val fileBasename = Paths.get(file.absolutePath).nameWithoutExtension
-                  if (fileBasename.matches("[a-fA-F0-9]{64}".toRegex())) remove(fileBasename)
-                }
-              }
-              AutofillMatcher.updateMatches(applicationContext, delete = filesToDelete)
-              shortcutHandler.pruneDynamicShortcuts()
-              snackbar(
-                message = resources.getQuantityString(R.plurals.password_delete_success, size)
-              )
-            }
-            .onErr { e ->
-              // The commit (or its signature) did not go through, e.g. the user cancelled the
-              // signing prompt. Undo the on-disk deletion by restoring the working tree from HEAD
-              // so the entry is only ever removed once it has actually been committed. Guard the
-              // restore so a failure (e.g. a stale index.lock) reports an error instead of
-              // crashing.
-              logcat(ERROR) { "Aborting deletion; restoring working tree from HEAD\n${e.asLog()}" }
-              val restored =
-                withContext(dispatcherProvider.io()) {
-                  try {
-                    PasswordRepository.repository?.let { repo ->
-                      Git(repo).reset().setMode(ResetType.HARD).call()
-                    }
-                    true
-                  } catch (t: Throwable) {
-                    logcat(ERROR) { t.asLog() }
-                    false
-                  }
-                }
-              refreshPasswordList()
-              // Don't nag with a bar when the user cancelled, or when the failure was already shown
-              // in a dialog (e.g. a blocked smartcard PIN).
-              if (!isCancellation(e) && !OpenPgpCardPrompt.isHandled(e)) {
-                val message =
-                  if (isGitLockError(e) || !restored) getString(R.string.git_index_locked_error)
-                  else ErrorMessages[e]
-                snackbar(message = message, length = Snackbar.LENGTH_LONG)
-              }
-            }
-          updateFabSync()
-        }
+    WarningDialog.show(
+      context = this,
+      title = getString(R.string.delete_dialog_title),
+      message = resources.getQuantityString(R.plurals.delete_dialog_text, size, size),
+      proceedLabel = getString(R.string.delete),
+    ) {
+      val filesToDelete = arrayListOf<File>()
+      selectedItems.forEach { item ->
+        if (item.file.isDirectory) filesToDelete.addAll(item.file.listFilesRecursively())
+        else filesToDelete.add(item.file)
       }
-      .setNegativeButton(R.string.dialog_no, null)
-      .show()
+      val fmt =
+        selectedItems.joinToString(separator = ", ") { item ->
+          item.file.toRelativeString(PasswordRepository.getRepositoryDirectory())
+        }
+      lifecycleScope.launch {
+        withContext(dispatcherProvider.io()) {
+          selectedItems.forEach { item -> item.file.deleteRecursively() }
+        }
+        refreshPasswordList()
+        commitChange(resources.getString(R.string.git_commit_remove_text, fmt))
+          .onOk {
+            // The deletion is committed (and signed, if requested): finalise the bookkeeping.
+            // remove to-be-deleted files from history
+            passwordHistory.edit {
+              filesToDelete.forEach { file -> remove(file.absolutePath.base64()) }
+            }
+            // remove cached passkey hex ID (filename without extension) <--> webauthn username
+            // associations
+            credentialUsernames.edit {
+              filesToDelete.forEach { file ->
+                val fileBasename = Paths.get(file.absolutePath).nameWithoutExtension
+                if (fileBasename.matches("[a-fA-F0-9]{64}".toRegex())) remove(fileBasename)
+              }
+            }
+            AutofillMatcher.updateMatches(applicationContext, delete = filesToDelete)
+            shortcutHandler.pruneDynamicShortcuts()
+            snackbar(message = resources.getQuantityString(R.plurals.password_delete_success, size))
+          }
+          .onErr { e ->
+            // The commit (or its signature) did not go through, e.g. the user cancelled the
+            // signing prompt. Undo the on-disk deletion by restoring the working tree from HEAD
+            // so the entry is only ever removed once it has actually been committed. Guard the
+            // restore so a failure (e.g. a stale index.lock) reports an error instead of
+            // crashing.
+            logcat(ERROR) { "Aborting deletion; restoring working tree from HEAD\n${e.asLog()}" }
+            val restored =
+              withContext(dispatcherProvider.io()) {
+                try {
+                  PasswordRepository.repository?.let { repo ->
+                    Git(repo).reset().setMode(ResetType.HARD).call()
+                  }
+                  true
+                } catch (t: Throwable) {
+                  logcat(ERROR) { t.asLog() }
+                  false
+                }
+              }
+            refreshPasswordList()
+            // Don't nag with a bar when the user cancelled, or when the failure was already shown
+            // in a dialog (e.g. a blocked smartcard PIN).
+            if (!isCancellation(e) && !OpenPgpCardPrompt.isHandled(e)) {
+              val message =
+                if (isGitLockError(e) || !restored) getString(R.string.git_index_locked_error)
+                else ErrorMessages[e]
+              snackbar(message = message, length = Snackbar.LENGTH_LONG)
+            }
+          }
+        updateFabSync()
+      }
+    }
   }
 
   /** Whether [error] (or a cause) is a user cancellation, e.g. dismissing the signing prompt. */

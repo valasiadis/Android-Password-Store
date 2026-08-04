@@ -53,6 +53,7 @@ import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
+import com.google.android.material.R as MaterialR
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
@@ -105,13 +106,18 @@ open class BasePGPActivity : AppCompatActivity() {
   protected fun encryptionOutcomeMessage(
     succeededUserIds: List<String>,
     failedUserIds: List<String>,
+    onInverseSurface: Boolean = false,
   ): CharSequence {
+    // A snackbar draws on the inverse surface, where the scheme's own primary is barely a colour
+    // at all; the inverse primary is what it puts an accent in.
+    val accent =
+      if (onInverseSurface) MaterialR.attr.colorPrimaryInverse else AppCompatR.attr.colorPrimary
     val message = SpannableStringBuilder()
     val succeeded = succeededUserIds.joinToString()
     message.appendHighlighting(
       getString(R.string.password_creation_file_encryption_succeeded_ids_message, succeeded),
       succeeded,
-      MaterialColors.getColor(this, AppCompatR.attr.colorPrimary, Color.TRANSPARENT),
+      MaterialColors.getColor(this, accent, Color.TRANSPARENT),
     )
     if (failedUserIds.isNotEmpty()) {
       val failed = failedUserIds.joinToString()

@@ -8,12 +8,13 @@ package app.passwordstore.ui.git.log
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.appcompat.R as AppCompatR
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import app.passwordstore.R
 import app.passwordstore.databinding.GitLogRowLayoutBinding
 import app.passwordstore.util.git.GitCommit
 import app.passwordstore.util.git.GitLogModel
-import com.google.android.material.R as MaterialR
 import com.google.android.material.color.MaterialColors
 import java.time.Instant
 import java.time.ZoneId
@@ -67,15 +68,12 @@ class GitLogAdapter : RecyclerView.Adapter<GitLogAdapter.ViewHolder>() {
         gitLogRowSignature.setImageResource(
           if (commit.isSigned) R.drawable.ic_lock_closed_24px else R.drawable.ic_lock_open_24px
         )
-        // From the scheme rather than a pair of fixed greens and greys, so both follow the
-        // theme: tertiary is the scheme's accent for a positive state.
+        // Green for a signature that checked out, red for none — the judgement is the point, and
+        // the red is the scheme's error colour, the same one the warning dialogs wear.
         gitLogRowSignature.setColorFilter(
-          MaterialColors.getColor(
-            root,
-            if (commit.isSigned) MaterialR.attr.colorTertiary
-            else MaterialR.attr.colorOnSurfaceVariant,
-            Color.TRANSPARENT,
-          )
+          if (commit.isSigned)
+            ContextCompat.getColor(root.context, R.color.git_commit_signature_valid)
+          else MaterialColors.getColor(root, AppCompatR.attr.colorError, Color.TRANSPARENT)
         )
         gitLogRowSignature.contentDescription =
           root.context.getString(

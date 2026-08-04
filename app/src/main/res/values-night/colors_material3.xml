@@ -4,4 +4,7 @@
   -->
 
 <resources>
+
+  <!-- Lightened to stay legible on a dark surface. -->
+  <color name="git_commit_signature_valid">#81C784</color>
 </resources>

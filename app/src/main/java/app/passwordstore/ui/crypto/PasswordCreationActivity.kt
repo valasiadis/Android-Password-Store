@@ -62,8 +62,6 @@ import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import com.github.michaelbull.result.unwrapError
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.BaseTransientBottomBar
-import com.google.android.material.snackbar.Snackbar
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.LuminanceSource
 import com.google.zxing.RGBLuminanceSource
@@ -398,8 +396,12 @@ class PasswordCreationActivity : BasePGPActivity() {
         .putExtra(EXTRA_FILE_PATH, path)
         .putExtra(EXTRA_REPO_PATH, repoPath)
         .putExtra(EXTRA_ENTRY, savedEntry)
+        .putExtra(RETURN_EXTRA_MESSAGE, savedMessage)
     )
   }
+
+  /** What the screen that follows should say about the save that just happened. */
+  private var savedMessage: String? = null
 
   private fun encrypt(identifiers: List<PGPIdentifier>) {
     with(binding) {
@@ -483,7 +485,7 @@ class PasswordCreationActivity : BasePGPActivity() {
           val (succeededUserEmails, result) =
             withContext(dispatcherProvider.io()) {
               repository.encrypt(
-                identifiers,
+                gpgIdentifiers,
                 ByteArrayInputStream(contentBytes),
                 ByteArrayOutputStream(),
               )
@@ -494,7 +496,7 @@ class PasswordCreationActivity : BasePGPActivity() {
           if (succeededUserEmails.isNullOrEmpty()) throw UnusableKeyException
 
           val failedUserEmails =
-            identifiers
+            gpgIdentifiers
               .map { id ->
                 repository.getEmailFromKeyId(id)
                   ?: run {
@@ -556,6 +558,10 @@ class PasswordCreationActivity : BasePGPActivity() {
             RETURN_EXTRA_LONG_NAME,
             PasswordRepository.getLongName(fullPath, repoPath, editName),
           )
+          // The screen that asked for this edit shows the entry: handing back the copy just
+          // written lets it show the new one without decrypting it again — which for an entry
+          // whose only key is on a smartcard means asking for the card a second time.
+          returnIntent.putExtra(EXTRA_ENTRY, savedEntry)
 
           if (shouldGeneratePassword) {
             val directoryStructure = AutofillPreferences.directoryStructure(applicationContext)
@@ -570,9 +576,6 @@ class PasswordCreationActivity : BasePGPActivity() {
               entry.username?.let { it.copyOf(it.size) }
                 ?: directoryStructure.getUsernameFor(passwordFile.toFile())
             returnIntent.putExtra(RETURN_EXTRA_USERNAME, username)
-            // The screen that asked for this edit shows the entry: handing back the copy just
-            // written lets it show the new one without decrypting anything.
-            returnIntent.putExtra(EXTRA_ENTRY, savedEntry)
 
             entry.clear()
           }
@@ -598,13 +601,15 @@ class PasswordCreationActivity : BasePGPActivity() {
                 finish()
               }
               if (failedUserEmails.isEmpty()) {
-                // Nothing went wrong, so it is said in passing rather than held up for an OK.
-                snackbar(message = encryptionOutcomeMessage(succeededUserEmails, failedUserEmails))
-                  .addCallback(
-                    object : BaseTransientBottomBar.BaseCallback<Snackbar>() {
-                      override fun onDismissed(bar: Snackbar?, event: Int) = leave()
-                    }
-                  )
+                // Nothing went wrong, so it is said in passing — on whichever screen comes next,
+                // since this one is on its way out and would take the message with it.
+                returnIntent.putExtra(
+                  RETURN_EXTRA_MESSAGE,
+                  encryptionOutcomeMessage(succeededUserEmails, failedUserEmails, true).toString(),
+                )
+                savedMessage =
+                  encryptionOutcomeMessage(succeededUserEmails, failedUserEmails, true).toString()
+                leave()
                 return@onOk
               }
               val dialog =
@@ -674,6 +679,7 @@ class PasswordCreationActivity : BasePGPActivity() {
     const val OTP_RESULT_REQUEST_KEY = "OTP_IMPORT"
     const val RESULT = "RESULT"
     const val RETURN_EXTRA_CREATED_FILE = "CREATED_FILE"
+    const val RETURN_EXTRA_MESSAGE = "SAVE_MESSAGE"
     const val RETURN_EXTRA_NAME = "NAME"
     const val RETURN_EXTRA_LONG_NAME = "LONG_NAME"
     const val RETURN_EXTRA_USERNAME = "USERNAME"

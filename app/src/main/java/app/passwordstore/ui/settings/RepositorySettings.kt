@@ -26,6 +26,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.git.config.GitConfigActivity
 import app.passwordstore.ui.git.config.GitServerConfigActivity
 import app.passwordstore.ui.proxy.ProxySelectorActivity
@@ -349,29 +350,26 @@ class RepositorySettings(private val activity: FragmentActivity) : SettingsProvi
         dependency = PreferenceKeys.PREF_SHARED_REPO
         onClick {
           val repoDir = PasswordRepository.getRepositoryDirectory()
-          MaterialAlertDialogBuilder(activity)
-            .setTitle(R.string.pref_dialog_delete_title)
-            .setMessage(activity.getString(R.string.dialog_delete_msg, repoDir))
-            .setCancelable(false)
-            .setPositiveButton(R.string.dialog_delete) { dialogInterface, _ ->
-              runCatching {
-                PasswordRepository.deleteRepository()
-              }
-                .onErr { it.message?.let { message -> activity.snackbar(message = message) } }
+          WarningDialog.show(
+            context = activity,
+            title = activity.getString(R.string.pref_dialog_delete_title),
+            message = activity.getString(R.string.dialog_delete_msg, repoDir),
+            proceedLabel = activity.getString(R.string.dialog_delete),
+          ) {
+            runCatching {
+              PasswordRepository.deleteRepository()
+              PasswordRepository.getRepositoryDirectory().mkdirs()
+            }
+              .onErr { it.message?.let { message -> activity.snackbar(message = message) } }
 
-              activity.getSystemService<ShortcutManager>()?.apply {
-                removeDynamicShortcuts(dynamicShortcuts.map { it.id }.toMutableList())
-              }
-              activity.sharedPrefs.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, false) }
-              activity.passwordHistory.edit { clear() }
-              activity.credentialUsernames.edit { clear() }
-              dialogInterface.cancel()
-              activity.finish()
+            activity.getSystemService<ShortcutManager>()?.apply {
+              removeDynamicShortcuts(dynamicShortcuts.map { it.id }.toMutableList())
             }
-            .setNegativeButton(R.string.dialog_do_not_delete) { dialogInterface, _ ->
-              run { dialogInterface.cancel() }
-            }
-            .show()
+            activity.sharedPrefs.edit { putBoolean(PreferenceKeys.REPOSITORY_INITIALIZED, false) }
+            activity.passwordHistory.edit { clear() }
+            activity.credentialUsernames.edit { clear() }
+            activity.finish()
+          }
           true
         }
       }

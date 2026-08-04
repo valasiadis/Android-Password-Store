@@ -50,8 +50,6 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.BaseTransientBottomBar
-import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -120,6 +118,10 @@ class DecryptActivity : BasePGPActivity() {
         AESEncryption.decrypt(entry)?.let { decrypted -> entry to decrypted }
       }
     intent.removeExtra(PasswordCreationActivity.EXTRA_ENTRY)
+    intent.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)?.let { message ->
+      intent.removeExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
+      binding.root.post { snackbar(message = message) }
+    }
     if (cachedEntry != null) {
       showCachedEntry(cachedEntry.first, cachedEntry.second)
       return
@@ -506,19 +508,14 @@ class DecryptActivity : BasePGPActivity() {
           snackbar(message = getString(R.string.change_keys_failure))
         }
         .onOk {
-          // The entry on screen was decrypted with keys it may no longer have, so the screen goes
-          // — but only once the message about it has been read, rather than out from under it.
+          // The entry stays open: what it says did not change, only what encrypts it, and the
+          // copy on screen is still the one that was just written.
           setResult(RESULT_OK)
           snackbar(
-              message =
-                if (failedUserIds.isEmpty()) getString(R.string.change_keys_success)
-                else getString(R.string.change_keys_partial, failedUserIds.joinToString())
-            )
-            .addCallback(
-              object : BaseTransientBottomBar.BaseCallback<Snackbar>() {
-                override fun onDismissed(transientBottomBar: Snackbar?, event: Int) = finish()
-              }
-            )
+            message =
+              if (failedUserIds.isEmpty()) getString(R.string.change_keys_success)
+              else getString(R.string.change_keys_partial, failedUserIds.joinToString())
+          )
         }
     }
   }
@@ -590,29 +587,32 @@ class DecryptActivity : BasePGPActivity() {
       } else {
         recreate()
       }
+      data.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)?.let { message ->
+        snackbar(message = message)
+      }
     }
 
   /** Deletes this entry, after asking, and leaves — there is nothing left to show. */
   private fun deleteEntry() {
-    MaterialAlertDialogBuilder(this)
-      .setTitle(R.string.delete_dialog_title)
-      .setMessage(resources.getQuantityString(R.plurals.delete_dialog_text, 1, 1))
-      .setPositiveButton(R.string.dialog_yes) { _, _ ->
-        lifecycleScope.launch {
-          withContext(dispatcherProvider.io()) { File(fullPath).delete() }
-          passwordHistory.edit { remove(fullPath.base64()) }
-          commitChange(
-            getString(
-              R.string.git_commit_remove_text,
-              PasswordRepository.getLongName(fullPath, repoPath, name),
-            )
+    WarningDialog.show(
+      context = this,
+      title = getString(R.string.delete_dialog_title),
+      message = resources.getQuantityString(R.plurals.delete_dialog_text, 1, 1),
+      proceedLabel = getString(R.string.delete),
+    ) {
+      lifecycleScope.launch {
+        withContext(dispatcherProvider.io()) { File(fullPath).delete() }
+        passwordHistory.edit { remove(fullPath.base64()) }
+        commitChange(
+          getString(
+            R.string.git_commit_remove_text,
+            PasswordRepository.getLongName(fullPath, repoPath, name),
           )
-          setResult(RESULT_OK)
-          finish()
-        }
+        )
+        setResult(RESULT_OK)
+        finish()
       }
-      .setNegativeButton(R.string.dialog_no, null)
-      .show()
+    }
   }
 
   private fun editPasskey() {

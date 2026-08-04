@@ -254,9 +254,10 @@ class DecryptActivity : BasePGPActivity() {
           .filter { result ->
             if (result.second.getError() is IncorrectPassphraseException) {
               /* Remove wrong passphrases from temporary and persistent caches */
-              persistentPassphrases.edit { remove(result.first) }
-              cachedPassphrases[result.first]?.wipe()
-              cachedPassphrases.remove(result.first)
+              val cacheKey = passphraseCacheKey(result.first)
+              persistentPassphrases.edit { remove(cacheKey) }
+              cachedPassphrases[cacheKey]?.wipe()
+              cachedPassphrases.remove(cacheKey)
               true
             } else false
           }
@@ -300,8 +301,9 @@ class DecryptActivity : BasePGPActivity() {
       val outcome =
         prompt.runWithPin(
           reader = reader,
-          // Namespaced so the decryption PIN cache is kept separate from the signing PIN cache.
-          cacheKey = "decrypt:${identifiers.firstOrNull()}",
+          // Namespaced so the decryption PIN cache is kept separate from the signing PIN cache,
+          // and named by the card's key rather than by whatever the store called it.
+          cacheKey = "decrypt:${identifiers.firstOrNull()?.let(::passphraseCacheKey)}",
           pinTitleRes = R.string.openpgp_card_pin_title,
           pinHintRes = R.string.openpgp_card_pin_hint,
           identityLabel = getIdentityLabelForIdentifiers(identifiers),

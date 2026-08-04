@@ -469,7 +469,8 @@ open class BasePGPActivity : AppCompatActivity() {
           } else {
             val id = PGPIdentifier.fromString(line)
             if (id == null) invalidIdCount++
-            else if (!repository.hasKey(id)) persistentPassphrases.edit { remove(id.toString()) }
+            else if (!repository.hasKey(id))
+              persistentPassphrases.edit { remove(passphraseCacheKey(id)) }
             id
           }
         }
@@ -487,6 +488,20 @@ open class BasePGPActivity : AppCompatActivity() {
 
     return gpgIdentifiers
   }
+
+  /**
+   * The name a passphrase is filed under: the key's own ID, whatever the store called it.
+   *
+   * A `.gpg-id` may name a key by address or by ID, and the two used to be separate entries in the
+   * cache — so a passphrase given once was asked for again the moment the same key was reached by
+   * its other name. An identifier the store does not hold keeps its own spelling; there is no key
+   * to ask for an ID.
+   */
+  protected fun passphraseCacheKey(identifier: PGPIdentifier): String =
+    repository.getLongKeyIdFromKeyId(identifier) ?: identifier.toString()
+
+  protected fun passphraseCacheKey(identifier: String): String =
+    PGPIdentifier.fromString(identifier)?.let(::passphraseCacheKey) ?: identifier
 
   /**
    * Builds a short label naming the key(s) a passphrase/PIN is being requested for, so the prompt
@@ -549,7 +564,10 @@ open class BasePGPActivity : AppCompatActivity() {
           }
         var cacheEnabled = bundle.getBoolean(PasswordDialog.PASSWORD_CACHE_KEY)
         lifecycleScope.launch(dispatcherProvider.main()) {
-          decryptWithPassphrase(mapOf("" to passphrase), identifiers) { id -> // onSuccess
+          decryptWithPassphrase(mapOf("" to passphrase), identifiers) { decryptedBy -> // onSuccess
+            val id = passphraseCacheKey(decryptedBy)
+            // The same key under its other name, from before passphrases were filed by key ID.
+            if (id != decryptedBy) persistentPassphrases.edit { remove(decryptedBy) }
             var fastUnlockingSetupCompletion: CompletableDeferred<Unit>? = null
             runCatching {
               // update temporary passphrase cache
@@ -715,11 +733,11 @@ open class BasePGPActivity : AppCompatActivity() {
       persistentPassphrases.edit { clear() }
 
     val persistentIds =
-      identifiers.map { it.toString() }.filter { persistentPassphrases.contains(it) }
+      identifiers.map(::passphraseCacheKey).filter(persistentPassphrases::contains)
     val pinEncrypted = persistentPassphrases.getString("unlock_pin", null)?.toCharArray()
     if (
       !persistentIds.none() &&
-        identifiers.map { it.toString() }.filter { cachedPassphrases.containsKey(it) }.none() &&
+        identifiers.map(::passphraseCacheKey).none(cachedPassphrases::containsKey) &&
         AESEncryption.isHardwareBacked(KeyType.PERSISTENT_WITH_AUTHENTICATION) &&
         settings.getString(PreferenceKeys.PREF_FAST_UNLOCK_OPTION, "disabled") == "fingerprint" &&
         BiometricAuthenticator.canAuthenticate(this@BasePGPActivity)
@@ -751,7 +769,7 @@ open class BasePGPActivity : AppCompatActivity() {
       }
     } else if (
       !persistentIds.none() &&
-        identifiers.map { it.toString() }.filter { cachedPassphrases.containsKey(it) }.none() &&
+        identifiers.map(::passphraseCacheKey).none(cachedPassphrases::containsKey) &&
         AESEncryption.isHardwareBacked(KeyType.PERSISTENT) &&
         settings.getString(PreferenceKeys.PREF_FAST_UNLOCK_OPTION, "disabled") == "PIN" &&
         pinEncrypted != null
@@ -848,9 +866,7 @@ open class BasePGPActivity : AppCompatActivity() {
   }
 
   protected fun decrypt(identifiers: List<PGPIdentifier>, isError: Boolean = false) {
-    val passphrases = cachedPassphrases.filterKeys {
-      identifiers.map { it.toString() }.contains(it)
-    }
+    val passphrases = cachedPassphrases.filterKeys(identifiers.map(::passphraseCacheKey)::contains)
     lifecycleScope.launch(dispatcherProvider.main()) {
       if (needsSmartcardPin(identifiers)) {
         // Smartcard PIN entry and retries are handled inline by the smartcard decrypt flow; just

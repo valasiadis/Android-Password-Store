@@ -623,12 +623,19 @@ class PasswordCreationActivity : BasePGPActivity() {
             finish()
           }
           if (failedUserEmails.isEmpty()) {
-            // Nothing went wrong, so it is said in passing — on whichever screen comes next, since
-            // this one is on its way out and would take the message with it. Which keys it went to
-            // is not news; that it was saved is.
+            // Nothing went wrong, so it is said in passing — on whichever screen comes next,
+            // since this one is on its way out and would take the message with it. Which keys it
+            // went to is not news; what happened to the entry is, and an entry that changed its
+            // name or its folder had more done to it than an edit.
             val message =
               getString(
-                if (editing) R.string.notice_password_updated else R.string.notice_password_created
+                when {
+                  !editing -> R.string.notice_password_created
+                  renamedFrom == null -> R.string.notice_password_updated
+                  renamedFrom.parentFile != passwordFile.toFile().parentFile ->
+                    R.string.notice_password_moved
+                  else -> R.string.notice_password_renamed
+                }
               )
             returnIntent.putExtra(RETURN_EXTRA_MESSAGE, message)
             savedMessage = message

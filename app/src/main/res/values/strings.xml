@@ -101,6 +101,8 @@
   <string name="pgp_key_creation_in_progress">Creating key…</string>
   <string name="notice_password_created">Password created</string>
   <string name="notice_password_updated">Password updated</string>
+  <string name="notice_password_renamed">Password renamed</string>
+  <string name="notice_password_moved">Password moved</string>
   <string name="setup_next">Next</string>
   <string name="setup_back">Back</string>
   <string name="setup_step_counter">Step %1$d of %2$d</string>

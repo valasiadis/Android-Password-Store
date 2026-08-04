@@ -200,9 +200,10 @@ class PasskeyAuthenticationActivity : BasePGPActivity() {
           .filter { result ->
             if (result.second.getError() is IncorrectPassphraseException) {
               /* Remove wrong passphrases from temporary and persistent caches */
-              persistentPassphrases.edit { remove(result.first) }
-              cachedPassphrases[result.first]?.wipe()
-              cachedPassphrases.remove(result.first)
+              val cacheKey = passphraseCacheKey(result.first)
+              persistentPassphrases.edit { remove(cacheKey) }
+              cachedPassphrases[cacheKey]?.wipe()
+              cachedPassphrases.remove(cacheKey)
               true
             } else false
           }

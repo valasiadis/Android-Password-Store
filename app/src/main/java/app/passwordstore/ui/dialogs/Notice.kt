@@ -58,12 +58,19 @@ object Notice {
       .findViewById<android.view.View>(R.id.notice_message)
       ?.let(::removeFromTop)
     placeAtTopOf(activity, binding.root)
+    binding.root.alpha = 0f
+    binding.root.animate().alpha(1f).setDuration(FADE_MS).start()
     binding.root.postDelayed(
       {
-        removeFromTop(binding.root)
+        binding.root
+          .animate()
+          .alpha(0f)
+          .setDuration(FADE_MS)
+          .withEndAction { removeFromTop(binding.root) }
+          .start()
         if (pending === current) pending = null
       },
-      current.until - SystemClock.elapsedRealtime(),
+      (current.until - SystemClock.elapsedRealtime() - FADE_MS).coerceAtLeast(0),
     )
   }
 
@@ -74,4 +81,7 @@ object Notice {
 
   /** Long enough to read a line, short enough not to sit over the screen it is talking about. */
   private const val VISIBLE_FOR_MS = 3_000L
+
+  /** Just enough to be seen arriving and leaving, rather than blinking in and out. */
+  private const val FADE_MS = 200L
 }

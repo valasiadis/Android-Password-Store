@@ -49,10 +49,12 @@
       android:layout_height="wrap_content"
       android:clickable="true"
       android:cursorVisible="false"
-      android:ellipsize="middle"
+      android:ellipsize="end"
       android:focusable="false"
-      android:inputType="none"
-      android:maxLines="1"
+      android:inputType="textNoSuggestions"
+      android:paddingStart="@dimen/spacing_large"
+      android:paddingEnd="@dimen/text_field_end_icon_room"
+      android:singleLine="true"
       android:text="@string/folder_encryption_key_inherited" />
 
   </com.google.android.material.textfield.TextInputLayout>

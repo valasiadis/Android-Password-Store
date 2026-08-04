@@ -45,6 +45,10 @@
       android:layout_height="wrap_content"
       android:layout_marginTop="48dp"
       android:layout_marginEnd="@dimen/fab_compat_margin"
+      android:autoSizeMaxTextSize="24sp"
+      android:autoSizeMinTextSize="16sp"
+      android:autoSizeTextType="uniform"
+      android:singleLine="true"
       android:text="@string/select_n_repository_type"
       android:textAppearance="?attr/textAppearanceHeadlineSmall"
       android:textStyle="bold"
@@ -53,17 +57,36 @@
       app:layout_constraintStart_toStartOf="@id/app_icon"
       app:layout_constraintTop_toBottomOf="@id/app_icon" />
 
-    <TextView
+    <LinearLayout
       android:id="@+id/tv_repo_type_text"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
       android:layout_marginTop="@dimen/onboarding_desc_margin_top"
       android:layout_marginEnd="@dimen/fab_compat_margin"
-      android:text="@string/select_repo_type_text"
-      android:textAppearance="?attr/textAppearanceTitleSmall"
+      android:gravity="center_vertical"
+      android:orientation="horizontal"
       app:layout_constraintEnd_toEndOf="parent"
       app:layout_constraintStart_toStartOf="@id/repo_type"
-      app:layout_constraintTop_toBottomOf="@id/repo_type" />
+      app:layout_constraintTop_toBottomOf="@id/repo_type">
+
+      <TextView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/select_repo_type_text"
+        android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+      <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/repo_type_help"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/spacing_small"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="@dimen/spacing_small"
+        android:src="@drawable/ic_help_20dp"
+        app:tint="?attr/colorOnSurfaceVariant" />
+
+    </LinearLayout>
 
     <com.google.android.material.button.MaterialButton
       android:id="@+id/clone_remote"
@@ -91,18 +114,6 @@
       app:layout_constraintEnd_toEndOf="@id/clone_remote"
       app:layout_constraintStart_toStartOf="@id/clone_remote"
       app:layout_constraintTop_toBottomOf="@id/clone_remote" />
-
-    <TextView
-      android:id="@+id/repo_tip"
-      android:layout_width="0dp"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="@dimen/spacing_medium"
-      android:text="@string/setup_repo_tip"
-      android:textAppearance="?attr/textAppearanceBodySmall"
-      android:textColor="?attr/colorOnSurfaceVariant"
-      app:layout_constraintEnd_toEndOf="@id/clone_remote"
-      app:layout_constraintStart_toStartOf="@id/clone_remote"
-      app:layout_constraintTop_toBottomOf="@id/create_local" />
 
   </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

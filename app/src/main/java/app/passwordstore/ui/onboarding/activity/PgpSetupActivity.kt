@@ -14,7 +14,9 @@ import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.databinding.SetupStepPgpBinding
+import app.passwordstore.ui.dialogs.showsTip
 import app.passwordstore.ui.pgp.PGPKeyListActivity
+import app.passwordstore.util.extensions.setEllipsizedText
 import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.settings.PreferenceKeys
 import dagger.hilt.android.AndroidEntryPoint
@@ -51,7 +53,9 @@ class PgpSetupActivity : SetupStepActivity() {
 
   override fun onContentInflated(content: View, savedInstanceState: Bundle?) {
     binding = SetupStepPgpBinding.bind(content)
-    selectedKeyIds = savedInstanceState?.getString(STATE_SELECTED_KEYS)
+    // Coming back to this step from the one after it finds the keys chosen the first time round.
+    selectedKeyIds =
+      savedInstanceState?.getString(STATE_SELECTED_KEYS) ?: intent.getStringExtra(EXTRA_KEY_IDS)
 
     binding.gpgKeyValue.setOnClickListener { chooseKeys() }
     binding.gpgKeyContainer.setEndIconOnClickListener { chooseKeys() }
@@ -62,6 +66,7 @@ class PgpSetupActivity : SetupStepActivity() {
     binding.asciiArmor.setOnCheckedChangeListener { _, isChecked ->
       sharedPrefs.edit { putBoolean(PreferenceKeys.ASCII_ARMOR, isChecked) }
     }
+    binding.asciiArmorHelp.showsTip(R.string.setup_ascii_armor_explanation)
 
     showSelectedKeys()
   }
@@ -85,7 +90,7 @@ class PgpSetupActivity : SetupStepActivity() {
         cryptoRepository.getUserIdFromKeyId(identifier)?.takeIf { it != "null" } ?: id
       }
     }
-    binding.gpgKeyValue.setText(
+    binding.gpgKeyValue.setEllipsizedText(
       if (names.isEmpty()) getString(R.string.setup_key_none_chosen)
       else names.joinToString(separator = ", ")
     )
@@ -93,8 +98,7 @@ class PgpSetupActivity : SetupStepActivity() {
   }
 
   override fun onNext() {
-    setResult(RESULT_OK, Intent().putExtra(PGPKeyListActivity.EXTRA_SELECTED_KEY, selectedKeyIds))
-    finish()
+    proceed(Intent().putExtra(EXTRA_KEY_IDS, selectedKeyIds))
   }
 
   private companion object {

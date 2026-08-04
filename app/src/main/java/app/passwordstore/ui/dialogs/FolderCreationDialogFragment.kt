@@ -23,6 +23,7 @@ import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.hideKeyboard
 import app.passwordstore.util.extensions.isInsideRepository
+import app.passwordstore.util.extensions.setEllipsizedText
 import app.passwordstore.util.extensions.unsafeLazy
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
@@ -100,8 +101,9 @@ class FolderCreationDialogFragment : DialogFragment() {
     }
 
   private fun showChosenKeys() {
-    binding.gpgKeyValue.setText(
-      chosenKeyIds?.replace("\n", ", ") ?: getString(R.string.folder_encryption_key_inherited)
+    binding.gpgKeyValue.setEllipsizedText(
+      chosenKeyIds?.split("\n")?.filter(String::isNotBlank)?.joinToString(separator = ", ")
+        ?: getString(R.string.folder_encryption_key_inherited)
     )
   }
 

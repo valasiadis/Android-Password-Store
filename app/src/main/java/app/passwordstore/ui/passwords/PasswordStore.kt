@@ -7,6 +7,7 @@ package app.passwordstore.ui.passwords
 import android.content.ComponentName
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Canvas
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.Menu
@@ -21,7 +22,7 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.SearchView.OnQueryTextListener
 import androidx.core.content.edit
-import androidx.core.graphics.drawable.toBitmap
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.commit
@@ -329,13 +330,27 @@ class PasswordStore : BaseGitActivity() {
     )
 
     supportActionBar?.apply {
-      // The icon's foreground on its own: the launcher's circle belongs on a launcher, and at
-      // this size it would be a coloured blob beside the name. Drawn at an icon's size rather
-      // than inset within a larger box, which would keep the box and crowd the title out of it.
+      // The icon's foreground on its own: the launcher's circle belongs on a launcher, and at this
+      // size it would be a coloured blob beside the name. A launcher icon keeps most of its canvas
+      // free so the system can mask and animate it, which beside a title reads as a mark two sizes
+      // too small — so it is drawn larger than the box it lands in, cropping that empty margin
+      // rather than the mark, and centred on the title's own centre line.
       val logoSize = (LOGO_SIZE_DP * resources.displayMetrics.density).toInt()
+      val overscan = (logoSize * LOGO_OVERSCAN).toInt()
       AppCompatResources.getDrawable(this@PasswordStore, R.drawable.ic_launcher_foreground)?.let {
         logo ->
-        setLogo(logo.toBitmap(logoSize, logoSize).toDrawable(resources))
+        val mark = createBitmap(logoSize, logoSize)
+        // The mark's own weight sits above the middle of its canvas, so centring the canvas leaves
+        // it riding above the title. What is lined up is the mark, not the box around it.
+        val nudge = (logoSize * LOGO_NUDGE).toInt()
+        logo.setBounds(
+          -overscan,
+          -overscan + nudge,
+          logoSize + overscan,
+          logoSize + overscan + nudge,
+        )
+        logo.draw(Canvas(mark))
+        setLogo(mark.toDrawable(resources))
       }
       setDisplayUseLogoEnabled(true)
       setDisplayShowHomeEnabled(true)
@@ -869,7 +884,13 @@ class PasswordStore : BaseGitActivity() {
     const val REQUEST_ARG_PATH = "PATH"
 
     /** The mark beside the title is an icon, not a heading of its own. */
-    private const val LOGO_SIZE_DP = 38
+    private const val LOGO_SIZE_DP = 40
+
+    /** How far past its box the icon is drawn, to leave its launcher-sized margin outside. */
+    private const val LOGO_OVERSCAN = 0.27f
+
+    /** How far down the mark is moved, so its middle and the title's middle are the same line. */
+    private const val LOGO_NUDGE = 0.04f
     private const val PENDING_KEY_FOLDER_STATE = "PENDING_KEY_FOLDER"
 
     private fun isPrintable(c: Char): Boolean {

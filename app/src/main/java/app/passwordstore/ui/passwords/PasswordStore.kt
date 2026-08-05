@@ -200,7 +200,7 @@ class PasswordStore : BaseGitActivity() {
         // screen's to finish, behind whatever the user is looking at now. A commit that fails
         // puts the entry back, which the list should show.
         lifecycleScope.launch {
-          commitSavedChange(result.data, onRolledBack = { refreshPasswordList() })
+          commitSavedChange(onRolledBack = { refreshPasswordList() })
         }
       }
     }
@@ -389,7 +389,11 @@ class PasswordStore : BaseGitActivity() {
     super.onResume()
     checkLocalRepository()
     refreshPasswordList()
-    if (settings.getBoolean(PreferenceKeys.SEARCH_ON_START, false)) {
+    // Opened to search — from the quick-search tile, or because the setting says to start there.
+    if (
+      settings.getBoolean(PreferenceKeys.SEARCH_ON_START, false) ||
+        intent.action == Intent.ACTION_SEARCH
+    ) {
       getPasswordFragment()?.focusSearch()
     }
   }

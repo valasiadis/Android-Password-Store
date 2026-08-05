@@ -260,7 +260,8 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
    * what opened it. Returns whether there was a field to focus at all.
    */
   fun focusSearch(query: String? = null): Boolean {
-    val field = view?.let { binding.searchInput } ?: return false
+    view ?: return false
+    val field = binding.searchInput
     query?.let { field.setText(it) }
     field.setSelection(field.text?.length ?: 0)
     field.requestFocus()
@@ -274,12 +275,6 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     binding.searchInput.text?.clear()
     binding.searchInput.clearFocus()
   }
-
-  /** As long as the sync button's own scale, so the two move as one. */
-  private val SEARCH_BAR_RESIZE_MS = 300L
-
-  /** The wait the sync button takes before it starts appearing, which the field shares. */
-  private val SYNC_FAB_APPEAR_DELAY_MS = 100L
 
   private var fabVisible = true
 
@@ -385,6 +380,8 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     }
 
   public fun updateFabSync() {
+    // Called from the store screen, which can outlive this fragment's view.
+    view ?: return
     val syncNeeded = PasswordRepository.getAheadCount() > 0
 
     val showAnim = if (syncNeeded && fabVisible && !binding.fabSync.isVisible) true else false
@@ -568,6 +565,12 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
   }
 
   companion object {
+
+    /** As long as the sync button's own scale, so the two move as one. */
+    private const val SEARCH_BAR_RESIZE_MS = 300L
+
+    /** The wait the sync button takes before it starts appearing, which the field shares. */
+    private const val SYNC_FAB_APPEAR_DELAY_MS = 100L
 
     const val ITEM_CREATION_REQUEST_KEY = "creation_key"
     const val ACTION_KEY = "action"

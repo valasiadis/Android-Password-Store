@@ -33,15 +33,14 @@ import app.passwordstore.Application
 import app.passwordstore.BuildConfig
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
-import app.passwordstore.ui.crypto.PasswordCreationActivity
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.git.ErrorMessages
+import app.passwordstore.util.git.PendingCommit
 import app.passwordstore.util.git.operation.GitOperation
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.getOr
 import com.github.michaelbull.result.onErr
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -51,6 +50,8 @@ import java.io.File
 import kotlin.math.abs
 import kotlin.math.max
 import kotlinx.coroutines.withContext
+import logcat.LogPriority.ERROR
+import logcat.asLog
 import logcat.logcat
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.CanceledException
@@ -190,19 +191,11 @@ suspend fun FragmentActivity.commitChange(message: String): Result<Unit, Throwab
  * uncommitted work keeps it.
  */
 suspend fun FragmentActivity.commitSavedChange(
-  data: Intent?,
-  onRolledBack: () -> Unit = {},
+  onRolledBack: () -> Unit = {}
 ): Result<Unit, Throwable> {
-  val message =
-    data?.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_COMMIT_MESSAGE) ?: return Ok(Unit)
-  data.removeExtra(PasswordCreationActivity.RETURN_EXTRA_COMMIT_MESSAGE)
-  val touched =
-    data
-      .getStringArrayExtra(PasswordCreationActivity.RETURN_EXTRA_TOUCHED_PATHS)
-      ?.toList()
-      .orEmpty()
-  return commitChange(message).onErr { error ->
-    val restored = restoreFromHead(touched)
+  val saved = PendingCommit.take() ?: return Ok(Unit)
+  return commitChange(saved.message).onErr { error ->
+    val restored = restoreFromHead(saved.touchedPaths)
     // Cancelling the signing prompt is an answer, not a fault, and a card that refused already
     // said so in its own dialog — but a save that could not be undone is worth saying either way.
     // Whatever the screen does about the entry waits until the failure has been read.
@@ -241,24 +234,31 @@ private suspend fun restoreFromHead(paths: List<String>): Boolean {
   val repository = PasswordRepository.repository ?: return true
   val workTree = repository.workTree ?: return true
   return withContext(dispatchers().io()) {
-    com.github.michaelbull.result
-      .runCatching {
-        val head = repository.resolve("${Constants.HEAD}^{tree}")
-        val git = Git(repository)
-        paths.forEach { path ->
-          val relative =
-            File(path).relativeToOrNull(workTree)?.invariantSeparatorsPath ?: return@forEach
-          val known =
-            head != null &&
-              RevWalk(repository).use { walk ->
-                TreeWalk.forPath(repository, relative, walk.parseTree(head)) != null
-              }
-          if (known) git.checkout().setStartPoint(Constants.HEAD).addPath(relative).call()
-          else File(path).delete()
+    try {
+      val head = repository.resolve("${Constants.HEAD}^{tree}")
+      val git = Git(repository)
+      paths.forEach { path ->
+        val relative =
+          File(path).relativeToOrNull(workTree)?.invariantSeparatorsPath ?: return@forEach
+        val known =
+          head != null &&
+            RevWalk(repository).use { walk ->
+              TreeWalk.forPath(repository, relative, walk.parseTree(head)) != null
+            }
+        if (known) {
+          git.checkout().setStartPoint(Constants.HEAD).addPath(relative).call()
+        } else {
+          // Never committed, so there is nothing to restore it from — and the failed commit may
+          // have staged it on the way, which is taken back with it.
+          git.rm().addFilepattern(relative).setCached(true).call()
+          File(path).delete()
         }
-        true
       }
-      .getOr(false)
+      true
+    } catch (error: Throwable) {
+      logcat(ERROR) { "Could not put the entry back\n${error.asLog()}" }
+      false
+    }
   }
 }
 

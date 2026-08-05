@@ -161,7 +161,7 @@ class AutofillSaveActivity : AppCompatActivity() {
         // Saving from a form ends here rather than on a screen of the app, so the commit the
         // editor handed over is waited for instead of passed on to a screen that never comes.
         lifecycleScope.launch {
-          commitSavedChange(data)
+          commitSavedChange()
           finishWithSaveResult(result.resultCode, data)
         }
       }

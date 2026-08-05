@@ -51,6 +51,7 @@ import app.passwordstore.util.extensions.toByteArray
 import app.passwordstore.util.extensions.unsafeLazy
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.extensions.wipe
+import app.passwordstore.util.git.PendingCommit
 import app.passwordstore.util.settings.DirectoryStructure
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.getOrThrow
@@ -392,20 +393,13 @@ class PasswordCreationActivity : BasePGPActivity() {
 
   /** Encrypts the password and the extra content */
   /** Opens a newly written entry on the copy kept from writing it, rather than decrypting it. */
-  private fun openSavedEntry(
-    path: String,
-    savedEntry: CharArray?,
-    commitMessage: String,
-    touchedPaths: Array<String>,
-  ) {
+  private fun openSavedEntry(path: String, savedEntry: CharArray?) {
     startActivity(
       Intent(this, DecryptActivity::class.java)
         .putExtra(EXTRA_FILE_PATH, path)
         .putExtra(EXTRA_REPO_PATH, repoPath)
         .putExtra(EXTRA_ENTRY, savedEntry)
         .putExtra(RETURN_EXTRA_MESSAGE, savedMessage)
-        .putExtra(RETURN_EXTRA_COMMIT_MESSAGE, commitMessage)
-        .putExtra(RETURN_EXTRA_TOUCHED_PATHS, touchedPaths)
     )
   }
 
@@ -621,24 +615,15 @@ class PasswordCreationActivity : BasePGPActivity() {
           // opened here and hands it that screen, while an edit goes back to the entry it came
           // from, which is waiting behind this one.
           // What the save touched, so a commit that fails can put it all back: the file written,
-          // and the one it was moved from.
-          val touchedPaths =
-            listOfNotNull(passwordFile.absolutePathString(), renamedFrom?.absolutePath)
-              .toTypedArray()
+          // and the one it was moved from. Left where only this app can pick it up, since the
+          // screen that does the committing can be opened by anyone.
+          PendingCommit.record(
+            commitMessage,
+            listOfNotNull(passwordFile.absolutePathString(), renamedFrom?.absolutePath),
+          )
           val leave = {
-            if (editing) {
-              returnIntent.putExtra(RETURN_EXTRA_COMMIT_MESSAGE, commitMessage)
-              returnIntent.putExtra(RETURN_EXTRA_TOUCHED_PATHS, touchedPaths)
-            }
             setResult(RESULT_OK, returnIntent)
-            if (!editing) {
-              openSavedEntry(
-                passwordFile.absolutePathString(),
-                savedEntry,
-                commitMessage,
-                touchedPaths,
-              )
-            }
+            if (!editing) openSavedEntry(passwordFile.absolutePathString(), savedEntry)
             finish()
           }
           if (failedUserEmails.isEmpty()) {

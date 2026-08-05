@@ -39,6 +39,7 @@ import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.commitSavedChange
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
+import app.passwordstore.util.extensions.isInsideRepository
 import app.passwordstore.util.extensions.toByteArray
 import app.passwordstore.util.extensions.toCharArray
 import app.passwordstore.util.extensions.unsafeLazy
@@ -62,6 +63,8 @@ import kotlin.io.path.pathString
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import logcat.LogPriority.ERROR
+import logcat.logcat
 
 @AndroidEntryPoint
 class DecryptActivity : BasePGPActivity() {
@@ -83,6 +86,14 @@ class DecryptActivity : BasePGPActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    // Started by anything on the device — a shortcut, a share target, another app — so the file it
+    // is told to open has to be one of this store's, not any file this app happens to be able to
+    // read.
+    if (!File(fullPath).isInsideRepository()) {
+      logcat(ERROR) { "Refusing to open $fullPath: outside the password store" }
+      finish()
+      return
+    }
     // The entry may have been deleted since a launcher shortcut was created for it; bail out
     // gracefully (and prune the stale shortcut) instead of crashing when we try to read the file.
     if (!File(fullPath).exists()) {
@@ -127,7 +138,7 @@ class DecryptActivity : BasePGPActivity() {
     val savedMessage = intent.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
     intent.removeExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
     lifecycleScope.launch {
-      commitSavedChange(intent).onOk {
+      commitSavedChange(onRolledBack = { showEntryAsStored() }).onOk {
         savedMessage?.let { Notice.show(this@DecryptActivity, it) }
       }
     }
@@ -616,7 +627,7 @@ class DecryptActivity : BasePGPActivity() {
       }
       val savedMessage = data.getStringExtra(PasswordCreationActivity.RETURN_EXTRA_MESSAGE)
       lifecycleScope.launch {
-        commitSavedChange(data, onRolledBack = { showEntryAsStored() }).onOk {
+        commitSavedChange(onRolledBack = { showEntryAsStored() }).onOk {
           savedMessage?.let { Notice.show(this@DecryptActivity, it) }
         }
       }

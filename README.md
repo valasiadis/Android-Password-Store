@@ -12,7 +12,7 @@ Forked from the archived [Password Store](https://github.com/android-password-st
 > This repository is a fork of
 > [norbusan/Android-Password-Store](https://github.com/norbusan/Android-Password-Store), which in
 > turn forks [agrahn/Android-Password-Store](https://github.com/agrahn/Android-Password-Store). It
-> implements hardware security support, commit signing and some UX improvements. The features were
+> implements hardware security support, commit signing and some UI/UX improvements. The features were
 > implemented with heavy assistance from generative AI (Claude Opus 4.8 and some OpenAI GPT-5.5) and
 > have since undergone review and security hardening upstream, with the goal of eventually merging
 > them into agrahn's version. I changed the app ID to `app.passwordstore.valasiadis` for
@@ -26,8 +26,7 @@ Forked from the archived [Password Store](https://github.com/android-password-st
 - Latest [snapshot build (APK)](https://github.com/valasiadis/Android-Password-Store/releases/tag/latest) of this fork
 - [GitHub Releases](https://github.com/valasiadis/Android-Password-Store/releases)
 
-You can install this app via [Obtainium](https://obtainium.imranr.dev/) too. You just need to check `Include prereleases`
-under the `Additional options for GitHub` section.
+You can install this app via [Obtainium](https://obtainium.imranr.dev/) too.
 
 This fork is not on F-Droid. Upstream is, as [`app.passwordstore.agrahn`](https://f-droid.org/en/packages/app.passwordstore.agrahn) — but it has a different app ID and a different signing key, so it cannot be installed as an update over this one.
 

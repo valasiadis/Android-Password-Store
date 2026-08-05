@@ -2,7 +2,9 @@ name: Publish APS binaries to GitHub Releases
 on:
   push:
     tags:
+      # A release, and a pre-release of one: v2.0.0 and v2.0.0-sc.1 alike.
       - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
 
 jobs:
   build:
@@ -65,7 +67,8 @@ jobs:
           release_name: ${{ github.ref }}
 #          body: ${{ steps.changelog_reader.outputs.changes }}
           draft: true
-          prerelease: false
+          # A tag carrying anything past the version — v2.0.0-sc.1 — is a pre-release.
+          prerelease: ${{ contains(github.ref_name, '-') }}
 
       - name: Get the version
         id: get_version

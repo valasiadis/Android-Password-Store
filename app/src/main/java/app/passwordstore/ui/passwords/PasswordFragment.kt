@@ -360,6 +360,9 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
       private fun animateFab(show: Boolean) =
         with(binding.fab) {
           fabVisible = show
+          // Nothing on this bar applies while entries are being picked out — searching would
+          // only take the selection off the screen — so it goes with the buttons.
+          animateSearchBar(show)
           val animation =
             AnimationUtils.loadAnimation(context, if (show) R.anim.scale_up else R.anim.scale_down)
           animation.setAnimationListener(
@@ -414,6 +417,29 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
       syncShowing = if (showAnim) true else if (hideAnim) false else binding.fabSync.isVisible
     )
   }
+
+  /** Takes the search field away with the buttons, and brings it back with them. */
+  private fun animateSearchBar(show: Boolean) =
+    with(binding.searchBar) {
+      if (show == isVisible) return@with
+      if (!show) requireActivity().hideKeyboard()
+      val animation =
+        AnimationUtils.loadAnimation(context, if (show) R.anim.scale_up else R.anim.scale_down)
+      animation.setAnimationListener(
+        object : Animation.AnimationListener {
+          override fun onAnimationRepeat(animation: Animation?) {}
+
+          override fun onAnimationEnd(animation: Animation?) {
+            if (!show) isVisible = false
+          }
+
+          override fun onAnimationStart(animation: Animation?) {
+            if (show) isVisible = true
+          }
+        }
+      )
+      startAnimation(animation)
+    }
 
   /**
    * Gives the search field the room the sync button is not using.

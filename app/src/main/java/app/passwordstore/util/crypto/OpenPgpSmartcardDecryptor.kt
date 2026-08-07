@@ -15,6 +15,7 @@ import org.bouncycastle.bcpg.AEADEncDataPacket
 import org.bouncycastle.bcpg.PublicKeyAlgorithmTags
 import org.bouncycastle.bcpg.SymmetricEncIntegrityPacket
 import org.bouncycastle.openpgp.PGPCompressedData
+import org.bouncycastle.openpgp.PGPEncryptedData
 import org.bouncycastle.openpgp.PGPEncryptedDataList
 import org.bouncycastle.openpgp.PGPException
 import org.bouncycastle.openpgp.PGPLiteralData
@@ -29,6 +30,38 @@ import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator
 import org.bouncycastle.openpgp.operator.jcajce.JceSessionKeyDataDecryptorFactoryBuilder
 import org.bouncycastle.util.io.Streams
+
+/**
+ * Whether [data] is protected against having been tampered with on its way here.
+ *
+ * Three packets are in use and all three arrive, since the message was written by whatever the user
+ * encrypts with: SEIPD v1 (tag 18 v1, ciphertext plus an MDC hash), SEIPD v2 (tag 18 v2, RFC 9580's
+ * AEAD) and AEAD (tag 20, LibrePGP's AEAD — what GnuPG writes once the recipients' keys say they
+ * understand it, so a likely shape for a store kept on a desktop).
+ *
+ * Only the last fails [PGPEncryptedData.isIntegrityProtected], which asks whether the data sits in
+ * a SEIPD packet rather than whether it is protected; tag 20 is authenticated by construction, as
+ * much as the v2 it is an alternative spelling of. That question alone once made entries written by
+ * an ordinary GnuPG unopenable.
+ */
+internal fun hasIntegrityProtection(data: PGPEncryptedData): Boolean =
+  data.isIntegrityProtected || data.encData is AEADEncDataPacket
+
+/**
+ * Establishes that the plaintext just read out of [data] is the plaintext that was written.
+ *
+ * A tag 20 packet has already answered for itself, chunk by chunk, as its stream was read to the
+ * end, and [PGPEncryptedData.verify] refuses to be called on it at all — that check is for the MDC
+ * only a SEIPD packet carries.
+ *
+ * @throws PGPException if the message was altered after it was written.
+ */
+internal fun verifyIntegrity(data: PGPEncryptedData) {
+  if (data.encData is AEADEncDataPacket) return
+  if (!data.verify()) {
+    throw PGPException("OpenPGP message integrity check failed")
+  }
+}
 
 class OpenPgpSmartcardDecryptor @Inject constructor() {
 
@@ -81,23 +114,25 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
           firstFailure,
         )
 
-    // Reject messages that carry no integrity protection (legacy SED packets) outright, matching
-    // the default policy of the app's main PGPainless decryption path. Without an MDC/SEIPD the
-    // plaintext is unauthenticated and malleable.
-    if (!encryptedData.isIntegrityProtected) {
+    // Reject messages that carry no protection at all (legacy SED packets) outright, matching the
+    // default policy of the app's main PGPainless decryption path. Without one, the plaintext is
+    // unauthenticated and malleable. See [hasIntegrityProtection] for what counts as protected.
+    if (!hasIntegrityProtection(encryptedData)) {
       throw PGPException("Refusing to decrypt OpenPGP message without integrity protection")
     }
 
-    // Streaming decryption necessarily writes the plaintext before verify() can run; [outputStream]
-    // is an in-memory buffer the caller must (and does) discard when this method throws.
+    // Streaming decryption necessarily writes the plaintext before it can be vouched for;
+    // [outputStream] is an in-memory buffer the caller must (and does) discard when this throws.
     encryptedData.getDataStream(JceSessionKeyDataDecryptorFactoryBuilder().build(sessionKey)).use {
       cleartext ->
       pipeLiteralData(cleartext, outputStream)
+      // The literal packet ends before the ciphertext does, and an AEAD message's last chunk is
+      // only answered for once the stream has been read out — so read the rest of it here, while
+      // it is open, and let a chunk that does not answer throw before the plaintext is used.
+      Streams.drain(cleartext)
     }
 
-    if (!encryptedData.verify()) {
-      throw PGPException("OpenPGP message integrity check failed")
-    }
+    verifyIntegrity(encryptedData)
   }
 
   private fun Throwable.isCardAuthenticationFailure(): Boolean =

@@ -27,6 +27,7 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.crypto.displayName
+import app.passwordstore.crypto.isHiddenRecipient
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.data.passfile.PasswordEntry
 import app.passwordstore.data.repo.PasswordRepository
@@ -477,15 +478,22 @@ open class BasePGPActivity : AppCompatActivity() {
    *
    * Asked of the message, the way gpg asks it: the recipients named in it are what can open it, and
    * the `.gpg-id` under [subDir] has no say over an entry that already exists — it decides only
-   * what future saves there are encrypted to. A message that names nobody, whether written with
-   * `--throw-keyids` or simply unreadable, is answered the way gpg answers it too: by trying
-   * everything held here.
+   * what future saves there are encrypted to. Where the folder names the same key under another
+   * spelling, that spelling is kept: it is what cached passphrases are filed under.
    *
-   * Ordered rather than narrowed, so nothing that could work goes untried. A key that opens without
-   * asking anything comes first, then one that wants a passphrase, then one that wants a smartcard
-   * to be found and presented — cheapest question first, but every question eventually. Where the
-   * folder names the same key under another spelling, that spelling is kept: it is what cached
-   * passphrases are filed under.
+   * A message that will not say who it is for is answered the way gpg answers it, by trying the
+   * whole keyring. That is a message written with `--throw-keyids` or `--hidden-recipient`, which
+   * puts an all-zero key ID where a recipient would go — see [isHiddenRecipient] — and equally one
+   * whose recipients could not be read at all.
+   *
+   * Ordered rather than narrowed, so nothing that could work goes untried, and ordered by how
+   * likely and how cheap each answer is:
+   * 1. the keys the folder's `.gpg-id` names, its own or the ones it inherits — the store's own
+   *    answer to "who reads this?", and so the likeliest to be right;
+   * 2. every other key held here, the ones that open without asking before the ones that want a
+   *    passphrase;
+   * 3. the smartcards, last, since those are the only ones that ask for something to be found and
+   *    presented — unless the folder named one, in which case it was already tried in step 1.
    *
    * A file that is not there, or not in the store, has no candidates at all. Trying everything is
    * the answer to a message that will not name its recipients, not to a path that should never
@@ -494,20 +502,26 @@ open class BasePGPActivity : AppCompatActivity() {
   protected fun decryptionCandidates(entryFile: File, subDir: String): List<PGPIdentifier> {
     if (!entryFile.isFile || !entryFile.isInsideRepository()) return emptyList()
     val recipients = entryRecipients(entryFile)
-    val candidates =
-      if (recipients.isEmpty()) {
-        repository.allKeyIds()
-      } else {
-        val folderSpelling =
-          folderIdentifiers(subDir).associateBy { repository.getLongKeyIdFromKeyId(it) }
-        recipients.map { recipient ->
-          folderSpelling[repository.getLongKeyIdFromKeyId(recipient)] ?: recipient
-        }
+    val named = recipients.filterNot(PGPIdentifier::isHiddenRecipient)
+    val folderSpelling =
+      folderIdentifiers(subDir).associateBy { repository.getLongKeyIdFromKeyId(it) }
+    val spelled =
+      named.map { recipient ->
+        folderSpelling[repository.getLongKeyIdFromKeyId(recipient)] ?: recipient
       }
+    val candidates =
+      if (named.size < recipients.size || named.isEmpty()) spelled + repository.allKeyIds()
+      else spelled
+    val folderKeys = folderSpelling.keys.filterNotNull().toSet()
     return candidates
       .distinct()
       .filter { repository.hasKey(it) && repository.hasDecKey(it) }
-      .sortedBy(::decryptionCost)
+      .sortedWith(
+        compareBy(
+          { if (repository.getLongKeyIdFromKeyId(it) in folderKeys) 0 else 1 },
+          ::decryptionCost,
+        )
+      )
   }
 
   /** What a key will ask of the user before it opens anything: nothing, a passphrase, or a card. */
@@ -524,7 +538,9 @@ open class BasePGPActivity : AppCompatActivity() {
    */
   protected fun reportUnopenable(recipients: List<PGPIdentifier>) {
     val named =
-      recipients.joinToString("\n") { id ->
+      // A message that hid its recipients names an all-zero key ID, which is not a key anyone is
+      // missing — listing it as one only asks the user to go and find a key that does not exist.
+      recipients.filterNot(PGPIdentifier::isHiddenRecipient).joinToString("\n") { id ->
         // Why each one is no help: not here at all, or here but only its public half — which call
         // for different remedies, one an import and the other a restore from a backup.
         val trouble =

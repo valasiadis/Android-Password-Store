@@ -26,6 +26,7 @@ import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
+import app.passwordstore.crypto.displayName
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.data.passfile.PasswordEntry
 import app.passwordstore.data.repo.PasswordRepository
@@ -69,7 +70,6 @@ import javax.inject.Inject
 import kotlin.math.max
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import logcat.asLog
 import logcat.logcat
@@ -159,8 +159,35 @@ open class BasePGPActivity : AppCompatActivity() {
       if (it.resultCode == RESULT_OK) {
         onKeyListCallback?.invoke()
       } else {
-        finish()
+        leaveIfRefused()
       }
+    }
+
+  /**
+   * Where a key chosen for a single save is delivered.
+   *
+   * Separate from [keySelectAction], which answers the question "what does this folder encrypt to?"
+   * by writing a .gpg-id. Choosing a key because the folder names one that is not here answers a
+   * narrower question — what this entry should be encrypted to — and must not rewrite the folder:
+   * the entries already in it are still encrypted to the old key, and repointing the folder only
+   * sends every later attempt to open them to a key that was never theirs.
+   */
+  private var onKeysChosenForSave: ((List<PGPIdentifier>) -> Unit)? = null
+
+  private val keyForSaveAction =
+    registerForActivityResult(StartActivityForResult()) { result ->
+      val chosen = onKeysChosenForSave
+      onKeysChosenForSave = null
+      val ids =
+        if (result.resultCode == RESULT_OK) {
+          result.data
+            ?.getStringExtra(PGPKeyListActivity.EXTRA_SELECTED_KEY)
+            ?.split("\n")
+            ?.filter(String::isNotBlank)
+            ?.mapNotNull(PGPIdentifier::fromString)
+            .orEmpty()
+        } else emptyList()
+      if (ids.isEmpty()) leaveIfRefused() else chosen?.invoke(ids)
     }
 
   private val keySelectAction =
@@ -183,20 +210,18 @@ open class BasePGPActivity : AppCompatActivity() {
               if (!it.exists()) it.mkdirs() // should not be necessary
             }
 
-        File(gpgIdDir, ".gpg-id")?.let {
+        File(gpgIdDir, ".gpg-id").let {
           it.writeText(selectedKeyId + "\n")
-          runBlocking {
-            commitChange(
-              getString(
-                R.string.git_commit_gpg_id,
-                getString(R.string.app_name),
-              )
-            )
+          // Committing can ask for a signing passphrase, and asking needs the main thread — which
+          // runBlocking was holding, so choosing a key on a store that signs its commits hung here
+          // instead of writing one.
+          lifecycleScope.launch {
+            commitChange(getString(R.string.git_commit_gpg_id, getString(R.string.app_name)))
+            onKeyListCallback?.invoke()
           }
-          onKeyListCallback?.invoke()
-        } ?: return@registerForActivityResult
+        }
       } else {
-        finish()
+        leaveIfRefused()
       }
     }
 
@@ -238,9 +263,23 @@ open class BasePGPActivity : AppCompatActivity() {
     super.onPause()
   }
 
+  /**
+   * Whether backing out of the key screens takes this one with it.
+   *
+   * A screen that is only reading an entry has nothing to keep and no reason to stay once the key
+   * it needs has been refused. An editor holds everything that has been typed, saved nowhere else,
+   * so it stays open and lets the user answer differently or take the entry somewhere else.
+   */
+  protected open val leavesOnKeyRefusal: Boolean = true
+
+  private fun leaveIfRefused() {
+    if (leavesOnKeyRefusal) finish()
+  }
+
   private fun openKeyManagerDialog(
     title: String,
     message: String,
+    @StringRes positiveLabel: Int = R.string.no_keys_imported_dialog_open_key_manager,
     onPositiveButtonClick: () -> Unit,
   ) =
     MaterialAlertDialogBuilder(this@BasePGPActivity)
@@ -248,10 +287,8 @@ open class BasePGPActivity : AppCompatActivity() {
       .setTitle(title)
       .setMessage(message)
       .setCancelable(false)
-      .setPositiveButton(R.string.no_keys_imported_dialog_open_key_manager) { _, _ ->
-        onPositiveButtonClick()
-      }
-      .setNegativeButton(R.string.dialog_cancel) { _, _ -> finish() }
+      .setPositiveButton(positiveLabel) { _, _ -> onPositiveButtonClick() }
+      .setNegativeButton(R.string.dialog_cancel) { _, _ -> leaveIfRefused() }
       .show()
 
   /* Function to execute [onKeysExist] only if there are PGP keys imported in the app's key manager.
@@ -301,83 +338,49 @@ open class BasePGPActivity : AppCompatActivity() {
     } else {
       val idsWithKey = ids.filter { repository.hasKey(it) }
 
-      if (idsWithKey.isEmpty()) { // No keys at all
-        /**
-         * The app does not provide keys with the requested key IDs; open Key Manager in key
-         * creation/import mode and let the user _import_ the needed PGP keys
-         */
-        val title = getString(R.string.no_pgp_keys_dialog_title)
-        val missingKeysForIds = ids.joinToString(", ")
-        val message = getString(R.string.no_pgp_keys_dialog_message) + missingKeysForIds
-        openKeyManagerDialog(title, message) {
-          keyImportAction.launch(PGPKeyListActivity.newIntent(this@BasePGPActivity))
+      if (idsWithKey.isEmpty()) {
+        // The folder names keys this app does not hold — a store cloned from elsewhere, or a key
+        // since deleted. Importing the named key is one answer, but the likelier one is that the
+        // entry should go to a key that is actually here, so this offers the picker.
+        val title = getString(R.string.folder_key_missing_dialog_title)
+        // The list gets lines of its own: interpolated into the sentence, the first key sat on
+        // the end of it and only the rest broke away.
+        val message =
+          getString(R.string.folder_key_missing_dialog_message) +
+            "\n\n" +
+            ids.joinToString("\n") { "\u2022\u2002${it.displayName}" } +
+            "\n\n" +
+            getString(R.string.folder_key_missing_dialog_hint)
+        openKeyManagerDialog(title, message, R.string.folder_key_missing_dialog_choose) {
+          onKeysChosenForSave = onKeysExist
+          // No SUB_PATH: the choice applies to what is being saved, and the folder keeps saying
+          // what it said.
+          keyForSaveAction.launch(
+            PGPKeyListActivity.newIntent(this@BasePGPActivity, keySelection = true)
+          )
         }
+      } else if (idsWithKey.size < ids.size) {
+        // Some of the folder's keys are here and some are not. What is here is enough to encrypt
+        // to, so the save goes ahead — but it reaches fewer readers than the folder asks for, and
+        // that is a fact about who can open a password rather than a decision to be made. So it is
+        // said once, on the way through, and acknowledged rather than answered.
+        MaterialAlertDialogBuilder(this@BasePGPActivity)
+          .setIcon(R.drawable.ic_warning_red_24dp)
+          .setTitle(R.string.folder_key_partial_dialog_title)
+          .setMessage(
+            getString(R.string.folder_key_partial_dialog_message) +
+              "\n\n" +
+              ids.filterNot { it in idsWithKey }.joinToString("\n") { "\u2022\u2002${it.displayName}" }
+          )
+          .setCancelable(false)
+          .setPositiveButton(R.string.dialog_ok) { _, _ -> onKeysExist(ids) }
+          .show()
       } else {
         onKeysExist(ids)
       }
     }
   }
 
-  protected fun requireDecryptionKeysExist(
-    subDir: String,
-    onKeysExist: (List<PGPIdentifier>) -> Unit,
-  ) {
-    val ids = getPGPIdentifiers(subDir)
-    if (ids.isNullOrEmpty()) {
-      /* Store not initialised properly; open Key Manager in selection mode and
-       * let user choose one or multiple keys */
-      val (title, message) =
-        if (ids == null) {
-          // .gpg-id is missing
-          getString(R.string.missing_gpg_id_dialog_title) to
-            getString(R.string.missing_gpg_id_dialog_message)
-        } else {
-          // .gpg-id contains no or malformed PGP IDs
-          getString(R.string.invalid_gpg_id_dialog_title) to
-            getString(R.string.invalid_gpg_id_dialog_message)
-        }
-      openKeyManagerDialog(title, message) {
-        val intent = PGPKeyListActivity.newIntent(this@BasePGPActivity, keySelection = true)
-        intent.putExtra("SUB_PATH", subDir)
-        keySelectAction.launch(intent)
-      }
-    } else {
-      val idsWithKey = ids.filter { repository.hasKey(it) }
-      val idsWithDecryptionKey = idsWithKey.filter { repository.hasDecKey(it) }
-
-      if (idsWithDecryptionKey.isEmpty()) {
-        /**
-         * The app does not provide secret decryption keys with the requested key IDs; open Key
-         * Manager in key creation/import mode and let the user _import_ the needed PGP keys
-         */
-        val title = getString(R.string.no_decryption_keys_dialog_title)
-        val missingDecKeysForIds =
-          if (idsWithKey.isNotEmpty()) {
-            // Some keys keys are available, but they are all public
-            ids
-              .map { id ->
-                if (id in idsWithKey) "\n${id}: ${getString(R.string.pgp_public_only)}"
-                else "\n${id}: ${getString(R.string.pgp_unknown)}"
-              }
-              .joinToString()
-          } else {
-            // No keys at all
-            ids.joinToString(", ")
-          }
-        val message = getString(R.string.no_decryption_keys_dialog_message) + missingDecKeysForIds
-        openKeyManagerDialog(title, message) {
-          keyImportAction.launch(PGPKeyListActivity.newIntent(this@BasePGPActivity))
-        }
-      } else {
-        onKeysExist(ids)
-      }
-    }
-  }
-
-  /**
-   * Copies a provided [password] string to the clipboard. This wraps [copyTextToClipboard] to
-   * optionally hide the default notice and starts off a timer to clear the clipboard.
-   */
   protected fun copyPasswordToClipboard(
     password: CharArray?,
     isSensitive: Boolean = true,
@@ -440,13 +443,108 @@ open class BasePGPActivity : AppCompatActivity() {
   }
 
   /**
-   * This method looks for a .gpg-id file starting in the current sub-directory of the password
-   * store, searching upwards through parent directories up to the root directory of the store, and
-   * then tries to parse a list of [PGPIdentifier]s from the first file found.
+   * The keys the folder's `.gpg-id` names, with nothing said when there is none.
    *
-   * It returns `null` if the store has not yet been initialised, that is, when no .gpg-id file was
-   * found; it returns an empty List if no valid identifiers were able to be parsed from the file.
+   * Decryption asks the message which keys it was encrypted to, as gpg does; the folder only
+   * supplies the wording those keys are cached under, and a message that names its own recipients
+   * does not need it at all. An absent or unreadable `.gpg-id` is therefore not a failure here, as
+   * it is when encrypting — where it is the only thing that decides.
    */
+  protected fun folderIdentifiers(subDir: String): List<PGPIdentifier> {
+    val repoRoot = PasswordRepository.getRepositoryDirectory()
+    val file = File(repoRoot, subDir).findTillRoot(".gpg-id", repoRoot) ?: return emptyList()
+    return file
+      .readLines()
+      .map { it.substringBefore(Regex("\\s*#|!")) }
+      .filter { it.isNotBlank() && it != "gpg-id" }
+      .mapNotNull(PGPIdentifier::fromString)
+  }
+
+  /**
+   * The keys [entryFile] says it was encrypted to, empty where it says nothing.
+   *
+   * Nothing outside the store is read. The path an entry screen is opened on arrives in an intent
+   * — from autofill, from a passkey request, from a home-screen shortcut — and a store's keys are
+   * for opening what is in the store.
+   */
+  protected fun entryRecipients(entryFile: File): List<PGPIdentifier> =
+    if (entryFile.isFile && entryFile.isInsideRepository())
+      entryFile.inputStream().use { repository.recipientKeyIds(it) }
+    else emptyList()
+
+  /**
+   * The keys worth trying for [entryFile], best first.
+   *
+   * Asked of the message, the way gpg asks it: the recipients named in it are what can open it, and
+   * the `.gpg-id` under [subDir] has no say over an entry that already exists — it decides only
+   * what future saves there are encrypted to. A message that names nobody, whether written with
+   * `--throw-keyids` or simply unreadable, is answered the way gpg answers it too: by trying
+   * everything held here.
+   *
+   * Ordered rather than narrowed, so nothing that could work goes untried. A key that opens without
+   * asking anything comes first, then one that wants a passphrase, then one that wants a smartcard
+   * to be found and presented — cheapest question first, but every question eventually. Where the
+   * folder names the same key under another spelling, that spelling is kept: it is what cached
+   * passphrases are filed under.
+   *
+   * A file that is not there, or not in the store, has no candidates at all. Trying everything is
+   * the answer to a message that will not name its recipients, not to a path that should never
+   * have been asked about — and the paths these screens open on arrive in intents.
+   */
+  protected fun decryptionCandidates(entryFile: File, subDir: String): List<PGPIdentifier> {
+    if (!entryFile.isFile || !entryFile.isInsideRepository()) return emptyList()
+    val recipients = entryRecipients(entryFile)
+    val candidates =
+      if (recipients.isEmpty()) {
+        repository.allKeyIds()
+      } else {
+        val folderSpelling =
+          folderIdentifiers(subDir).associateBy { repository.getLongKeyIdFromKeyId(it) }
+        recipients.map { recipient ->
+          folderSpelling[repository.getLongKeyIdFromKeyId(recipient)] ?: recipient
+        }
+      }
+    return candidates
+      .distinct()
+      .filter { repository.hasKey(it) && repository.hasDecKey(it) }
+      .sortedBy(::decryptionCost)
+  }
+
+  /** What a key will ask of the user before it opens anything: nothing, a passphrase, or a card. */
+  private fun decryptionCost(id: PGPIdentifier): Int =
+    when {
+      repository.isSmartcardBacked(id) || repository.hasOnlyStubDecKey(id) -> 2
+      repository.isPasswordProtected(listOf(id)) -> 1
+      else -> 0
+    }
+
+  /**
+   * Says an entry cannot be opened here, names the keys it is encrypted to, and offers to import
+   * one of them — which is the only remedy, since a file already encrypted cannot be redirected.
+   */
+  protected fun reportUnopenable(recipients: List<PGPIdentifier>) {
+    val named =
+      recipients.joinToString("\n") { id ->
+        // Why each one is no help: not here at all, or here but only its public half — which call
+        // for different remedies, one an import and the other a restore from a backup.
+        val trouble =
+          when {
+            !repository.hasKey(id) -> getString(R.string.pgp_unknown)
+            !repository.hasDecKey(id) -> getString(R.string.pgp_public_only)
+            else -> null
+          }
+        if (trouble == null) "\u2022\u2002${id.displayName}"
+        else "\u2022\u2002${id.displayName} \u2014 $trouble"
+      }
+    openKeyManagerDialog(
+      getString(R.string.no_decryption_keys_dialog_title),
+      getString(R.string.password_decryption_no_recipient_key) +
+        if (named.isEmpty()) "" else "\n\n$named",
+    ) {
+      keyImportAction.launch(PGPKeyListActivity.newIntent(this@BasePGPActivity))
+    }
+  }
+
   protected fun getPGPIdentifiers(subDir: String): List<PGPIdentifier>? {
     var shortIdCount = 0
     var invalidIdCount = 0
@@ -518,8 +616,10 @@ open class BasePGPActivity : AppCompatActivity() {
       .map { id ->
         repository.getUserIdFromKeyId(id)?.takeIf { it.isNotBlank() && it != "null" }
           ?: repository.getEmailFromKeyId(id)
-          ?: repository.getLongKeyIdFromKeyId(id)
-          ?: id.toString()
+          // A bare long key ID, which is shown wearing the 0x that says it is hexadecimal — see
+          // PGPIdentifier.displayName, which this is the already-flattened form of.
+          ?: repository.getLongKeyIdFromKeyId(id)?.let { "0x$it" }
+          ?: id.displayName
       }
       .distinct()
       .joinToString(", ")
@@ -915,8 +1015,15 @@ open class BasePGPActivity : AppCompatActivity() {
 
   protected fun decrypt(identifiers: List<PGPIdentifier>, isError: Boolean = false) {
     val passphrases = cachedPassphrases.filterKeys(identifiers.map(::passphraseCacheKey)::contains)
+    // Which branch to take is decided by the keys that could open this without a card, as the
+    // decryption itself decides it. Asking only whether a card is among the candidates sent an
+    // entry that also has a local key down the PIN branch, which then handed the local path an
+    // empty map of passphrases and no way to read it.
+    val localIds = identifiers.filterNot {
+      repository.hasOnlyStubDecKey(it) || repository.isSmartcardBacked(it)
+    }
     lifecycleScope.launch(dispatcherProvider.main()) {
-      if (needsSmartcardPin(identifiers)) {
+      if (localIds.isEmpty() && needsSmartcardPin(identifiers)) {
         // Smartcard PIN entry and retries are handled inline by the smartcard decrypt flow; just
         // pass any cached (e.g. biometric-unlocked) PIN through for the first attempt.
         val decryptedCachedPins = passphrases.mapValues {
@@ -924,7 +1031,7 @@ open class BasePGPActivity : AppCompatActivity() {
         }
         decryptWithPassphrase(decryptedCachedPins, identifiers)
         decryptedCachedPins.values.forEach { it.wipe() }
-      } else if (!repository.isPasswordProtected(identifiers) && !isError) {
+      } else if (!repository.isPasswordProtected(localIds) && !isError) {
         // try passphraseless decryption first
         decryptWithPassphrase(mapOf("" to null), identifiers)
       } else if (!isError && !passphrases.isEmpty()) {

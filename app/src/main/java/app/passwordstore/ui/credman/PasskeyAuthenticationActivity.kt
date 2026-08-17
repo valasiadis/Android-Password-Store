@@ -12,6 +12,7 @@ import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.core.content.edit
 import androidx.credentials.provider.PendingIntentHandler
+import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.crypto.errors.IncorrectPassphraseException
@@ -51,6 +52,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.io.path.nameWithoutExtension
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.asLog
@@ -87,9 +89,18 @@ class PasskeyAuthenticationActivity : BasePGPActivity() {
           return
         }
 
+    // As on the entry screen: what can open this is asked of the message, not of the folder's
+    // .gpg-id.
     requireKeysExist {
-      requireDecryptionKeysExist(PasswordRepository.getParentPath(passkeyPath, repoPath)) { ids ->
-        getPersistentAndDecrypt(ids, action = "passkey")
+      lifecycleScope.launch {
+        val entryFile = File(passkeyPath)
+        val subDir = PasswordRepository.getParentPath(passkeyPath, repoPath)
+        val keys = withContext(dispatcherProvider.io()) { decryptionCandidates(entryFile, subDir) }
+        if (keys.isEmpty()) {
+          reportUnopenable(withContext(dispatcherProvider.io()) { entryRecipients(entryFile) })
+          return@launch
+        }
+        getPersistentAndDecrypt(keys, action = "passkey")
       }
     }
   }

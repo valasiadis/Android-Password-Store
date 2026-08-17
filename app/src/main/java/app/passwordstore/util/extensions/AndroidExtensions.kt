@@ -41,20 +41,25 @@ import app.passwordstore.util.git.PendingCommit
 import app.passwordstore.util.git.operation.GitOperation
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.getError
 import com.github.michaelbull.result.onErr
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import java.io.File
+import kotlin.coroutines.resume
 import kotlin.math.abs
 import kotlin.math.max
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.asLog
 import logcat.logcat
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.CanceledException
+import org.eclipse.jgit.errors.LockFailedException
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.treewalk.TreeWalk
@@ -183,22 +188,29 @@ suspend fun FragmentActivity.commitChange(message: String): Result<Unit, Throwab
 }
 
 /**
- * Commits what a saved entry changed, on the screen the editor handed back to.
+ * Commits what a save changed, and puts that save back if the commit does not go through.
  *
- * The editor used to wait for git before closing, which left it sitting over the entry it had just
- * written for the length of a commit — signing prompt included. It now returns straight away and
- * passes the commit message along, so the entry is on screen while this runs behind it.
- *
- * A commit that does not go through — a cancelled signing prompt, a locked index — takes the save
- * with it: the entry is put back the way the last commit had it, so what is on disk and what is in
- * the history never disagree. Only the files the save touched are restored, and a store with other
+ * A commit that fails — a cancelled signing prompt, a locked index — takes the save with it: the
+ * entry is put back the way the last commit had it, so that what is on disk and what is in the
+ * history never disagree. Only the files that save touched are restored, so a store with other
  * uncommitted work keeps it.
+ *
+ * The screen that called this decides what to do about the failure. An editor stays open on what
+ * was typed, since nothing of it survived on disk; a screen that is only showing the entry has
+ * nothing to keep and reloads instead.
  */
 suspend fun FragmentActivity.commitSavedChange(
   onRolledBack: () -> Unit = {}
 ): Result<Unit, Throwable> {
   val saved = PendingCommit.take() ?: return Ok(Unit)
-  return commitChange(saved.message).onErr { error ->
+  var outcome = commitChange(saved.message)
+  // A lock left behind by an operation that died is the one failure here with an obvious remedy,
+  // and one the user would otherwise have to go and find under the repository's tools. Offered
+  // once: refusing it is an answer, and the save is taken back like any other failed commit.
+  if (outcome.getError()?.isGitLockError() == true && offerToClearStaleLock()) {
+    outcome = commitChange(saved.message)
+  }
+  return outcome.onErr { error ->
     val restored = restoreFromHead(saved.touchedPaths)
     // Cancelling the signing prompt is an answer, not a fault, and a card that refused already
     // said so in its own dialog — but a save that could not be undone is worth saying either way.
@@ -213,6 +225,55 @@ suspend fun FragmentActivity.commitSavedChange(
     }
   }
 }
+
+/** The `index.lock` a git operation leaves behind when it does not finish. */
+private const val GIT_INDEX_LOCK = "index.lock"
+
+/**
+ * Whether [this] is git refusing to work because the index is locked.
+ *
+ * Deliberately generous about what counts. A lock that has outlived the operation that took it is
+ * something the user can only clear from in here, so the cost of reading one error too many as a
+ * lock is an offer that turns out not to help — against the cost of reading one too few, which is a
+ * store that cannot be written to and no way to say so.
+ */
+fun Throwable.isGitLockError(): Boolean =
+  generateSequence(this) { it.cause }
+    .any { cause ->
+      cause is LockFailedException ||
+        cause.message.orEmpty().contains(GIT_INDEX_LOCK, ignoreCase = true) ||
+        cause.message.orEmpty().contains("Cannot lock", ignoreCase = true)
+    }
+
+/**
+ * Asks whether to clear a stale lock, and returns whether it is gone.
+ *
+ * Never taken without asking: a lock file is how git says another operation is under way, and the
+ * only one who can tell a lock that is stale from a lock that is doing its job is the person who
+ * knows whether anything else is running.
+ */
+private suspend fun FragmentActivity.offerToClearStaleLock(): Boolean =
+  suspendCancellableCoroutine { continuation ->
+    if (isFinishing || isDestroyed) {
+      continuation.resume(false)
+      return@suspendCancellableCoroutine
+    }
+    val dialog =
+      MaterialAlertDialogBuilder(this)
+        .setIcon(R.drawable.ic_warning_red_24dp)
+        .setTitle(R.string.git_index_locked_title)
+        .setMessage(R.string.git_index_locked_error)
+        .setCancelable(false)
+        .setPositiveButton(R.string.git_index_locked_remove) { _, _ ->
+          val lock = PasswordRepository.repository?.directory?.resolve(GIT_INDEX_LOCK)
+          continuation.resume(lock != null && (!lock.isFile || lock.delete()))
+        }
+        .setNegativeButton(R.string.dialog_cancel) { _, _ -> continuation.resume(false) }
+        .show()
+    // The dialog cannot be dismissed by tapping away from it, so if the screen underneath goes
+    // while it is up, it goes with it rather than staying behind as a leaked window.
+    continuation.invokeOnCancellation { runCatching { dialog.dismiss() } }
+  }
 
 /** The app's own dispatchers, for the few helpers here that are not part of an injected class. */
 private fun dispatchers(): DispatcherProvider =

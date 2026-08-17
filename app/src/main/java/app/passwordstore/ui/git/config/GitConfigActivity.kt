@@ -6,30 +6,18 @@ package app.passwordstore.ui.git.config
 
 import android.os.Bundle
 import android.view.MenuItem
-import androidx.lifecycle.lifecycleScope
-import app.passwordstore.R
-import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitConfigBinding
-import app.passwordstore.ui.dialogs.ErrorDialog
-import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.git.base.BaseGitActivity
-import app.passwordstore.ui.git.log.GitLogActivity
-import app.passwordstore.util.extensions.asLog
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
-import app.passwordstore.util.extensions.launchActivity
 import app.passwordstore.util.extensions.viewBinding
-import com.github.michaelbull.result.fold
-import com.github.michaelbull.result.getOrElse
-import com.github.michaelbull.result.onErr
-import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.launch
-import logcat.LogPriority.ERROR
-import logcat.logcat
-import org.eclipse.jgit.lib.Constants
-import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.lib.RepositoryState
 
+/**
+ * Who the commits belong to, and nothing else.
+ *
+ * The screen used to carry the repository's tools below these fields — aborting a rebase, resetting
+ * to the remote, collecting garbage. Those are things done to a store rather than facts about one,
+ * and they now sit under the repository's settings, leaving one question to a screen.
+ */
 class GitConfigActivity : BaseGitActivity() {
 
   private val binding by viewBinding(ActivityGitConfigBinding::inflate)
@@ -44,7 +32,6 @@ class GitConfigActivity : BaseGitActivity() {
 
     identity = GitIdentityFields(binding.identity, gitSettings)
     identity.focusFirstEmptyField()
-    setupTools()
   }
 
   override fun onPause() {
@@ -60,155 +47,5 @@ class GitConfigActivity : BaseGitActivity() {
       }
       else -> super.onOptionsItemSelected(item)
     }
-  }
-
-  /** Sets up the UI components of the tools section. */
-  private fun setupTools() {
-    val repo = PasswordRepository.repository
-    if (repo != null) {
-      binding.gitHeadStatus.text = headStatusMsg(repo)
-      binding.gitLog.isEnabled = PasswordRepository.isGitRepo()
-      binding.gitLog.alpha = if (binding.gitLog.isEnabled) 1.0f else 0.5f
-      // enable the abort button only if we're rebasing or merging
-      val needsAbort =
-        repo.repositoryState.isRebasing || repo.repositoryState == RepositoryState.MERGING
-      binding.gitAbortRebase.isEnabled = needsAbort
-      binding.gitAbortRebase.alpha = if (needsAbort) 1.0f else 0.5f
-      binding.gitResetToRemote.isEnabled = PasswordRepository.isGitRepo() && gitSettings.url != null
-      binding.gitResetToRemote.alpha = if (binding.gitResetToRemote.isEnabled) 1.0f else 0.5f
-      binding.gitGc.isEnabled = binding.gitResetToRemote.isEnabled
-      binding.gitGc.alpha = if (binding.gitGc.isEnabled) 1.0f else 0.5f
-      updateRemoveLockButton(repo)
-    } else {
-      updateRemoveLockButton(null)
-    }
-    binding.gitLog.setOnClickListener {
-      runCatching { launchActivity(GitLogActivity::class.java) }
-        .onErr { ex -> logcat(ERROR) { ex.asLog("Failed to start GitLogActivity") } }
-    }
-    binding.gitAbortRebase.setOnClickListener { abortRebase() }
-    binding.gitResetToRemote.setOnClickListener { resetToRemote() }
-    binding.gitGc.setOnClickListener {
-      lifecycleScope.launch {
-        launchGitOperation(GitOp.GC)
-          .fold(
-            success = ::finishOnSuccessHandler,
-            failure = { err -> promptOnErrorHandler(err) { finish() } },
-          )
-      }
-    }
-    binding.gitRemoveLock.setOnClickListener { removeLockFile() }
-  }
-
-  private fun updateRemoveLockButton(repo: Repository? = PasswordRepository.repository) {
-    val canRemoveLock = repo?.directory?.resolve(GIT_INDEX_LOCK)?.isFile == true
-    binding.gitRemoveLock.isEnabled = canRemoveLock
-    binding.gitRemoveLock.alpha = if (canRemoveLock) 1.0f else 0.5f
-  }
-
-  private fun removeLockFile() {
-    val lockFile = PasswordRepository.repository?.directory?.resolve(GIT_INDEX_LOCK)
-    val messageRes =
-      when {
-        lockFile == null || !lockFile.isFile -> R.string.git_remove_lock_file_missing
-        lockFile.delete() -> R.string.git_remove_lock_file_success
-        else -> R.string.git_remove_lock_file_failed
-      }
-    Notice.show(this@GitConfigActivity, messageRes)
-    updateRemoveLockButton()
-  }
-
-  /**
-   * Asks which branch to reset onto, from the ones the remote is known to have.
-   *
-   * The branch used to be typed in, which asks the user to remember what a `git branch -r` would
-   * have told them — and answers a typo by creating a branch that tracks nothing.
-   */
-  private fun resetToRemote() {
-    val branches = remoteBranches()
-    if (branches.isEmpty()) {
-      ErrorDialog.show(this, R.string.git_utils_no_remote_branches)
-      return
-    }
-    val current = PasswordRepository.getCurrentBranch()
-    var chosen = branches.indexOf(current).coerceAtLeast(0)
-    MaterialAlertDialogBuilder(this)
-      .setTitle(R.string.git_utils_reset_remote_branch_title)
-      .setSingleChoiceItems(branches.toTypedArray(), chosen) { _, which -> chosen = which }
-      .setNegativeButton(R.string.dialog_cancel, null)
-      .setPositiveButton(R.string.dialog_ok) { _, _ ->
-        remoteBranch = branches[chosen]
-        lifecycleScope.launch {
-          launchGitOperation(GitOp.RESET)
-            .fold(
-              success = ::finishOnSuccessHandler,
-              failure = { err -> promptOnErrorHandler(err) { finish() } },
-            )
-        }
-      }
-      .show()
-  }
-
-  /** The branches the remote had when it was last spoken to, under their bare names. */
-  private fun remoteBranches(): List<String> =
-    PasswordRepository.repository
-      ?.refDatabase
-      ?.getRefsByPrefix("${Constants.R_REMOTES}origin/")
-      ?.map { it.name.removePrefix("${Constants.R_REMOTES}origin/") }
-      ?.filter { it != Constants.HEAD }
-      ?.distinct()
-      ?.sorted()
-      .orEmpty()
-
-  private fun abortRebase() {
-    lifecycleScope.launch {
-      launchGitOperation(GitOp.BREAK_OUT_OF_DETACHED)
-        .fold(
-          success = {
-            val branch = PasswordRepository.getCurrentBranch()
-            MaterialAlertDialogBuilder(this@GitConfigActivity).run {
-              setTitle(resources.getString(R.string.git_abort_and_push_title))
-              setMessage(
-                resources.getString(
-                  R.string.git_break_out_of_detached_success,
-                  branch,
-                  "conflicting-$branch-...",
-                )
-              )
-              setOnDismissListener { finish() }
-              setPositiveButton(resources.getString(R.string.dialog_ok)) { _, _ -> }
-              show()
-            }
-          },
-          failure = { err -> promptOnErrorHandler(err) { finish() } },
-        )
-    }
-  }
-
-  /**
-   * Returns a user-friendly message about the current state of HEAD.
-   *
-   * The state is recognized to be either pointing to a branch or detached.
-   */
-  private fun headStatusMsg(repo: Repository): String {
-    return runCatching {
-      val headRef = repo.findRef(Constants.HEAD)
-      if (headRef.isSymbolic) {
-        val branchName = headRef.target.name
-        val shortBranchName = Repository.shortenRefName(branchName)
-        getString(R.string.git_head_on_branch, shortBranchName)
-      } else {
-        val commitHash = headRef.objectId.abbreviate(8).name()
-        getString(R.string.git_head_detached, commitHash)
-      }
-    }
-      .getOrElse { ex ->
-        logcat(ERROR) { "Error getting HEAD reference\n${ex}" }
-        getString(R.string.git_head_missing)
-      }
-  }
-
-  companion object {
-    private const val GIT_INDEX_LOCK = "index.lock"
   }
 }

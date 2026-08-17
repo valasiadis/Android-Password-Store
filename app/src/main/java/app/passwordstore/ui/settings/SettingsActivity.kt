@@ -16,6 +16,7 @@ import androidx.core.os.BundleCompat
 import app.passwordstore.R
 import app.passwordstore.databinding.ActivityPreferenceRecyclerviewBinding
 import app.passwordstore.injection.prefs.SettingsPreferences
+import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.settings.PreferenceKeys
@@ -27,8 +28,13 @@ import de.Maxr1998.modernpreferences.helpers.screen
 import de.Maxr1998.modernpreferences.helpers.subScreen
 import javax.inject.Inject
 
+/**
+ * Built on [BaseGitActivity] so the repository's own tools can be offered here as settings rather
+ * than as a screen of their own: the one-off git operations need somewhere to run, and this is
+ * already where everything else about the repository is decided.
+ */
 @AndroidEntryPoint
-class SettingsActivity : AppCompatActivity() {
+class SettingsActivity : BaseGitActivity() {
 
   @SettingsPreferences @Inject lateinit var settings: SharedPreferences
 

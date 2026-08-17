@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.crypto.KeyUtils.tryGetKeyId
 import app.passwordstore.crypto.PGPKey
+import app.passwordstore.crypto.displayName
 import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.databinding.PgpKeyCreationActivityBinding
 import app.passwordstore.ui.dialogs.ProgressOverlay
@@ -155,7 +156,7 @@ class PGPKeyCreationActivity : AppCompatActivity() {
     if (key != null) {
       MaterialAlertDialogBuilder(this)
         .setTitle(getString(R.string.pgp_key_creation_succeeded))
-        .setMessage(getString(R.string.pgp_key_creation_succeeded_message, tryGetKeyId(key)))
+        .setMessage(getString(R.string.pgp_key_creation_succeeded_message, tryGetKeyId(key)?.displayName))
         .setPositiveButton(android.R.string.ok) { _, _ ->
           setResult(RESULT_OK)
           finish()

@@ -5,6 +5,7 @@
 package app.passwordstore.ui.pgp
 
 import app.passwordstore.crypto.PGPIdentifier
+import app.passwordstore.crypto.displayName
 import app.passwordstore.data.crypto.CryptoRepository
 
 /**
@@ -17,7 +18,10 @@ import app.passwordstore.data.crypto.CryptoRepository
  */
 fun CryptoRepository.keyNames(keyIds: String?): List<String> =
   keyIds?.split("\n")?.filter(String::isNotBlank).orEmpty().map { id ->
-    PGPIdentifier.fromString(id)?.let { identifier ->
-      getUserIdFromKeyId(identifier)?.takeIf { it != "null" }
-    } ?: id
+    val identifier = PGPIdentifier.fromString(id)
+    identifier?.let { getUserIdFromKeyId(it)?.takeIf { name -> name != "null" } }
+      // Shown the way key IDs are shown everywhere else, whatever spelling the file used, so a
+      // number here reads as one of them rather than as an unexplained string of hex.
+      ?: identifier?.displayName
+      ?: id
   }

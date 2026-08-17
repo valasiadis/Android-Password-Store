@@ -23,6 +23,16 @@ public val PGPIdentifier.displayName: String
       is PGPIdentifier.UserId -> email
     }
 
+/**
+ * Whether this is the placeholder a message carries in place of a recipient it will not name.
+ *
+ * `gpg --throw-keyids` (and `--hidden-recipient`) writes an all-zero key ID into the session key
+ * packet, which RFC 4880 calls a wild card: it identifies nobody, and says only that whoever can
+ * open this will have to find that out by trying. It is not a key, and nothing will ever hold one.
+ */
+public val PGPIdentifier.isHiddenRecipient: Boolean
+  get() = this is PGPIdentifier.KeyId && id == 0L
+
 /** Supertype for valid identifiers of PGP keys. */
 public sealed class PGPIdentifier {
 

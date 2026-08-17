@@ -52,6 +52,19 @@ object PreferenceKeys {
   @Deprecated("Use GIT_REMOTE_URL instead") const val GIT_REMOTE_USERNAME = "git_remote_username"
   const val GIT_SERVER_INFO = "git_server_info"
 
+  /** The tools screen, and the one-off operations it offers. */
+  const val GIT_TOOLS = "git_tools"
+  const val GIT_HEAD_STATUS = "git_head_status"
+  const val GIT_SYNC = "git_sync"
+  const val GIT_PULL = "git_pull"
+  const val GIT_PUSH = "git_push"
+  const val GIT_LOG = "git_log"
+  const val GIT_ABORT_REBASE = "git_abort_rebase"
+  const val GIT_RESET_TO_REMOTE = "git_reset_to_remote"
+  const val GIT_GC = "git_gc"
+  const val GIT_REMOVE_LOCK = "git_remove_lock"
+  const val REFRESH_FOLDER_LIST = "refresh_folder_list"
+
   @Deprecated("Git branch is no longer stored in preferences")
   const val GIT_BRANCH_NAME = "git_branch"
   const val HTTPS_PASSWORD = "https_password"

@@ -15,9 +15,7 @@
   android:layout_width="match_parent"
   android:layout_height="wrap_content"
   android:padding="@dimen/activity_horizontal_margin"
-  tools:context="app.passwordstore.ui.git.config.GitConfigActivity"
-  tools:layout_editor_absoluteX="0dp"
-  tools:layout_editor_absoluteY="81dp">
+  tools:context="app.passwordstore.ui.git.config.GitConfigActivity">
 
   <include
     android:id="@+id/identity"
@@ -27,66 +25,6 @@
     android:layout_marginTop="8dp"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintTop_toTopOf="parent" />
-
-  <androidx.appcompat.widget.AppCompatTextView
-    android:id="@+id/git_tools_title"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_xlarge"
-    android:text="@string/git_tools"
-    android:textAppearance="?attr/textAppearanceTitleLarge"
-    android:textColor="?attr/colorOnSurface"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/identity" />
-
-  <androidx.appcompat.widget.AppCompatTextView
-    android:id="@+id/git_head_status"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/git_tools_title"
-    tools:text="HEAD status" />
-
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/git_log"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    android:text="@string/git_log"
-    app:layout_constraintTop_toBottomOf="@+id/git_head_status" />
-
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/git_abort_rebase"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    android:text="@string/abort_rebase"
-    app:layout_constraintTop_toBottomOf="@+id/git_log" />
-
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/git_reset_to_remote"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    android:text="@string/reset_to_remote"
-    app:layout_constraintTop_toBottomOf="@id/git_abort_rebase" />
-
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/git_gc"
-    android:layout_marginTop="8dp"
-    android:text="@string/git_run_gc_job"
-    app:layout_constraintTop_toBottomOf="@id/git_reset_to_remote"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content" />
-
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/git_remove_lock"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    android:text="@string/git_remove_lock_file"
-    app:layout_constraintTop_toBottomOf="@id/git_gc" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
 

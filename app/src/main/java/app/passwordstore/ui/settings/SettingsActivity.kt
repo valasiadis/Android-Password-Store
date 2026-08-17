@@ -9,10 +9,10 @@ import android.content.Context
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.BundleCompat
 import app.passwordstore.R
 import app.passwordstore.databinding.ActivityPreferenceRecyclerviewBinding
+import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.viewBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -22,8 +22,13 @@ import de.Maxr1998.modernpreferences.PreferencesAdapter
 import de.Maxr1998.modernpreferences.helpers.screen
 import de.Maxr1998.modernpreferences.helpers.subScreen
 
+/**
+ * Built on [BaseGitActivity] so the repository's own tools can be offered here as settings rather
+ * than as a screen of their own: the one-off git operations need somewhere to run, and this is
+ * already where everything else about the repository is decided.
+ */
 @AndroidEntryPoint
-class SettingsActivity : AppCompatActivity() {
+class SettingsActivity : BaseGitActivity() {
 
   private val miscSettings = MiscSettings(this)
   private val autofillSettings = AutofillSettings(this)

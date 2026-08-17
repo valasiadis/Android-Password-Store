@@ -162,7 +162,7 @@
   <string name="pref_edit_git_server_settings">Repository &amp; authentication</string>
   <string name="pref_ssh_keygen_title">Generate SSH key pair</string>
   <string name="pref_import_ssh_key_title">Import SSH key</string>
-  <string name="pref_edit_git_config">Local Git config &amp; utilities</string>
+  <string name="pref_edit_git_config">Git config</string>
   <string name="pref_ssh_see_key_title">View public key</string>
   <string name="pref_git_delete_repo_title">Delete repository</string>
   <string name="pref_dialog_delete_title">Clear repository</string>
@@ -274,17 +274,21 @@
   <string name="dialog_no">No</string>
   <string name="dialog_cancel">Cancel</string>
   <string name="git_sync">Synchronise repository</string>
+  <string name="git_sync_summary">Commits local changes, fetches the remote, and sends everything back.</string>
   <string name="git_pull">Pull from remote</string>
+  <string name="git_pull_summary">Commits local changes and fetches the remote, without sending anything back.</string>
   <string name="git_push">Push to remote</string>
+  <string name="git_push_summary">Sends commits the remote does not have yet.</string>
   <string name="git_push_up_to_date">Everything up-to-date</string>
-  <string name="git_log">Show commit log</string>
+  <string name="git_log">Commit log</string>
   <string name="show_password_pref_title">Show the password</string>
   <string name="show_password_pref_summary">Control the visibility of the passwords once decrypted. This does not disable copying to clipboard.</string>
   <string name="show_extra_content_pref_title">Show extra content</string>
   <string name="show_extra_content_pref_summary">Control the visibility of the extra content once decrypted.</string>
   <string name="fast_unlock_pref_title">Fast unlocking of entries</string>
   <string name="pwd_generate_button">Generate</string>
-  <string name="refresh_list">Refresh list</string>
+  <string name="refresh_list">Refresh folder list</string>
+  <string name="refresh_list_summary">Re-read the store from disk, for changes made outside this app.</string>
   <string name="send_plaintext_password_to">Send password as plaintext using…</string>
   <string name="app_icon_hint">App icon</string>
 
@@ -323,9 +327,10 @@
   <string name="ssh_key_does_not_exist">Unable to open the ssh private key, please check that the file exists</string>
   <string name="new_password_title">New password</string>
   <string name="new_passkey_title">New passkey</string>
-  <string name="git_tools">Utilities</string>
+  <string name="git_tools">Tools</string>
   <string name="abort_rebase">Abort rebase and push new branch</string>
   <string name="reset_to_remote">Hard reset to remote branch</string>
+  <string name="git_head_status_title">Repository state</string>
   <string name="git_head_on_branch">On branch %1$s</string>
   <string name="git_head_detached">HEAD detached at %1$s</string>
   <string name="git_head_missing">Unable to locate HEAD</string>
@@ -546,7 +551,9 @@
   <string name="git_remove_lock_file_success">Removed stale Git lock file.</string>
   <string name="git_remove_lock_file_missing">No stale Git lock file was found.</string>
   <string name="git_remove_lock_file_failed">Failed to remove stale Git lock file.</string>
-  <string name="git_index_locked_error">A previous Git operation left a lock file behind. Remove the stale Git lock file from the Git configuration, then try again.</string>
+  <string name="git_index_locked_title">Git lock file in the way</string>
+  <string name="git_index_locked_error">A previous Git operation left a lock file behind, so this change could not be recorded. Removing it is safe once no other operation is running.</string>
+  <string name="git_index_locked_remove">Remove and retry</string>
   <string name="activity_label_pgp_key_manager">PGP key manager</string>
   <string name="activity_label_pgp_key_select">Select one or more PGP keys</string>
   <string name="activity_label_pgp_key_single_select">Choose a PGP key</string>

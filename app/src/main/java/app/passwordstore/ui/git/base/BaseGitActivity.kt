@@ -65,7 +65,7 @@ abstract class BaseGitActivity : AppCompatActivity() {
    * Poor workaround to pass in a specified remote branch for [ResetToRemoteOperation]. Callers of
    * [launchGitOperation] should set this before calling the method with [GitOp.RESET].
    */
-  protected var remoteBranch = ""
+  var remoteBranch = ""
 
   /**
    * Attempt to launch the requested Git operation.

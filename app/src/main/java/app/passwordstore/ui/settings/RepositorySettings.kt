@@ -15,7 +15,6 @@ import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import androidx.fragment.app.FragmentActivity
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -33,7 +32,6 @@ import app.passwordstore.ui.proxy.ProxySelectorActivity
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.credentialUsernames
 import app.passwordstore.util.extensions.getString
-import app.passwordstore.util.extensions.gitSecrets
 import app.passwordstore.util.extensions.launchActivity
 import app.passwordstore.util.extensions.passwordHistory
 import app.passwordstore.util.extensions.sharedPrefs
@@ -52,6 +50,7 @@ import de.Maxr1998.modernpreferences.Preference
 import de.Maxr1998.modernpreferences.PreferenceScreen
 import de.Maxr1998.modernpreferences.helpers.onClick
 import de.Maxr1998.modernpreferences.helpers.pref
+import de.Maxr1998.modernpreferences.helpers.subScreen
 import de.Maxr1998.modernpreferences.helpers.switch
 import java.io.IOException
 import java.nio.file.FileVisitResult
@@ -66,7 +65,9 @@ import kotlinx.coroutines.withContext
 import logcat.asLog
 import logcat.logcat
 
-class RepositorySettings(private val activity: FragmentActivity) : SettingsProvider {
+class RepositorySettings(private val activity: SettingsActivity) : SettingsProvider {
+
+  private val gitToolsSettings = GitToolsSettings(activity)
 
   private val hiltEntryPoint by unsafeLazy {
     EntryPointAccessors.fromApplication(
@@ -255,6 +256,13 @@ class RepositorySettings(private val activity: FragmentActivity) : SettingsProvi
           activity.launchActivity(GitConfigActivity::class.java)
           true
         }
+      }
+      // The operations run against the repository, kept behind a screen of their own: they are
+      // reached when something needs doing rather than read down as settings.
+      subScreen {
+        collapseIcon = true
+        titleRes = R.string.git_tools
+        gitToolsSettings.provideSettings(this)
       }
       switch(PreferenceKeys.REBASE_ON_PULL) {
         titleRes = R.string.pref_rebase_on_pull_title

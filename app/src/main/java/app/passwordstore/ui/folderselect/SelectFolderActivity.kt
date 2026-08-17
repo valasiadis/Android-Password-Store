@@ -6,6 +6,7 @@ package app.passwordstore.ui.folderselect
 
 import android.os.Bundle
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -22,6 +23,7 @@ import app.passwordstore.ui.dialogs.FolderCreationDialogFragment
 import app.passwordstore.ui.passwords.PASSWORD_FRAGMENT_TAG
 import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.util.extensions.contains
+import app.passwordstore.util.extensions.followsKeyboard
 import app.passwordstore.util.extensions.isInsideRepository
 import app.passwordstore.util.viewmodel.SearchableRepositoryViewModel
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -74,12 +76,16 @@ class SelectFolderActivity : AppCompatActivity(R.layout.select_folder_layout) {
     // insets, so it comes to rest above the navigation bar. This row is outside that container
     // and has to take the insets itself, otherwise it sits a navigation bar lower than the
     // button it is meant to line up with.
-    ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.folder_actions)) {
-      view,
-      windowInsets ->
+    val actions = findViewById<View>(R.id.folder_actions)
+    ViewCompat.setOnApplyWindowInsetsListener(actions) { view, windowInsets ->
       val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
       view.updatePadding(left = insets.left, right = insets.right, bottom = insets.bottom)
       windowInsets
+    }
+    // And rides the keyboard the way the password list's own bottom row does, so that a keyboard
+    // opened over this screen pushes the actions up with it instead of covering them.
+    followsKeyboard(findViewById(R.id.select_folder_root)) { overlap ->
+      actions.translationY = -overlap.toFloat()
     }
 
     supportActionBar?.apply {

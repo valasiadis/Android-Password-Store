@@ -14,8 +14,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.Animation
-import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.appcompat.view.ActionMode
@@ -23,6 +21,7 @@ import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePadding
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -44,9 +43,13 @@ import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.ui.git.config.GitServerConfigActivity
 import app.passwordstore.ui.util.OnOffItemAnimator
 import app.passwordstore.util.coroutines.DispatcherProvider
+import app.passwordstore.util.extensions.SCALE_APPEAR_DELAY_MS
+import app.passwordstore.util.extensions.SCALE_MS
 import app.passwordstore.util.extensions.base64
+import app.passwordstore.util.extensions.followsKeyboard
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.hideKeyboard
+import app.passwordstore.util.extensions.scalesAway
 import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.extensions.substringBefore
 import app.passwordstore.util.extensions.viewBinding
@@ -125,6 +128,7 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     binding.fab.setOnClickListener {
       ItemCreationBottomSheet().show(childFragmentManager, "BOTTOM_SHEET")
     }
+    followKeyboard()
     childFragmentManager.setFragmentResultListener(ITEM_CREATION_REQUEST_KEY, viewLifecycleOwner) {
       _,
       bundle ->
@@ -278,6 +282,28 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
 
   private var fabVisible = true
 
+  private var keyboardShowing = false
+
+  /** What the list leaves free below its last row before the keyboard asks for any more. */
+  private var listBottomRoom = 0
+
+  /** Moves the row along the bottom of the screen with the keyboard, in one piece. */
+  private fun followKeyboard() {
+    listBottomRoom = binding.passRecycler.paddingBottom
+    requireActivity().followsKeyboard(
+      binding.root,
+      onShown = { showing ->
+        if (showing != keyboardShowing) {
+          keyboardShowing = showing
+          updateFab()
+        }
+      },
+    ) { overlap ->
+      binding.bottomBar.translationY = -overlap.toFloat()
+      binding.passRecycler.updatePadding(bottom = listBottomRoom + overlap)
+    }
+  }
+
   private val actionModeCallback =
     object : ActionMode.Callback {
       // Called when the action mode is created; startActionMode() was called
@@ -293,19 +319,18 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
       // but may be called multiple times if the mode is invalidated.
       override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
         val selectedItems = recyclerAdapter.getSelectedItems()
-        menu
-          .findItem(R.id.menu_edit_password)
-          .setVisible(selectedItems.all { it.type == PasswordItem.TYPE_CATEGORY })
-        menu
-          .findItem(R.id.menu_set_folder_key)
-          .setVisible(
-            selectedItems.size == 1 && selectedItems[0].type == PasswordItem.TYPE_CATEGORY
-          )
-        menu
-          .findItem(R.id.menu_pin_password)
-          .setVisible(
-            selectedItems.size == 1 && selectedItems[0].type == PasswordItem.TYPE_PASSWORD
-          )
+        val onlyOne = selectedItems.size == 1
+        val single = selectedItems.singleOrNull()
+        // Renaming asks for one new name, which several things at once cannot be given.
+        menu.findItem(R.id.menu_edit_password).isVisible =
+          onlyOne && single?.type == PasswordItem.TYPE_CATEGORY
+        menu.findItem(R.id.menu_set_folder_key).isVisible =
+          onlyOne &&
+            single?.type == PasswordItem.TYPE_CATEGORY &&
+            requireStore().canChooseKeyFor(single.file)
+        // A shortcut points at one entry.
+        menu.findItem(R.id.menu_pin_password).isVisible =
+          onlyOne && single?.type == PasswordItem.TYPE_PASSWORD
         return true
       }
 
@@ -328,7 +353,7 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
             false
           }
           R.id.menu_set_folder_key -> {
-            requireStore().showFolderEncryptionKey(recyclerAdapter.getSelectedItems()[0])
+            requireStore().showFolderEncryptionKey(recyclerAdapter.getSelectedItems()[0].file)
             mode.finish()
             true
           }
@@ -352,67 +377,33 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
         animateFab(true)
       }
 
-      private fun animateFab(show: Boolean) =
-        with(binding.fab) {
-          fabVisible = show
-          // Nothing on this bar applies while entries are being picked out — searching would
-          // only take the selection off the screen — so it goes with the buttons.
-          animateSearchBar(show)
-          val animation =
-            AnimationUtils.loadAnimation(context, if (show) R.anim.scale_up else R.anim.scale_down)
-          animation.setAnimationListener(
-            object : Animation.AnimationListener {
-              override fun onAnimationRepeat(animation: Animation?) {}
-
-              override fun onAnimationEnd(animation: Animation?) {
-                if (!show) visibility = View.GONE
-              }
-
-              override fun onAnimationStart(animation: Animation?) {
-                if (show) visibility = View.VISIBLE
-              }
-            }
-          )
-          animate().setStartDelay(if (show) 100 else 0).setDuration(100).start()
-          startAnimation(animation)
-          updateFabSync()
-        }
+      private fun animateFab(show: Boolean) {
+        fabVisible = show
+        // Nothing on this bar applies while entries are being picked out — searching would
+        // only take the selection off the screen — so it goes with the buttons.
+        animateSearchBar(show)
+        updateFab()
+      }
     }
 
-  public fun updateFabSync() {
+  /**
+   * Shows or hides the creation button, and hands the search field whatever room that leaves.
+   *
+   * The button is gone while entries are being picked out, and while the keyboard is up: what is
+   * being typed then is a search, and starting a new entry is not what the screen is for until that
+   * search is over.
+   */
+  private fun updateFab() {
+    binding.fab.scalesAway(fabVisible && !keyboardShowing)
+    updateFabSync()
+  }
+
+  fun updateFabSync() {
     // Called from the store screen, which can outlive this fragment's view.
     view ?: return
-    val syncNeeded = PasswordRepository.getAheadCount() > 0
-
-    val showAnim = if (syncNeeded && fabVisible && !binding.fabSync.isVisible) true else false
-
-    val hideAnim = if (binding.fabSync.isVisible && (!fabVisible || !syncNeeded)) true else false
-
-    with(binding.fabSync) {
-      val animation =
-        AnimationUtils.loadAnimation(context, if (showAnim) R.anim.scale_up else R.anim.scale_down)
-
-      animation.setAnimationListener(
-        object : Animation.AnimationListener {
-          override fun onAnimationRepeat(animation: Animation?) {}
-
-          override fun onAnimationEnd(animation: Animation?) {
-            if (hideAnim) visibility = View.GONE
-          }
-
-          override fun onAnimationStart(animation: Animation?) {
-            if (showAnim) visibility = View.VISIBLE
-          }
-        }
-      )
-
-      animate().setStartDelay(if (showAnim) 100 else 0).setDuration(100).start()
-
-      if (showAnim || hideAnim) startAnimation(animation)
-    }
-    updateSearchBarWidth(
-      syncShowing = if (showAnim) true else if (hideAnim) false else binding.fabSync.isVisible
-    )
+    val syncShowing = PasswordRepository.getAheadCount() > 0 && fabVisible
+    binding.fabSync.scalesAway(syncShowing)
+    updateSearchBarWidth(syncShowing)
   }
 
   /** Takes the search field away with the buttons, and brings it back with them. */
@@ -420,53 +411,44 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     with(binding.searchBar) {
       if (show == isVisible) return@with
       if (!show) requireActivity().hideKeyboard()
-      val animation =
-        AnimationUtils.loadAnimation(context, if (show) R.anim.scale_up else R.anim.scale_down)
-      animation.setAnimationListener(
-        object : Animation.AnimationListener {
-          override fun onAnimationRepeat(animation: Animation?) {}
-
-          override fun onAnimationEnd(animation: Animation?) {
-            if (!show) isVisible = false
-          }
-
-          override fun onAnimationStart(animation: Animation?) {
-            if (show) isVisible = true
-          }
-        }
-      )
-      startAnimation(animation)
+      scalesAway(show)
     }
 
   /**
-   * Gives the search field the room the sync button is not using.
+   * Gives the search field the room the buttons beside it are not using.
    *
-   * The button comes and goes with whether the store is ahead of its remote, and a field that kept
-   * a gap for a button that is not there looks off-centre for no reason. The change is animated so
-   * the field grows and shrinks with the button rather than jumping the moment it appears.
+   * The sync button comes and goes with whether the store is ahead of its remote, and the creation
+   * button steps aside while the keyboard is up; a field that kept a gap for a button that is not
+   * there looks off-centre for no reason. The change is animated so the field grows and shrinks
+   * with the button rather than jumping the moment it appears.
    */
   private fun updateSearchBarWidth(syncShowing: Boolean) {
-    val room =
+    fun room(forButton: Boolean) =
       resources.getDimensionPixelSize(
-        if (syncShowing) R.dimen.search_bar_side_room else R.dimen.fab_compat_margin
+        if (forButton) R.dimen.search_bar_side_room else R.dimen.fab_compat_margin
       )
+    val start = room(syncShowing)
+    val end = room(fabVisible && !keyboardShowing)
     val bar = binding.searchBar
-    val current = (bar.layoutParams as ViewGroup.MarginLayoutParams).marginStart
-    if (current == room) return
+    val current = bar.layoutParams as ViewGroup.MarginLayoutParams
+    if (current.marginStart == start && current.marginEnd == end) return
     // In step with the button it is making room for: the same length, and the same wait before
-    // starting when that button is on its way in.
+    // starting when that button is on its way in. Staged within the row, so that a row on its way
+    // up or down carries this along rather than having it played out against the screen.
     TransitionManager.beginDelayedTransition(
-      binding.root,
+      binding.bottomBar,
       ChangeBounds().apply {
-        duration = SEARCH_BAR_RESIZE_MS
-        startDelay = if (syncShowing) SYNC_FAB_APPEAR_DELAY_MS else 0
+        addTarget(bar)
+        duration = SCALE_MS
+        startDelay =
+          if (start > current.marginStart || end > current.marginEnd) SCALE_APPEAR_DELAY_MS else 0
       },
     )
     // Both ends, every time: setting one of a pair of start/end margins is what makes the layout
     // resolve them, and the one left alone comes back as nothing rather than as what it was.
     bar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-      marginStart = room
-      marginEnd = resources.getDimensionPixelSize(R.dimen.search_bar_side_room)
+      marginStart = start
+      marginEnd = end
     }
   }
 
@@ -565,12 +547,6 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
   }
 
   companion object {
-
-    /** As long as the sync button's own scale, so the two move as one. */
-    private const val SEARCH_BAR_RESIZE_MS = 300L
-
-    /** The wait the sync button takes before it starts appearing, which the field shares. */
-    private const val SYNC_FAB_APPEAR_DELAY_MS = 100L
 
     const val ITEM_CREATION_REQUEST_KEY = "creation_key"
     const val ACTION_KEY = "action"

@@ -37,10 +37,19 @@
     tools:ignore="GoogleAppIndexingWarning,CredentialDependency"
     tools:targetApi="34" >
 
+    <!--
+      The search field sits at the bottom of this screen, so the keyboard must not be allowed to
+      cover it. From Android 11 the screen holds the window at full size and moves the row itself,
+      frame by frame with the keyboard's own animation — see followsKeyboard, which sets
+      SOFT_INPUT_ADJUST_NOTHING at runtime and overrides this. Before that there is no animation to
+      follow, so the window is resized instead: said outright rather than left to whatever the
+      system reads into an unspecified window.
+    -->
     <activity
       android:name=".ui.passwords.PasswordStore"
       android:configChanges="orientation|screenSize"
-      android:exported="false" />
+      android:exported="false"
+      android:windowSoftInputMode="adjustResize" />
 
     <activity
       android:name=".ui.onboarding.activity.OnboardingActivity"
@@ -176,7 +185,8 @@
 
     <activity
       android:name=".ui.folderselect.SelectFolderActivity"
-      android:exported="false" />
+      android:exported="false"
+      android:windowSoftInputMode="adjustResize" />
     <activity
       android:name=".ui.sshkeygen.PgpAuthKeySelectionActivity"
       android:exported="false"

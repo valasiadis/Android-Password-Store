@@ -467,7 +467,7 @@
   <string name="otp_import_manual_entry">Enter manually</string>
   <string name="otp_import_manual_hint_secret">Secret</string>
   <string name="otp_import_manual_hint_account">Account</string>
-  <string name="place_shortcut_on_home_screen">Place shortcut on home screen</string>
+  <string name="place_shortcut_on_home_screen">Create shortcut</string>
   <string name="password_list_fab_content_description">Create new password or folder</string>
   <string name="pgp_new_pgp_key_title">Create PGP key</string>
   <string name="pgp_key_backupcode_title">Backup code</string>

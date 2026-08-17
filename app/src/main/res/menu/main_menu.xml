@@ -1,0 +1,25 @@
+<!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  Two buttons and no overflow. What used to hang behind the dots were repository operations that
+  belong with the rest of the repository's settings, and a list refresh that happens by itself on
+  the way back from anywhere. What is left is the key this folder encrypts to, and the settings.
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto">
+
+  <item
+    android:id="@+id/folder_key"
+    android:icon="@drawable/ic_key_24dp"
+    android:title="@string/folder_encryption_key"
+    app:showAsAction="ifRoom" />
+
+  <item
+    android:id="@+id/user_pref"
+    android:icon="@drawable/ic_settings_24dp"
+    android:title="@string/action_settings"
+    app:showAsAction="ifRoom" />
+</menu>

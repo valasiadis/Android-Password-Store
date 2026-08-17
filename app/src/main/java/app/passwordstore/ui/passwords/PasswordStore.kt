@@ -26,6 +26,7 @@ import androidx.fragment.app.commit
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
+import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.data.password.PasswordItem
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityPwdstoreBinding
@@ -51,13 +52,13 @@ import app.passwordstore.util.extensions.commitSavedChange
 import app.passwordstore.util.extensions.contains
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
+import app.passwordstore.util.extensions.isGitLockError
 import app.passwordstore.util.extensions.isInsideRepository
 import app.passwordstore.util.extensions.launchActivity
 import app.passwordstore.util.extensions.listFilesRecursively
 import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.git.ErrorMessages
-import app.passwordstore.util.settings.AuthMode
 import app.passwordstore.util.settings.PreferenceKeys
 import app.passwordstore.util.shortcuts.ShortcutHandler
 import app.passwordstore.util.viewmodel.FilterMode
@@ -84,7 +85,6 @@ import logcat.logcat
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ResetCommand.ResetType
 import org.eclipse.jgit.api.errors.CanceledException
-import org.eclipse.jgit.errors.LockFailedException
 
 const val PASSWORD_FRAGMENT_TAG = "PasswordsList"
 
@@ -138,16 +138,10 @@ class PasswordStore : BaseGitActivity() {
    * are encrypted to, not what the existing files are encrypted to, which is worth saying plainly
    * first — but only where there is something to lose.
    */
-  fun showFolderEncryptionKey(folder: PasswordItem) {
-    val directory = folder.file
+  fun showFolderEncryptionKey(directory: File) {
     // Only the folder's own key counts as its answer: with none, it is following the folder above
     // it, and that is what the picker should open on.
-    val keys =
-      File(directory, ".gpg-id")
-        .takeIf(File::isFile)
-        ?.readLines()
-        ?.filter(String::isNotBlank)
-        .orEmpty()
+    val keys = File(directory, ".gpg-id").takeIf(File::isFile)?.gpgIdLines().orEmpty()
     val holdsEntries = directory.walkTopDown().any { it.isFile && it.extension == "gpg" }
     if (!holdsEntries) {
       launchKeySelection(directory, keys)
@@ -161,6 +155,37 @@ class PasswordStore : BaseGitActivity() {
     ) {
       launchKeySelection(directory, keys)
     }
+  }
+
+  /**
+   * Whether asking a folder about its key can lead anywhere.
+   *
+   * With more than one key in the store there is always a choice to make. With only one there
+   * usually is not — except where the folder names a key this app does not hold, which is what a
+   * store cloned from elsewhere looks like before its key is imported, or names none at all. Those
+   * are exactly the cases where the question needs asking however few keys are to hand.
+   */
+  fun canChooseKeyFor(directory: File): Boolean =
+    repository.keyCount() > 1 || !encryptsToHeldKey(directory)
+
+  /**
+   * What a `.gpg-id` names, one key to a line.
+   *
+   * The same trimming everything else that reads one does: a `.gpg-id` may carry comments and
+   * subkey markers, and a line still wearing them is neither a key this app can look up nor a key
+   * it can tell the picker about — it would simply go missing from the screen that is meant to be
+   * showing it.
+   */
+  private fun File.gpgIdLines(): List<String> =
+    readLines()
+      .map { it.substringBefore('#').substringBefore('!').trim() }
+      .filter { it.isNotEmpty() && it != "gpg-id" }
+
+  /** Whether every key [directory] encrypts to, its own or the one it inherits, is held here. */
+  private fun encryptsToHeldKey(directory: File): Boolean {
+    val keyFile = File(directory, ".gpg-id").takeIf(File::isFile) ?: inheritedKeyFile(directory)
+    val identifiers = keyFile?.gpgIdLines()?.mapNotNull(PGPIdentifier::fromString).orEmpty()
+    return identifiers.isNotEmpty() && identifiers.all(repository::hasKey)
   }
 
   /** The .gpg-id a folder inherits, which is the nearest one above it inside the repository. */
@@ -368,6 +393,9 @@ class PasswordStore : BaseGitActivity() {
 
     lifecycleScope.launch {
       model.currentDir.flowWithLifecycle(lifecycle).collect { dir ->
+        // Whether the key button has anything to offer is a fact about the folder being looked
+        // at, so walking into another one is a reason to ask again.
+        invalidateOptionsMenu()
         val basePath = PasswordRepository.getRepositoryDirectory().absoluteFile
         supportActionBar?.apply {
           // The icon belongs to the store as a whole, not to a folder inside it.
@@ -389,6 +417,9 @@ class PasswordStore : BaseGitActivity() {
     super.onResume()
     checkLocalRepository()
     refreshPasswordList()
+    // Keys can be imported or dropped while this screen is behind the settings, and how many there
+    // are decides whether the key button has anything to offer.
+    invalidateOptionsMenu()
     // Opened to search — from the quick-search tile, or because the setting says to start there.
     if (
       settings.getBoolean(PreferenceKeys.SEARCH_ON_START, false) ||
@@ -399,20 +430,14 @@ class PasswordStore : BaseGitActivity() {
   }
 
   override fun onCreateOptionsMenu(menu: Menu): Boolean {
-    val menuRes =
-      when {
-        gitSettings.authMode == AuthMode.None -> R.menu.main_menu_no_auth
-        PasswordRepository.isGitRepo() -> R.menu.main_menu_git
-        else -> R.menu.main_menu_non_git
-      }
-    menuInflater.inflate(menuRes, menu)
+    // One menu for every store: neither button depends on there being a remote, or on how the app
+    // authenticates to it.
+    menuInflater.inflate(R.menu.main_menu, menu)
     return super.onCreateOptionsMenu(menu)
   }
 
   override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-    // Invalidation forces onCreateOptionsMenu to be called again. This is cheap and quick so
-    // we can get by without any noticeable difference in performance.
-    invalidateOptionsMenu()
+    menu.findItem(R.id.folder_key)?.isVisible = canChooseKeyFor(currentDir)
     return super.onPrepareOptionsMenu(menu)
   }
 
@@ -436,41 +461,14 @@ class PasswordStore : BaseGitActivity() {
   }
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
-    val id = item.itemId
-    val initBefore =
-      MaterialAlertDialogBuilder(this)
-        .setCancelable(false)
-        .setTitle(R.string.error)
-        .setIcon(R.drawable.ic_crossmark_red_24dp)
-        .setMessage(R.string.creation_dialog_text)
-        .setPositiveButton(R.string.dialog_ok, null)
-    when (id) {
+    when (item.itemId) {
       R.id.user_pref -> {
         runCatching { launchActivity(SettingsActivity::class.java) }
           .onErr { e -> e.printStackTrace() }
       }
-      R.id.git_push -> {
-        if (!PasswordRepository.isInitialized) {
-          initBefore.show()
-        } else {
-          runGitOperation(GitOp.PUSH)
-        }
-      }
-      R.id.git_pull -> {
-        if (!PasswordRepository.isInitialized) {
-          initBefore.show()
-        } else {
-          runGitOperation(GitOp.PULL)
-        }
-      }
-      R.id.git_sync -> {
-        if (!PasswordRepository.isInitialized) {
-          initBefore.show()
-        } else {
-          runGitOperation(GitOp.SYNC)
-        }
-      }
-      R.id.refresh -> refreshPasswordList()
+      // The folder being looked at, which at the top of the store is the store itself — the one
+      // folder that can never be picked out of a list, and so could never be asked before.
+      R.id.folder_key -> showFolderEncryptionKey(currentDir)
       android.R.id.home -> {
         onBackPressedDispatcher.onBackPressed()
       }
@@ -646,7 +644,7 @@ class PasswordStore : BaseGitActivity() {
             // in a dialog (e.g. a blocked smartcard PIN).
             if (!isCancellation(e) && !OpenPgpCardPrompt.isHandled(e)) {
               val message =
-                if (isGitLockError(e) || !restored) getString(R.string.git_index_locked_error)
+                if (e.isGitLockError() || !restored) getString(R.string.git_index_locked_error)
                 else ErrorMessages[e]
               ErrorDialog.show(this@PasswordStore, message)
             }
@@ -661,22 +659,6 @@ class PasswordStore : BaseGitActivity() {
     var cause = error
     while (cause != null) {
       if (cause is CanceledException) return true
-      cause = cause.cause
-    }
-    return false
-  }
-
-  /**
-   * Whether [error] is a Git index-lock failure, usually a stale `index.lock` from an interrupted
-   * operation. The lock is never removed automatically; it can be cleared from Git configuration.
-   */
-  private fun isGitLockError(error: Throwable?): Boolean {
-    var cause = error
-    while (cause != null) {
-      if (cause is LockFailedException) return true
-      val message = cause.message.orEmpty()
-      if (message.contains("index.lock", ignoreCase = true)) return true
-      if (message.contains("Cannot lock", ignoreCase = true)) return true
       cause = cause.cause
     }
     return false

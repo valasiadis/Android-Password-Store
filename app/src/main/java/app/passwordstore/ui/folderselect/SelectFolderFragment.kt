@@ -48,9 +48,11 @@ class SelectFolderFragment : Fragment(R.layout.password_recycler_view) {
 
     ViewCompat.setOnApplyWindowInsetsListener(view, windowInsetsLambda)
 
-    // Folder creation moved to the activity's bottom bar, opposite the confirm action, so
-    // the floating button no longer sits where a confirmation is expected.
-    binding.fab.hide()
+    // This screen borrows the password list's layout, which carries a row of its own along the
+    // bottom: a search field, and the creation button that moved to this activity's own bar
+    // opposite the confirm action. Both were drawn over that bar, and neither belongs here —
+    // nothing is searched on this screen, a folder is picked by walking into it.
+    binding.bottomBar.isVisible = false
 
     recyclerAdapter =
       PasswordItemRecyclerAdapter(lifecycleScope, dispatcherProvider).onItemClicked { _, item ->

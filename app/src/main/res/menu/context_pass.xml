@@ -8,6 +8,21 @@
   xmlns:tools="http://schemas.android.com/tools"
   tools:context=".pwdstore">
 
+  <!--
+    In the order the actions escalate: renaming touches only the name, moving touches only where
+    the thing sits, and deleting is the one that cannot be taken back — so it comes last whichever
+    of the others is on offer, and is welcome to fall behind the overflow when the bar runs out of
+    room for it.
+
+    Which of them appear at all is decided when the selection changes, since a rename means nothing
+    to several things at once and a shortcut means nothing to a folder.
+  -->
+  <item
+    android:id="@+id/menu_edit_password"
+    android:icon="@drawable/ic_edit_24dp"
+    android:title="@string/rename"
+    app:showAsAction="ifRoom" />
+
   <item
     android:id="@+id/menu_move_password"
     android:icon="@drawable/ic_move_folder_24dp"
@@ -21,19 +36,13 @@
     app:showAsAction="ifRoom" />
 
   <item
-    android:id="@+id/menu_edit_password"
-    android:icon="@drawable/ic_edit_24dp"
-    android:title="@string/rename"
-    app:showAsAction="ifRoom" />
+    android:id="@+id/menu_pin_password"
+    android:icon="@drawable/ic_push_pin_24dp"
+    android:title="@string/place_shortcut_on_home_screen"
+    app:showAsAction="never" />
 
   <item
     android:id="@+id/menu_set_folder_key"
     android:title="@string/folder_encryption_key"
     app:showAsAction="never" />
-
-  <item
-    android:id="@+id/menu_pin_password"
-    android:icon="@drawable/ic_push_pin_24dp"
-    android:title="@string/place_shortcut_on_home_screen"
-    app:showAsAction="ifRoom" />
 </menu>

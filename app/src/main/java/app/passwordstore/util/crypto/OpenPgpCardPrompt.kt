@@ -129,6 +129,48 @@ class OpenPgpCardPrompt(
     }
   }
 
+  /**
+   * How a card names itself: the fingerprints of the keys it carries, read straight off it.
+   *
+   * A PIN belongs to a card, not to a PGP key, and the key ids a caller happens to be working with
+   * are only a guess at which card will be presented. Reading this needs no PIN, so the card can be
+   * identified before anything is verified against it — and a PIN that belongs to some other card
+   * is never offered, which would spend one of its retries.
+   */
+  private fun cardIdentity(card: OpenPgpNfcCard): String? = runCatching {
+    card.readCardInfo().fingerprints
+  }
+    .get()
+    ?.takeIf { it.isNotEmpty() }
+    ?.joinToString(",") { fingerprint ->
+      fingerprint.joinToString("") { byte -> "%02x".format(byte) }
+    }
+
+  /**
+   * Where a card's PIN is filed: under the card itself where it could be identified, and otherwise
+   * under whatever the caller named the operation, which is the best guess left.
+   */
+  private fun pinCacheKey(fallback: String, identity: String?): String =
+    if (identity == null) fallback else "${fallback.substringBefore(':')}:card:$identity"
+
+  /** Raised out of the card session to say which card is present and that its PIN is not known. */
+  private class PinNotCached(val identity: String?) : Exception()
+
+  /**
+   * Where the PIN being offered to the card came from, which decides what may be done with it.
+   *
+   * Only a PIN typed at this prompt was asked about — the dialog is where the user says whether to
+   * keep it — so only that one is ever written back to the cache. Only a PIN the caller handed in
+   * is the caller's to forget when the card turns it down. And only a PIN this loop read out of
+   * the cache itself is this loop's to wipe; the other two belong to [runWithPin]'s own `pin`, or
+   * to whoever passed them in.
+   */
+  private enum class PinSource {
+    TYPED,
+    SEEDED,
+    CACHED,
+  }
+
   /** Which PW1 access slot a wrong-PIN retry counter should be read from. */
   enum class PinMode {
     /** PW1 mode 0x82 (decryption / INTERNAL AUTHENTICATE). */
@@ -152,14 +194,14 @@ class OpenPgpCardPrompt(
    * Runs a full smartcard PIN-and-retry session against the already-open [reader], shared by
    * decryption, commit signing and SSH authentication.
    *
-   * The PIN is seeded from [seedPin] (e.g. a biometric-unlocked value) or the screen-off cache
-   * under [cacheKey], otherwise the user is prompted (with the OpenPGP-mandated [MIN_PIN_LENGTH]
-   * minimum). [block] verifies the PIN and performs the card operation via [attempt]. On a rejected
-   * PIN the PIN is wiped and dropped from the cache, and the card's own remaining-attempts counter
-   * is consulted -- [pinMode] selects the slot -- to either re-prompt inline or report the card as
-   * [CardOutcome.Blocked]. A transient transport error re-presents the card with
-   * [commFailedMessage]. The PIN is cached only once [block] fully succeeds, so a rejected PIN is
-   * never persisted.
+   * The PIN is seeded from [seedPin] (e.g. a biometric-unlocked value); failing that the card is
+   * asked who it is and its own cached PIN is looked up under [cacheKey]; failing that the user is
+   * prompted (with the OpenPGP-mandated [MIN_PIN_LENGTH] minimum). [block] verifies the PIN and
+   * performs the card operation via [attempt]. On a rejected PIN the PIN is wiped and dropped from
+   * the cache, and the card's own remaining-attempts counter is consulted -- [pinMode] selects the
+   * slot -- to either re-prompt inline or report the card as [CardOutcome.Blocked]. A transient
+   * transport error re-presents the card with [commFailedMessage]. A PIN typed here is cached only
+   * once [block] fully succeeds, so a rejected PIN is never persisted.
    *
    * The present-card dialog is dismissed on success and the PIN is always wiped before returning.
    * Reader-mode release and turning each [CardOutcome] into a user-facing action stay with the
@@ -175,16 +217,39 @@ class OpenPgpCardPrompt(
     presentMessage: String,
     commFailedMessage: String,
     seedPin: CharArray? = null,
+    /**
+     * Run when the card rejects the PIN that came in as [seedPin], so the caller can drop whatever
+     * it seeded that from. The cache this prompt owns is cleared on any rejection; a secret held
+     * anywhere else is the caller's to forget, and one that is not forgotten is offered to the card
+     * again on the next attempt — spending another retry on a PIN the user never typed.
+     *
+     * Not run for a PIN the user typed here, which was never stored anywhere else: a single
+     * mistyped PIN is no reason to throw away a working secret and make them enrol it again.
+     */
+    onPinRejected: () -> Unit = {},
     block: (OpenPgpNfcCard, CharArray) -> T,
   ): CardOutcome<T> {
-    var pin: CharArray? = seedPin?.takeIf { it.isNotEmpty() } ?: readCachedPin(cacheKey)
-    var pinFromCache = pin != null
+    // Nothing is read from the cache up front: which card will be presented is not known until it
+    // is, and a PIN fetched on a guess is a retry spent on the wrong card. The card is asked who it
+    // is first, inside the same session, and only then is its own PIN looked up.
+    var pin: CharArray? = seedPin?.takeIf { it.isNotEmpty() }
+    var pinSource = PinSource.SEEDED
+    var askFirst = false
     var cachePin = false
     var pinErrorMessage: String? = null
     var cardMessage = presentMessage
+    // Set inside the card session, read after it: what the card called itself.
+    var presentedIdentity: String? = null
+    // The one array this loop owns — a PIN it read out of the cache itself, which nothing else
+    // holds a reference to and nothing else will wipe.
+    var cachedCopy: CharArray? = null
+    fun dropCachedCopy() {
+      cachedCopy?.wipe()
+      cachedCopy = null
+    }
     try {
       while (true) {
-        if (pin == null) {
+        if (askFirst) {
           // Take the card dialog down while the PIN dialog is up so they don't stack.
           dismissDialog()
           val entry =
@@ -197,28 +262,69 @@ class OpenPgpCardPrompt(
               identityLabel = identityLabel,
             ) ?: return CardOutcome.Cancelled
           pin = entry.secret
+          pinSource = PinSource.TYPED
           cachePin = entry.cache
-          pinFromCache = false
           pinErrorMessage = null
           cardMessage = presentMessage
+          askFirst = false
         }
-        val currentPin = requireNotNull(pin) { "PIN must be set before contacting the card" }
-        when (val attempt = attempt(reader, cardMessage) { card -> block(card, currentPin) }) {
+        // Nothing from the previous round is wanted any more, and a cached PIN left lying about is
+        // a cached PIN in the heap for the life of the process.
+        dropCachedCopy()
+        val offered = pin
+        when (
+          val attempt =
+            attempt(reader, cardMessage) { card ->
+              val identity = cardIdentity(card)
+              presentedIdentity = identity
+              // What was typed or seeded takes precedence; otherwise this card's own PIN, if it
+              // has one here. Neither means the card is known but its PIN is not, which is asked
+              // for outside the session — the card cannot be held through a dialog.
+              val usable =
+                offered
+                  ?: identity
+                    ?.let { readCachedPin(pinCacheKey(cacheKey, it)) }
+                    ?.also { cachedCopy = it }
+                  ?: throw PinNotCached(identity)
+              block(card, usable)
+            }
+        ) {
           is Attempt.Success -> {
             dismissDialog()
-            // Cache the PIN only now that the whole operation has succeeded.
-            if (!pinFromCache) storeCachedPin(cacheKey, currentPin, cachePin)
+            // Written back only for a PIN typed here, and only now that the whole operation has
+            // succeeded — under the card that did it, asked again of the card in hand rather than
+            // trusted from before the exchange. A seeded or cached PIN is already kept wherever it
+            // belongs, and putting one through storeCachedPin with `cache` unset would clear this
+            // cache and switch the caching preference off behind the user's back.
+            if (pinSource == PinSource.TYPED && offered != null) {
+              val identity = cardIdentity(attempt.card) ?: presentedIdentity
+              storeCachedPin(pinCacheKey(cacheKey, identity), offered, cachePin)
+            }
             return CardOutcome.Success(attempt.value, attempt.card)
           }
           Attempt.Cancelled -> return CardOutcome.Cancelled
           is Attempt.Error -> {
             val e = attempt.error
-            if (isSmartcardPinFailure(e)) {
-              // A rejected PIN must never be kept in the cache.
-              clearCachedPin(cacheKey)
+            if (e is PinNotCached) {
+              // The card is known and has no PIN here: let it go, ask, and take it again.
+              runCatching { attempt.card?.close() }
               pin?.wipe()
               pin = null
-              pinFromCache = false
+              askFirst = true
+              continue
+            }
+            if (isSmartcardPinFailure(e)) {
+              // A rejected PIN must never be kept in the cache. Cleared under the card that turned
+              // it down, which is where it was found.
+              clearCachedPin(pinCacheKey(cacheKey, presentedIdentity))
+              clearCachedPin(cacheKey)
+              // Only what the caller handed in is the caller's to forget: a PIN typed here is held
+              // nowhere else, and a cached one was only reached because the caller had nothing.
+              if (pinSource == PinSource.SEEDED && offered != null) onPinRejected()
+              dropCachedCopy()
+              pin?.wipe()
+              pin = null
+              askFirst = true
               // Trust the card's own retry counter; if the status word omitted it, ask the card
               // directly with a non-destructive status check so we learn whether it is now blocked.
               val remaining =
@@ -243,6 +349,7 @@ class OpenPgpCardPrompt(
       }
     } finally {
       pin?.wipe()
+      dropCachedCopy()
     }
   }
 

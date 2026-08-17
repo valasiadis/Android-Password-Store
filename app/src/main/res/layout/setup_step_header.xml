@@ -40,7 +40,7 @@
     android:layout_marginTop="@dimen/spacing_small"
     android:textAppearance="?attr/textAppearanceHeadlineSmall"
     android:textColor="?attr/colorOnSurface"
-    tools:text="The key that encrypts them" />
+    tools:text="Setup encryption" />
 
   <androidx.appcompat.widget.AppCompatTextView
     android:id="@+id/setup_message"

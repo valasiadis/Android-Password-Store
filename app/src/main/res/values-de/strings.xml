@@ -370,7 +370,6 @@
   <!-- Onboarding flow -->
   <string name="let_s_go">Los geht\'s</string>
   <string name="select_n_repository_type">Wählen Sie einen \nRepository-Typ.</string>
-  <string name="select_repo_type_text">Wählen Sie aus, ob Sie ein lokales Repository anlegen, oder ein Remote-Repository klonen möchten.</string>
   <string name="clone_remote_repo">Remote-Repository klonen</string>
   <string name="create_local_repo">Lokales Repository anlegen</string>
   <string name="gpg_key_select">Schlüssel auswählen</string>

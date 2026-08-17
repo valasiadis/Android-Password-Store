@@ -88,9 +88,9 @@
   <string name="connection_mode">Authentication method</string>
 
   <!-- Git Config fragment -->
-  <string name="setup_identity_title">Your Git identity</string>
+  <string name="setup_identity_title">Setup Git</string>
   <string name="setup_encryption_title">How entries are stored</string>
-  <string name="setup_key_title">The key that encrypts them</string>
+  <string name="setup_key_title">Setup encryption</string>
   <string name="setup_key_message">Pick the PGP key your passwords will be encrypted to, or import one. A key on a smartcard works too — you will be asked for the card when opening an entry.</string>
   <string name="setup_repo_tip">Cloning brings an existing store from a Git server. Creating one keeps it on this device until you add a server later.</string>
   <string name="setup_encryption_message">Passwords are kept as files, each encrypted to a PGP key. This decides how those files are written, and applies to entries saved from now on.</string>
@@ -116,7 +116,7 @@
   <string name="setup_step_counter">Step %1$d of %2$d</string>
   <string name="setup_key_none_chosen">No key chosen yet</string>
   <string name="gpg_key_select_mandatory">Selecting a PGP key is required to proceed</string>
-  <string name="setup_remote_title">Where the store lives</string>
+  <string name="setup_remote_title">Setup remote</string>
   <string name="setup_remote_message">The address of the Git repository holding your passwords, and how this app should be let in.</string>
   <string name="setup_auth_key_none">No authentication key set yet. Pick one of these; the server needs the matching public key.</string>
   <string name="setup_auth_key_set">An authentication key is set. Choosing another one replaces it.</string>
@@ -443,7 +443,6 @@
   <!-- Onboarding flow -->
   <string name="let_s_go">Let\'s Go</string>
   <string name="select_n_repository_type">Select repository type</string>
-  <string name="select_repo_type_text">Select if you want to create a local repo or clone a remote repo.</string>
   <string name="clone_remote_repo">Clone Remote Repo</string>
   <string name="create_local_repo">Create Local Repo</string>
   <string name="gpg_key_select">Select key(s)</string>

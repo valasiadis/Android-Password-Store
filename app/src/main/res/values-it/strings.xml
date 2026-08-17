@@ -259,7 +259,6 @@
   <!-- Onboarding flow -->
   <string name="let_s_go">Andiamo</string>
   <string name="select_n_repository_type">Seleziona \nTipo di repository</string>
-  <string name="select_repo_type_text">Seleziona se vuoi creare una repo locale o clonarne una remota.</string>
   <string name="clone_remote_repo">Clona Repo Remota</string>
   <string name="create_local_repo">Crea Repo Locale</string>
   <string name="gpg_key_select">Seleziona chiave</string>

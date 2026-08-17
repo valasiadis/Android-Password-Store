@@ -21,12 +21,17 @@
     android:paddingHorizontal="@dimen/activity_horizontal_margin"
     android:paddingVertical="@dimen/spacing_xlarge">
 
+    <!--
+      Sized to carry the screen rather than to label it, and allowed to shrink back within the
+      margins on a narrow screen instead of running off the sides of one.
+    -->
     <LinearLayout
       android:id="@+id/app_header"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:gravity="center_vertical"
       android:orientation="horizontal"
+      app:layout_constrainedWidth="true"
       app:layout_constraintBottom_toTopOf="@id/repo_choice"
       app:layout_constraintEnd_toEndOf="parent"
       app:layout_constraintStart_toStartOf="parent"
@@ -35,8 +40,8 @@
 
       <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/app_icon"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
+        android:layout_width="@dimen/onboarding_app_icon_size"
+        android:layout_height="@dimen/onboarding_app_icon_size"
         android:contentDescription="@string/app_icon_hint"
         android:src="@mipmap/ic_launcher" />
 
@@ -46,7 +51,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/spacing_large"
         android:text="@string/app_name"
-        android:textAppearance="?attr/textAppearanceTitleLarge"
+        android:textAppearance="?attr/textAppearanceHeadlineMedium"
         android:textStyle="bold" />
 
     </LinearLayout>
@@ -75,26 +80,16 @@
         android:textStyle="bold" />
 
       <!--
-        The sentence is centred on the screen by itself; the question mark hangs off its end
-        rather than being weighed in, so the text does not sit off to one side to make room for it.
+        What the two buttons below mean, kept behind the mark rather than spelled out under the
+        question: the sentence was a restatement of the title for anyone who did not need it, and a
+        paragraph in the way for everyone who did.
       -->
-      <TextView
-        android:id="@+id/repo_type_description"
-        android:layout_width="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_medium"
-        android:maxWidth="@dimen/repo_type_description_width"
-        android:text="@string/select_repo_type_text"
-        android:textAlignment="center"
-        android:textAppearance="?attr/textAppearanceTitleSmall" />
-
       <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/repo_type_help"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="@dimen/spacing_small"
+        android:layout_marginTop="@dimen/spacing_medium"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:padding="@dimen/spacing_small"
         android:src="@drawable/ic_help_20dp"

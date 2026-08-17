@@ -268,7 +268,6 @@
   <!-- Onboarding flow -->
   <string name="let_s_go">Zaczynajmy</string>
   <string name="select_n_repository_type">Wybierz \ntyp repozytorium</string>
-  <string name="select_repo_type_text">Zaznacz, czy chcesz utworzyć lokalne repozytorium, czy sklonować zdalne repozytorium.</string>
   <string name="clone_remote_repo">Klonuj zdalne repozytorium</string>
   <string name="create_local_repo">Utwórz lokalne repozytorium</string>
   <string name="gpg_key_select">Wybierz klucz</string>

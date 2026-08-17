@@ -323,7 +323,6 @@
   <!-- Onboarding flow -->
   <string name="let_s_go">Hadi Başlayalım</string>
   <string name="select_n_repository_type">Depo \nTürü Seçin</string>
-  <string name="select_repo_type_text">Yerel bir depo oluşturmak mı yoksa uzak bir depoyu klonlamak mı istediğinizi seçin.</string>
   <string name="clone_remote_repo">Uzak Depoyu Klonla</string>
   <string name="create_local_repo">Yerel Depo Oluştur</string>
   <string name="gpg_key_select">Anahtar seç</string>

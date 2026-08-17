@@ -274,7 +274,6 @@
     <string name="gpg_key_select_mandatory">És necessari seleccionar una clau PGP per continuar</string>
     <string name="folder_creation_err_file_exists">Ja existeix un fitxer amb aquest nom</string>
     <string name="select_n_repository_type">Selecciona el tipus de repositori</string>
-    <string name="select_repo_type_text">Selecciona si vol crear un repositori local o clonar un de remot.</string>
     <string name="clone_remote_repo">Clona un repositori remot</string>
     <string name="create_local_repo">Crea un repositori local</string>
     <string name="gpg_key_select">Selecciona les claus</string>

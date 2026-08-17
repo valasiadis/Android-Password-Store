@@ -21,16 +21,19 @@ jobs:
       with:
         java-version: 21
 
-    # version.properties carries the next version under development — 2.1.0-SNAPSHOT
-    # — because that is what the branch is between releases. A build made from a
-    # tag is not between anything, so it is given the version it was tagged with,
-    # and the app reports v2.1.0-sc.2 rather than a snapshot it is not.
+    # version.properties carries whatever version the branch is working towards,
+    # which is not what a tagged build is. v2.0.0-sc.3 is upstream's 2.0.0 with
+    # this fork's smartcard support, third revision, and that is what the app
+    # should report — not the 2.1.0-SNAPSHOT the file happens to hold.
     #
-    # The version code follows the scheme the file already uses, major*10000 +
-    # minor*100 + patch, so an sc build and the release it precedes agree on it:
-    # this is 2.1.0, arrived at early. Sharing a code costs nothing — Android
-    # refuses an install only when the code is lower than the one already there,
-    # so sc.2 goes over sc.1, and 2.1.0 goes over both.
+    # The version code puts the sc revision in the last two digits below the
+    # scheme the file already uses, so 2.0.0-sc.3 is 20000*100 + 3. It only ever
+    # has to climb across this fork's own builds — the applicationId is the
+    # fork's, so upstream's releases are a different app and never compete — and
+    # it does: sc.4 follows sc.3, and a later 2.1.0-sc.1 (2010001) follows both.
+    # It also clears the 20100 that sc.1 and sc.2 were built with by accident,
+    # back when the version was read straight out of the file, so this installs
+    # over them rather than being refused as a downgrade.
     - name: Set the version from the tag
       shell: bash
       env:
@@ -38,7 +41,8 @@ jobs:
       run: |
         VERSION="${TAG#v}"
         IFS=. read -r MAJOR MINOR PATCH _ <<< "${VERSION%%-*}"
-        CODE=$(( MAJOR * 10000 + MINOR * 100 + PATCH ))
+        REVISION="${VERSION##*-sc.}"
+        CODE=$(( (MAJOR * 10000 + MINOR * 100 + PATCH) * 100 + REVISION ))
         sed -i \
           -e "s/^versioning-plugin.versionName=.*/versioning-plugin.versionName=${VERSION}/" \
           -e "s/^versioning-plugin.versionCode=.*/versioning-plugin.versionCode=${CODE}/" \

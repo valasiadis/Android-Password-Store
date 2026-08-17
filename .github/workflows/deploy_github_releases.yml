@@ -2,9 +2,9 @@ name: Publish APS binaries to GitHub Releases
 on:
   push:
     tags:
-      # A release, and a pre-release of one: v2.0.0 and v2.0.0-sc.1 alike.
+      # A release and nothing else. An -sc tag is a release of this fork and is
+      # built by deploy_sc_releases.yml, which publishes rather than drafts.
       - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'
 
 permissions:
   contents: read
@@ -73,12 +73,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           mv artifacts/app-release.apk "artifacts/APS-${TAG}.apk"
-          # A tag carrying anything past the version — v2.0.0-sc.1 — is a pre-release.
-          PRERELEASE=()
-          if [[ "${TAG}" == *-* ]]; then
-            PRERELEASE=(--prerelease)
-          fi
           gh release create "${TAG}" \
-            --draft "${PRERELEASE[@]}" \
+            --draft \
             --title "${TAG}" \
             "artifacts/APS-${TAG}.apk"

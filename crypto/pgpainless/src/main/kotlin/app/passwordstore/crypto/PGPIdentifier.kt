@@ -8,6 +8,21 @@ package app.passwordstore.crypto
 import java.util.Locale
 import java.util.regex.Pattern
 
+/**
+ * How an identifier is shown to a person: a key ID wearing the `0x` that says it is hexadecimal,
+ * and a user ID exactly as it reads.
+ *
+ * Kept apart from [PGPIdentifier.KeyId.toString], which is an identity rather than a caption — it
+ * names the file a key is stored in and the entry a passphrase is cached under, so putting the
+ * prefix there would orphan every key and every cached passphrase already on the device.
+ */
+public val PGPIdentifier.displayName: String
+  get() =
+    when (this) {
+      is PGPIdentifier.KeyId -> "0x$this"
+      is PGPIdentifier.UserId -> email
+    }
+
 /** Supertype for valid identifiers of PGP keys. */
 public sealed class PGPIdentifier {
 

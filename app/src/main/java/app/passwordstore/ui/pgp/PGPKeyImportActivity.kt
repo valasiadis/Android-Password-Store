@@ -18,6 +18,7 @@ import app.passwordstore.crypto.KeyUtils.isCertificateOrKey
 import app.passwordstore.crypto.KeyUtils.parseAllCertificatesOrKeys
 import app.passwordstore.crypto.KeyUtils.tryGetKeyId
 import app.passwordstore.crypto.PGPIdentifier
+import app.passwordstore.crypto.displayName
 import app.passwordstore.crypto.PGPKey
 import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.crypto.errors.KeyAlreadyExistsException
@@ -330,7 +331,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
       val keyId = tryGetKeyId(sourceKey)
       MaterialAlertDialogBuilder(this)
         .setTitle(getString(R.string.pgp_key_import_failed))
-        .setMessage(getString(R.string.pgp_key_import_failed_replace_message, keyId))
+        .setMessage(getString(R.string.pgp_key_import_failed_replace_message, keyId?.displayName))
         .setPositiveButton(R.string.dialog_yes) { _, _ ->
           val retry = runCatching { addKeyOrThrow(sourceKey, replace = true) }
           if (retry.isOk) {
@@ -429,7 +430,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
         R.plurals.pgp_key_import_success_message,
         importedKeyIds.size,
         importedKeyIds.size,
-      ) + "\n\n" + importedKeyIds.joinToString(prefix = "\t", separator = "\n\t")
+      ) + "\n\n" + importedKeyIds.joinToString(prefix = "\t", separator = "\n\t") { it.displayName }
 
     val failureText =
       resources.getQuantityString(
@@ -439,7 +440,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
       ) +
         "\n\n" +
         importFailures.joinToString("\n") { (k, e) ->
-          val id = tryGetKeyId(k)?.toString() ?: "?"
+          val id = tryGetKeyId(k)?.displayName ?: "?"
           val reason =
             when (e) {
               is KeyAlreadyExistsException -> getString(R.string.pgp_key_import_skipped_existing)

@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.autofill.AutofillManager
 import androidx.core.content.edit
+import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.crypto.errors.IncorrectPassphraseException
@@ -38,6 +39,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.asLog
@@ -75,10 +77,18 @@ class AutofillDecryptActivity : BasePGPActivity() {
       intent?.getBooleanExtra(EXTRA_SEARCH_ACTION, true) ?: throw NullPointerException()
     action = if (isSearchAction) AutofillAction.Search else AutofillAction.Match
     logcat { action.toString() }
+    // As on the entry screen: what can open this is asked of the message, not of the folder's
+    // .gpg-id, so an entry encrypted to a key this device holds opens whatever its folder says.
     requireKeysExist {
-      requireDecryptionKeysExist(PasswordRepository.getParentPath(filePath, repositoryPath)) { ids
-        ->
-        getPersistentAndDecrypt(ids, action = "autofill")
+      lifecycleScope.launch {
+        val entryFile = File(filePath)
+        val subDir = PasswordRepository.getParentPath(filePath, repositoryPath)
+        val keys = withContext(dispatcherProvider.io()) { decryptionCandidates(entryFile, subDir) }
+        if (keys.isEmpty()) {
+          reportUnopenable(withContext(dispatcherProvider.io()) { entryRecipients(entryFile) })
+          return@launch
+        }
+        getPersistentAndDecrypt(keys, action = "autofill")
       }
     }
   }

@@ -416,7 +416,9 @@ class PasskeyCreationActivity : BasePGPActivity() {
   /** encrypts passkey (edited or newly created) and saves it to the store */
   private fun encrypt(identifiers: List<PGPIdentifier>) {
     with(binding) {
-      val gpgIdentifiers = getPGPIdentifiers(directory.text.toString())
+      // As in the password editor: what the caller settled on, not a fresh reading of .gpg-id,
+      // so a key chosen by hand is the one that encrypts.
+      val gpgIdentifiers = identifiers
       if (gpgIdentifiers.isNullOrEmpty()) return@with
 
       lifecycleScope.launch(dispatcherProvider.main()) {

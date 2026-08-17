@@ -99,6 +99,13 @@
   <string name="setup_ascii_armor_explanation">Stores passwords as text rather than binary. The files are larger, but survive tools that would mangle binary data.</string>
   <string name="pgp_key_creation_in_progress">Creating key…</string>
   <string name="notice_password_created">Password created</string>
+  <string name="notice_password_discarded">Entry discarded</string>
+  <string name="notice_changes_discarded">Changes discarded</string>
+  <string name="password_discard_title">Discard this entry?</string>
+  <string name="password_discard_message">Nothing here has been saved yet. Leaving now loses what you have typed.</string>
+  <string name="password_discard_edit_title">Discard these changes?</string>
+  <string name="password_discard_edit_message">The changes made here have not been saved. Leaving now loses them, and the entry stays as it was.</string>
+  <string name="password_discard_confirm">Discard</string>
   <string name="notice_password_updated">Password updated</string>
   <string name="rename">Rename</string>
   <string name="search_clear">Clear the search</string>
@@ -407,6 +414,7 @@
 
   <!-- Password decryption failure -->
   <string name="password_decryption_no_decryption_key">Decryption failed. No suitable decryption key found</string>
+  <string name="password_decryption_no_recipient_key">This entry is encrypted to keys that are not on this device.</string>
   <string name="password_decryption_unknown_error">Unknown decryption error</string>
   <string name="password_no_longer_exists">This password no longer exists.</string>
 
@@ -571,10 +579,14 @@
   <string name="pgp_invalid_key_identifier">invalid</string>
   <string name="pgp_short_key_identifier">invalid: short ID</string>
   <string name="pgp_unknown_key_identifier">unknown key ID</string>
-  <string name="no_pgp_keys_dialog_title">No PGP keys found</string>
-  <string name="no_pgp_keys_dialog_message">Open the PGP key manager and import matching PGP keys from backups for key ID(s): </string>
+  <string name="pgp_key_missing_label">Not available on this device</string>
+  <string name="folder_key_missing_dialog_title">Encryption key not found</string>
+  <string name="folder_key_missing_dialog_message">This folder is set to encrypt to keys this app does not have:</string>
+  <string name="folder_key_missing_dialog_hint">Choose another key to save this entry under, or import the missing one.</string>
+  <string name="folder_key_missing_dialog_choose">Choose a key</string>
+  <string name="folder_key_partial_dialog_title">Some keys are missing</string>
+  <string name="folder_key_partial_dialog_message">Anyone who reads this store with these keys will not be able to open the entry, because this app does not have them to encrypt to:</string>
   <string name="no_decryption_keys_dialog_title">No decryption keys found</string>
-  <string name="no_decryption_keys_dialog_message">Open the PGP key manager and import matching secret PGP keys from backups for key ID(s): </string>
   <string name="pgp_unknown">unknown</string>
   <string name="pgp_public_only">public only</string>
   <string name="invalid_gpg_id_dialog_title">Empty or malformatted .gpg-id file</string>

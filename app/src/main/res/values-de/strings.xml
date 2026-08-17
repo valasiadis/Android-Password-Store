@@ -460,10 +460,7 @@
   <string name="pgp_invalid_key_identifier">ungültig</string>
   <string name="pgp_short_key_identifier">ungültig: Kurz-ID</string>
   <string name="pgp_unknown_key_identifier">unbekannte Schlüssel-ID</string>
-  <string name="no_pgp_keys_dialog_title">Keine PGP-Schlüssel gefunden</string>
-  <string name="no_pgp_keys_dialog_message">Öffnen Sie den PGP-Schlüsselmanager und importieren Sie aus Backups passende PGP-Schlüssel für folgende ID(s): </string>
   <string name="no_decryption_keys_dialog_title">Keine geheimen Schlüssel</string>
-  <string name="no_decryption_keys_dialog_message">Öffnen Sie den PGP-Schlüsselmanager und importieren Sie aus Backups passende geheime PGP-Schlüssel für folgende ID(s): </string>
   <string name="pgp_unknown">unbekannt</string>
   <string name="pgp_public_only">nur öffentlich</string>
   <string name="invalid_gpg_id_dialog_title">Leere oder fehlerhaft formatierte .gpg-id-Datei</string>

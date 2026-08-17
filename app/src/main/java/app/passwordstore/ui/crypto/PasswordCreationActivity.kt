@@ -16,6 +16,7 @@ import android.provider.MediaStore
 import android.text.InputType
 import android.view.MenuItem
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.core.content.edit
@@ -38,12 +39,14 @@ import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.OtpImportDialogFragment
 import app.passwordstore.ui.dialogs.PasswordGeneratorDialogFragment
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.folderselect.SelectFolderActivity
 import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.util.autofill.AutofillPreferences
 import app.passwordstore.util.crypto.AESEncryption
 import app.passwordstore.util.extensions.asLog
 import app.passwordstore.util.extensions.base64
+import app.passwordstore.util.extensions.commitSavedChange
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.isInsideRepository
@@ -89,6 +92,9 @@ import logcat.logcat
 class PasswordCreationActivity : BasePGPActivity() {
 
   @PasswordHistory @Inject lateinit var passwordHistory: SharedPreferences
+
+  /** Everything typed here lives only here until it is saved, so a refused key never ends it. */
+  override val leavesOnKeyRefusal = false
 
   private val binding by viewBinding(PasswordCreationActivityBinding::inflate)
   @Inject lateinit var passwordEntryFactory: PasswordEntry.Factory
@@ -178,8 +184,57 @@ class PasswordCreationActivity : BasePGPActivity() {
       }
     }
 
+  /**
+   * Asks before dropping what has been typed.
+   *
+   * Everything on this screen is held here and nowhere else until it is saved, so leaving is the
+   * one way to lose it — and a back gesture is easy to make by accident on the way to somewhere
+   * else in the entry.
+   *
+   * Only once there is something to lose: asking on the way out of a screen nothing was done to
+   * is a question with one sensible answer, which teaches the answer rather than the question.
+   */
+  private val confirmDiscard =
+    object : OnBackPressedCallback(false) {
+      override fun handleOnBackPressed() {
+        WarningDialog.show(
+          context = this@PasswordCreationActivity,
+          titleRes =
+            if (editing) R.string.password_discard_edit_title else R.string.password_discard_title,
+          messageRes =
+            if (editing) R.string.password_discard_edit_message
+            else R.string.password_discard_message,
+          proceedLabelRes = R.string.password_discard_confirm,
+        ) {
+          setResult(RESULT_CANCELED)
+          // Said on the way out, the way a save says what it did: this screen is going, and the
+          // notice is picked up by whichever one comes up behind it.
+          Notice.show(
+            this@PasswordCreationActivity,
+            if (editing) R.string.notice_changes_discarded else R.string.notice_password_discarded,
+          )
+          isEnabled = false
+          onBackPressedDispatcher.onBackPressed()
+        }
+      }
+    }
+
+  /**
+   * Whether anything on this screen has been changed since it opened, and so is there to lose.
+   *
+   * Set by the fields themselves rather than by comparing against what they started with: the
+   * comparison would mean keeping a second copy of the password in a String, which is the one
+   * shape of memory this app cannot wipe when it is done.
+   */
+  private var edited = false
+    set(value) {
+      field = value
+      confirmDiscard.isEnabled = value
+    }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    onBackPressedDispatcher.addCallback(this, confirmDiscard)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
     title =
       if (editing) getString(R.string.edit_password) else getString(R.string.new_password_title)
@@ -325,6 +380,18 @@ class PasswordCreationActivity : BasePGPActivity() {
     listOf(binding.filename, binding.username, binding.extraContent).forEach {
       it.doAfterTextChanged { updateViewState() }
     }
+    // Attached last, once every field has been filled in with what the screen opened on, so that
+    // filling them in is not itself mistaken for the user changing something. The folder field is
+    // in here too: it is written by the folder picker, and moving an entry is a change like any
+    // other.
+    listOf(
+        binding.filename,
+        binding.username,
+        binding.password,
+        binding.extraContent,
+        binding.directory,
+      )
+      .forEach { it.doAfterTextChanged { edited = true } }
     updateViewState()
   }
 
@@ -462,9 +529,11 @@ class PasswordCreationActivity : BasePGPActivity() {
               .distinct()
           } else emptyList()
         } else emptyList()
-      // pass enters the key ID into `.gpg-id`.
-      val gpgIdentifiers = entryKeys.ifEmpty { getPGPIdentifiers(directory.text.toString()) }
-      if (gpgIdentifiers.isNullOrEmpty()) return@with
+      // Whatever the caller settled on: the folder's own keys in the ordinary case, and the key
+      // chosen by hand where the folder named one this device does not have. Re-reading .gpg-id
+      // here instead threw that choice away and encrypted to the missing key all over again.
+      val gpgIdentifiers = entryKeys.ifEmpty { identifiers }
+      if (gpgIdentifiers.isEmpty()) return@with
 
       val path = run { // password item's full file path string
         val editRelativePath = directory.text.toString().trim()
@@ -594,9 +663,6 @@ class PasswordCreationActivity : BasePGPActivity() {
             entry.clear()
           }
 
-          // Committing is left to the screen this one returns to, which does it in the background
-          // while the entry is already on show. Waiting for git here held the editor open over the
-          // entry it had just written, for as long as a commit takes — signing prompt and all.
           val commitMessageRes =
             if (editing) R.string.git_commit_edit_text else R.string.git_commit_add_text
           val commitMessage =
@@ -608,23 +674,32 @@ class PasswordCreationActivity : BasePGPActivity() {
           editPass?.wipe()
           editUsername?.wipe()
           editExtra?.wipe()
-          // A new entry opens on itself, so the password can be copied or read without finding it
-          // in the list again. Editing returns to the entry it came from instead, which is already
-          // behind this screen.
-          // Whoever ends up in front does the committing, and only one of them: a new entry is
-          // opened here and hands it that screen, while an edit goes back to the entry it came
-          // from, which is waiting behind this one.
           // What the save touched, so a commit that fails can put it all back: the file written,
-          // and the one it was moved from. Left where only this app can pick it up, since the
-          // screen that does the committing can be opened by anyone.
+          // and the one it was moved from.
           PendingCommit.record(
             commitMessage,
             listOfNotNull(passwordFile.absolutePathString(), renamedFrom?.absolutePath),
           )
+          // Committing happens here, before this screen goes anywhere, and the screen only goes if
+          // it worked. Handing the commit to whatever came next meant a signing prompt backed out
+          // of took the entry back with it, from a screen the user had already been returned to —
+          // the work gone and nothing left to retype it from. Waiting costs the length of a commit
+          // and leaves the editor holding everything that was typed.
           val leave = {
-            setResult(RESULT_OK, returnIntent)
-            if (!editing) openSavedEntry(passwordFile.absolutePathString(), savedEntry)
-            finish()
+            lifecycleScope.launch {
+              if (commitSavedChange().isOk) {
+                setResult(RESULT_OK, returnIntent)
+                // A new entry opens on itself, so the password can be copied or read without
+                // finding it in the list again. Editing returns to the entry it came from
+                // instead, which is already behind this screen.
+                if (!editing) openSavedEntry(passwordFile.absolutePathString(), savedEntry)
+                finish()
+              }
+              // A commit that failed has put the files back the way the last one had them, so what
+              // was typed exists only on this screen again. It stays open, and stays worth asking
+              // about on the way out.
+            }
+            Unit
           }
           if (failedUserEmails.isEmpty()) {
             // Nothing went wrong, so it is said in passing — on whichever screen comes next,

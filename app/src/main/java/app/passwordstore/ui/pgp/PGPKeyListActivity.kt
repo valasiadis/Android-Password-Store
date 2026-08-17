@@ -66,6 +66,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.security.SecureRandom
 import javax.inject.Inject
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 import logcat.LogPriority.ERROR
@@ -127,12 +128,19 @@ class PGPKeyListActivity : AppCompatActivity() {
     val selectedKeyIds = mutableStateSetOf<String>()
 
     // Keys already in use by whatever opened this screen, so it starts out showing them.
+    //
+    // Held as this screen's own spelling rather than the caller's: a .gpg-id may name a key by
+    // fingerprint, in capitals, or with an 0x in front, and a row that hands back the key it was
+    // drawn from can only ever remove the one spelling it knows. Tapping a key off the list left
+    // the caller's wording of it sitting in the set, so the key came back on confirmation.
     val preselectedKeys =
       intent
         .getStringExtra(EXTRA_PRESELECTED_KEYS)
         ?.split("\n")
         ?.filter { it.isNotBlank() }
         .orEmpty()
+        .map { line -> PGPIdentifier.fromString(line)?.toString() ?: line }
+        .distinct()
     selectedKeyIds.addAll(preselectedKeys)
     // What the caller arrived with, to tell an actual change from merely looking.
     val initialKeyIds = preselectedKeys.toSet()
@@ -205,6 +213,19 @@ class PGPKeyListActivity : AppCompatActivity() {
           },
         ) { paddingValues ->
           Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+            // Compared as key IDs rather than as text: a .gpg-id may name a key it holds by
+            // fingerprint, in capitals, or with an 0x in front, and none of those spellings match
+            // what a KeyId prints as — which showed a key the app has as one it has not.
+            val heldKeyIds = viewModel.keys.mapNotNull { it.first }.toSet()
+            // Only meaningful once the key set has arrived; before that nothing looks held.
+            val missingKeys =
+              if (viewModel.keys.isEmpty()) persistentListOf()
+              else
+                preselectedKeys
+                  .mapNotNull { PGPIdentifier.fromString(it) as? KeyId }
+                  .filterNot { it in heldKeyIds }
+                  .distinct()
+                  .toImmutableList()
             KeyList(
               identifiers = viewModel.keys, // Pair<KeyId,UserId>
               isSecretKey = ::isSecretKey,
@@ -217,13 +238,18 @@ class PGPKeyListActivity : AppCompatActivity() {
               onKeySelected =
                 if (isSelectingKeys) {
                   { identifier, isSelected ->
-                    val keyId = run { // ensure numeric key ID
-                      val key = pgpKeyManager.getKeyById(identifier).getOrThrow()
-                      KeyUtils.tryGetKeyId(key) ?: throw NullPointerException()
+                    // A row hands back the key id it was drawn from, which is all this needs —
+                    // and is the only thing to be had for a key the app no longer holds. Anything
+                    // else is looked up, and a lookup that fails is ignored rather than thrown:
+                    // asking about a deleted key used to take the screen down with it.
+                    val keyId =
+                      identifier as? KeyId
+                        ?: pgpKeyManager.getKeyById(identifier).get()?.let(KeyUtils::tryGetKeyId)
+                    if (keyId != null) {
+                      if (singleSelection) selectedKeyIds.clear()
+                      if (isSelected) selectedKeyIds.add(keyId.toString())
+                      else selectedKeyIds.remove(keyId.toString())
                     }
-                    if (singleSelection) selectedKeyIds.clear()
-                    if (isSelected) selectedKeyIds.add(keyId.toString())
-                    else selectedKeyIds.remove(keyId.toString())
                   }
                 } else null,
               singleSelection = singleSelection,
@@ -231,6 +257,7 @@ class PGPKeyListActivity : AppCompatActivity() {
                 preselectedKeys
                   .mapNotNull { PGPIdentifier.fromString(it) as? KeyId }
                   .toImmutableList(),
+              missingKeys = missingKeys,
               offerInherit = offerInherit,
               inheritInitially = inheritInitially,
               onInheritChanged = { inheritSelected = it },
@@ -343,7 +370,7 @@ class PGPKeyListActivity : AppCompatActivity() {
         appendLine(getString(R.string.pgp_key_info_email, it))
       }
       cryptoRepository.getLongKeyIdFromKeyId(identifier)?.let {
-        appendLine(getString(R.string.pgp_key_info_key_id, it))
+        appendLine(getString(R.string.pgp_key_info_key_id, "0x$it"))
       }
       fingerprint?.let { appendLine(getString(R.string.pgp_key_info_fingerprint, it)) }
       append(getString(R.string.pgp_key_info_type, type))

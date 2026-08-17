@@ -146,12 +146,25 @@ class DecryptActivity : BasePGPActivity() {
       showCachedEntry(cachedEntry.first, cachedEntry.second)
       return
     }
+    // What can open this entry is asked of the entry, as gpg asks it: the message names the keys
+    // it was encrypted to, and the folder's .gpg-id says only what future saves there go to. A
+    // folder naming a key this device lacks used to refuse an entry that was encrypted to a key it
+    // has, and a folder naming a key it has waved through entries that were not encrypted to it.
     requireKeysExist {
-      requireDecryptionKeysExist(relativeParentPath) { ids ->
-        lifecycleScope.launch {
-          val keys = withContext(dispatcherProvider.io()) { keysForEntry(ids) }
-          getPersistentAndDecrypt(keys)
+      lifecycleScope.launch {
+        val entryFile = File(fullPath)
+        val keys =
+          withContext(dispatcherProvider.io()) {
+            decryptionCandidates(entryFile, relativeParentPath)
+          }
+        if (keys.isEmpty()) {
+          // Named, so the user can see which key to go and find rather than being told only that
+          // some key is missing.
+          val recipients = withContext(dispatcherProvider.io()) { entryRecipients(entryFile) }
+          reportUnopenable(recipients)
+          return@launch
         }
+        getPersistentAndDecrypt(keys)
       }
     }
   }
@@ -161,34 +174,6 @@ class DecryptActivity : BasePGPActivity() {
     encryptedEntryChars?.wipe()
     itemsAdapter?.clearItems()
     super.onDestroy()
-  }
-
-  /**
-   * The keys to open this entry with, which is a question about the entry rather than about the
-   * folder holding it: one saved under another key — moved off a smartcard, say — would otherwise
-   * be sent to the key the folder names, and refused by a card it was never a recipient of.
-   *
-   * Answered with the folder's own identifiers wherever they name the same keys the entry does, so
-   * that what is asked for, what is cached against it, and what decrypts stay one and the same
-   * list. Only an entry encrypted outside its folder's .gpg-id is described by the message alone.
-   */
-  private fun keysForEntry(folderIds: List<PGPIdentifier>): List<PGPIdentifier> {
-    val recipients = entryRecipients()
-    if (recipients.isEmpty()) return preferringLocal(folderIds)
-    // Every recipient this store holds a key for, named the way the folder names it where the
-    // folder names it at all — the folder's wording is what cached passphrases are filed under, so
-    // it is kept where possible. A recipient the folder does not mention is still one of the
-    // entry's keys, though, and dropping it for that reason is what kept sending an entry with a
-    // local key to the card the folder does mention.
-    val folderByKey = folderIds.associateBy { repository.getLongKeyIdFromKeyId(it) }
-    val entryKeys =
-      recipients
-        .mapNotNull { recipient ->
-          folderByKey[repository.getLongKeyIdFromKeyId(recipient)]
-            ?: recipient.takeIf { repository.hasKey(it) && repository.hasDecKey(it) }
-        }
-        .distinct()
-    return preferringLocal(entryKeys.ifEmpty { folderIds })
   }
 
   /**
@@ -210,35 +195,25 @@ class DecryptActivity : BasePGPActivity() {
         .also { staged.delete() }
     }
 
-  /** The keys this entry names as its recipients, empty when the message will not say. */
-  private fun entryRecipients(): List<PGPIdentifier> =
-    File(fullPath).inputStream().use { repository.recipientKeyIds(it) }
-
-  /**
-   * The keys among [keys] that are held locally, or all of them when none is.
-   *
-   * A local key is always to hand, while a card has to be found, presented and its PIN entered, so
-   * an entry encrypted to both is opened by the local one and never asks for the card. Chosen here
-   * rather than at decryption time so that the passphrase gathered, the passphrase cached and the
-   * key that decrypts are all the same key.
-   */
-  private fun preferringLocal(keys: List<PGPIdentifier>): List<PGPIdentifier> =
-    keys
-      .filter { !repository.isSmartcardBacked(it) && !repository.hasOnlyStubDecKey(it) }
-      .ifEmpty { keys }
-
   override suspend fun decryptWithPassphrase(
     passphrases: Map<String, CharArray?>,
     identifiers: List<PGPIdentifier>,
     onSuccess: suspend (String) -> Unit,
   ) {
-    if (identifiers.any { repository.hasOnlyStubDecKey(it) || repository.isSmartcardBacked(it) }) {
-      decryptWithSmartcard(passphrases, identifiers, onSuccess)
+    // A card is asked for only when nothing else can open the entry. This used to go to the card
+    // the moment any candidate was on one, so an entry encrypted to both a card and a local key
+    // asked for the card anyway — the ordering of the candidates counted for nothing.
+    val cardKeys = identifiers.filter {
+      repository.isSmartcardBacked(it) || repository.hasOnlyStubDecKey(it)
+    }
+    val localKeys = identifiers - cardKeys.toSet()
+    if (localKeys.isEmpty()) {
+      decryptWithSmartcard(passphrases, cardKeys, onSuccess)
       return
     }
     val message = withContext(dispatcherProvider.io()) { File(fullPath).readBytes().inputStream() }
     val outputStream = ByteArrayOutputStream()
-    val results = repository.decrypt(passphrases, identifiers, message, outputStream)
+    val results = repository.decrypt(passphrases, localKeys, message, outputStream)
     val lastResult = results.last()
     if (lastResult.second.isOk) {
       val decryptedEntryBytes = lastResult.second.getOrThrow().toByteArray()
@@ -277,9 +252,21 @@ class DecryptActivity : BasePGPActivity() {
         /* Retry */
         decrypt(identifiers, isError = true)
       } else if (
+        cardKeys.isNotEmpty() &&
+          results.filter { it.second.getError() is NoDecryptionKeyAvailableException }.any()
+      ) {
+        // The local keys turned out not to fit; the card is the remaining candidate.
+        decryptWithSmartcard(passphrases, cardKeys, onSuccess)
+      } else if (
         results.filter { it.second.getError() is NoDecryptionKeyAvailableException }.any()
       ) {
-        ErrorDialog.show(this@DecryptActivity, R.string.password_decryption_no_decryption_key)
+        // Nothing here can be shown without a key this device does not have, so the screen goes
+        // once that has been read rather than sitting there with an entry it cannot open.
+        ErrorDialog.show(
+          this@DecryptActivity,
+          R.string.password_decryption_no_decryption_key,
+          onDismiss = { finish() },
+        )
       } else {
         ErrorDialog.show(this@DecryptActivity, R.string.password_decryption_unknown_error)
       }
@@ -312,17 +299,37 @@ class DecryptActivity : BasePGPActivity() {
       val outcome =
         prompt.runWithPin(
           reader = reader,
-          // Namespaced so the decryption PIN cache is kept separate from the signing PIN cache,
-          // and named by the card's key rather than by whatever the store called it.
-          cacheKey = "decrypt:${identifiers.firstOrNull()?.let(::passphraseCacheKey)}",
+          // Namespaced so the decryption PIN cache is kept separate from the signing PIN cache.
+          // Only the namespace before the colon survives: the prompt files a PIN under the card
+          // that answered, since a PIN belongs to a card rather than to a PGP key. The rest is the
+          // fallback for a card that would not say what it was, and names every card key in play
+          // rather than merely the first of them — that shifted with the order the candidates came
+          // in and filed one card's PIN under another's name.
+          cacheKey =
+            "decrypt:" +
+              identifiers.map(::passphraseCacheKey).distinct().sorted().joinToString(","),
           pinTitleRes = R.string.openpgp_card_pin_title,
           pinHintRes = R.string.openpgp_card_pin_hint,
           identityLabel = getIdentityLabelForIdentifiers(identifiers),
           pinMode = OpenPgpCardPrompt.PinMode.USER,
           presentMessage = getString(R.string.openpgp_nfc_tap_card),
           commFailedMessage = getString(R.string.openpgp_nfc_card_comm_failed),
-          // Seed the PIN from a caller-provided (e.g. biometric-unlocked) value.
-          seedPin = passphrases.values.firstOrNull()?.takeIf { it.isNotEmpty() },
+          // A seeded secret the card turns down is dropped from the persistent store too, or it is
+          // handed straight back to the card next time. A key that was once a software key keeps
+          // its old passphrase there, and that passphrase is not this card's PIN. Only reached for
+          // a secret that came from here: a PIN the user mistyped at the prompt leaves the store
+          // alone, or one slip would cost them their enrolment.
+          onPinRejected = {
+            identifiers.map(::passphraseCacheKey).forEach { key ->
+              persistentPassphrases.edit { remove(key) }
+              unlockPins.edit { remove(key) }
+            }
+          },
+          seedPin =
+            identifiers
+              .map(::passphraseCacheKey)
+              .firstNotNullOfOrNull { key -> passphrases[key] }
+              ?.takeIf { it.isNotEmpty() },
         ) { card, currentPin ->
           val results =
             repository.decryptWithSmartcard(
@@ -436,7 +443,9 @@ class DecryptActivity : BasePGPActivity() {
       // subkey it was addressed to, and that matches nothing in the list.
       val current =
         withContext(dispatcherProvider.io()) {
-          entryRecipients().mapNotNull { repository.getLongKeyIdFromKeyId(it) }.distinct()
+          entryRecipients(File(fullPath))
+            .mapNotNull { repository.getLongKeyIdFromKeyId(it) }
+            .distinct()
         }
       reencryptAction.launch(
         PGPKeyListActivity.newIntent(
@@ -482,7 +491,7 @@ class DecryptActivity : BasePGPActivity() {
    * This is where an entry's keys and its folder's .gpg-id part company, deliberately: pass allows
    * one file to be readable by a different key from its neighbours, and the .gpg-id keeps deciding
    * what *new* saves in that folder are encrypted to. Opening an entry therefore asks the entry
-   * (see [keysForEntry]) rather than the folder.
+   * (see [decryptionCandidates]) rather than the folder.
    *
    * Only this entry changes: the folder keeps its own key, and pass is content for one file to be
    * readable by a different key from its neighbours. The plaintext never leaves memory — it is the

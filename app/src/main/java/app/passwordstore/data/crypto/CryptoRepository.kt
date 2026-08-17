@@ -60,6 +60,10 @@ constructor(
   fun hasKeys(): Boolean =
     pgpKeyManager.getAllKeys().mapBoth(success = { it.isNotEmpty() }, failure = { false })
 
+  /** Every key this app holds, as identifiers — what gpg would search when a message names none. */
+  fun allKeyIds(): List<PGPIdentifier> =
+    pgpKeyManager.getAllKeys().get().orEmpty().mapNotNull(KeyUtils::tryGetKeyId)
+
   /** How many keys this store holds, which says whether there is another one to change to. */
   fun keyCount(): Int = pgpKeyManager.getAllKeys().mapBoth(success = { it.size }, failure = { 0 })
 
@@ -163,6 +167,10 @@ constructor(
     encryptedMessage: ByteArrayInputStream,
     message: ByteArrayOutputStream,
   ) = run {
+    // No passphrase offered at all reads the same as one that is empty: a key that wants nothing
+    // opens either way, and a key that wants something says so. Asking an empty map for its first
+    // entry threw instead.
+    @Suppress("NAME_SHADOWING") val passphrases = passphrases.ifEmpty { mapOf("" to null) }
     if (passphrases.keys.first() == "") { // New passphrase from user input
       // Test it against the PGP identities of current entry
       identities.mapUntil({ it.second.isOk }) { id ->

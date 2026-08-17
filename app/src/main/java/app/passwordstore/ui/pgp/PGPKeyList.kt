@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,7 @@ import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.crypto.PGPIdentifier.KeyId
 import app.passwordstore.crypto.PGPIdentifier.UserId
+import app.passwordstore.crypto.displayName
 import app.passwordstore.ui.compose.theme.APSTheme
 import app.passwordstore.ui.compose.theme.SpacingLarge
 import app.passwordstore.util.extensions.conditional
@@ -83,6 +85,14 @@ fun KeyList(
   isKeyEnabled: (identifier: PGPIdentifier) -> Boolean = { true },
   initiallySelectedKeys: ImmutableList<KeyId> = persistentListOf(),
   /**
+   * Keys the caller is set to that this device does not hold — a store cloned from elsewhere, or a
+   * key since deleted. Shown so the current answer is visible rather than silently absent, marked
+   * as absent, and selectable like any other: a store is usually shared, and a key that is no help
+   * here may be exactly the key the machine at the other end opens its entries with. Dropping one
+   * is the user's decision to stop encrypting to whoever holds it, not this screen's.
+   */
+  missingKeys: ImmutableList<KeyId> = persistentListOf(),
+  /**
    * Whether "the folder above decides" is one of the choices, and what it currently is. A folder
    * with no key of its own uses its parent's, which is a real answer to "which key?" and belongs in
    * the same list as the keys — it is how a folder goes back to following its parent.
@@ -104,7 +114,7 @@ fun KeyList(
       if (singleSelection && SshKey.pgpLongKeyId != 0L && isEmpty()) add(KeyId(SshKey.pgpLongKeyId))
     }
   }
-  if (identifiers.isEmpty()) {
+  if (identifiers.isEmpty() && missingKeys.isEmpty()) {
     Column(
       modifier = modifier.fillMaxSize(),
       verticalArrangement = Arrangement.Center,
@@ -141,6 +151,24 @@ fun KeyList(
           )
         }
       }
+      items(missingKeys) { keyId ->
+        MissingKeyItem(
+          keyId = keyId,
+          isSelected = onKeySelected != null && keyId in selectedKeys,
+          onSelectedChange =
+            if (onKeySelected != null) {
+              { isSelected ->
+                if (singleSelection) selectedKeys.clear()
+                if (isSelected) selectedKeys.add(keyId) else selectedKeys.remove(keyId)
+                if (isSelected && inheritSelected) {
+                  inheritSelected = false
+                  onInheritChanged(false)
+                }
+                onKeySelected(keyId, isSelected)
+              }
+            } else null,
+        )
+      }
       items(identifiers) { identifier ->
         KeyItem(
           identifier = identifier,
@@ -173,6 +201,75 @@ fun KeyList(
         )
       }
     }
+  }
+}
+
+/**
+ * A key the folder is set to that is not held on this device: chosen like any other, and said to be
+ * absent.
+ *
+ * Absent here does not mean useless. A store is usually shared, and the entries in it are usually
+ * encrypted to everyone who reads them — so a key this device cannot open anything with is
+ * routinely the one the machine at the other end depends on. Dimmed to say it will be no help
+ * here, and left selectable so that keeping it stays the user's call.
+ */
+@Composable
+private fun MissingKeyItem(
+  keyId: KeyId,
+  isSelected: Boolean,
+  onSelectedChange: ((Boolean) -> Unit)?,
+) {
+  val rowShape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium))
+  Row(
+    modifier =
+      Modifier.fillMaxWidth()
+        .padding(
+          horizontal = dimensionResource(R.dimen.spacing_small),
+          vertical = dimensionResource(R.dimen.spacing_xsmall),
+        )
+        .clip(rowShape)
+        .background(
+          if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+          else MaterialTheme.colorScheme.surfaceVariant
+        )
+        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, rowShape)
+        .conditional(onSelectedChange != null) {
+          toggleable(value = isSelected, onValueChange = { onSelectedChange?.invoke(it) })
+        }
+        .heightIn(min = 48.dp)
+        .padding(horizontal = dimensionResource(R.dimen.activity_horizontal_margin)),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Icon(
+      painter =
+        painterResource(id = if (isSelected) R.drawable.ic_done_24dp else R.drawable.ic_key_24dp),
+      contentDescription =
+        if (isSelected) stringResource(R.string.pgp_key_selected_indicator) else null,
+      tint =
+        if (isSelected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_ALPHA),
+      modifier = Modifier.size(24.dp),
+    )
+    Spacer(modifier = Modifier.width(SpacingLarge))
+    Text(
+      text = keyId.displayName,
+      color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_ALPHA),
+      fontSize = 18.sp,
+      overflow = TextOverflow.Ellipsis,
+      maxLines = 1,
+    )
+    Spacer(modifier = Modifier.width(SpacingLarge))
+    // Beside the name rather than beneath it: one line, as every other row here is, with the note
+    // taking whatever room the name leaves.
+    Text(
+      text = stringResource(R.string.pgp_key_missing_label),
+      modifier = Modifier.weight(1f),
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_ALPHA),
+      textAlign = TextAlign.End,
+      overflow = TextOverflow.Ellipsis,
+      maxLines = 1,
+    )
   }
 }
 

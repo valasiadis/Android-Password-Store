@@ -35,10 +35,20 @@ fun View.showsTip(@StringRes tip: Int) {
       View.MeasureSpec.makeMeasureSpec(screenWidth, View.MeasureSpec.AT_MOST),
       View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
     )
-    // Dropped from the mark that was tapped, and pulled back where that would take it off the
-    // screen: a tip half past the edge explains half of what it was asked.
+    // Centred under the mark that was tapped, and pulled back where that would take it off the
+    // screen: a tip half past the edge explains half of what it was asked. A mark near one side of
+    // the screen therefore keeps its tip inside it rather than centred on the mark.
     val anchorLeft = IntArray(2).also(anchor::getLocationOnScreen)[0]
-    val overflow = anchorLeft + binding.root.measuredWidth + margin - screenWidth
+    val tipWidth = binding.root.measuredWidth
+    val centred = (anchor.width - tipWidth) / 2
+    val offset =
+      centred.coerceIn(
+        // Never past either margin, and never so far back that a tip wider than the room left
+        // between the margins is pushed off the side it was pulled towards.
+        minimumValue = margin - anchorLeft,
+        maximumValue =
+          (screenWidth - margin - tipWidth - anchorLeft).coerceAtLeast(margin - anchorLeft),
+      )
     PopupWindow(
         binding.root,
         ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -47,7 +57,7 @@ fun View.showsTip(@StringRes tip: Int) {
       .apply {
         isOutsideTouchable = true
         isFocusable = true
-        showAsDropDown(anchor, minOf(0, -overflow), 0)
+        showAsDropDown(anchor, offset, 0)
       }
   }
 }

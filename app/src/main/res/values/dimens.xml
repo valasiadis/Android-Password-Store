@@ -50,9 +50,6 @@
   <dimen name="activity_horizontal_margin">16dp</dimen>
   <dimen name="activity_vertical_margin">16dp</dimen>
   <dimen name="fab_compat_margin">16dp</dimen>
-  <!-- The search field between the two buttons, as tall as they are. -->
-  <!-- Narrow enough that the sentence under the heading falls into two lines. -->
-  <dimen name="repo_type_description_width">260dp</dimen>
   <!--
     Material leaves 14dp above and below a dialog's buttons on top of the padding the panel itself
     carries, which on a two-line question reads as a gap rather than as spacing. Overriding the
@@ -62,6 +59,9 @@
   <dimen name="m3_alert_dialog_action_bottom_padding" tools:ignore="UnusedResources" tools:override="true">8dp</dimen>
   <!-- What a dialog leaves free at each side of the screen. -->
   <dimen name="dialog_inset">24dp</dimen>
+  <!-- The mark beside the app's name on the screen that opens the app for the first time. -->
+  <dimen name="onboarding_app_icon_size">80dp</dimen>
+  <!-- The search field between the two buttons, as tall as they are. -->
   <dimen name="search_bar_height">56dp</dimen>
   <!-- What that field leaves free on each side for those buttons. -->
   <dimen name="search_bar_side_room">88dp</dimen>

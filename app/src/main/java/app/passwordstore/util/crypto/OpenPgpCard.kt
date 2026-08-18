@@ -30,8 +30,15 @@ import logcat.LogPriority.WARN
 import logcat.asLog
 import logcat.logcat
 
+/**
+ * An OpenPGP card, reached over whatever [CardTransport] it turned up on.
+ *
+ * Everything here is the card's own protocol as the OpenPGP Card specification defines it: which
+ * APDU asks what, how a long answer is fetched in pieces, what a status word means. None of it
+ * knows whether the card is held against the phone or plugged into it.
+ */
 class OpenPgpCard(
-  private val isoDep: IsoDep,
+  private val transport: CardTransport,
   private val onClose: () -> Unit = {},
 ) : AutoCloseable {
 
@@ -166,25 +173,24 @@ class OpenPgpCard(
   }
 
   /**
-   * Whether the card is still within the reader field. Actively probes with a benign read command
-   * rather than trusting [IsoDep.isConnected], whose cached presence state can stay `true` after
-   * the card has physically left the field. Uses a short transceive timeout so a removed card is
-   * reported quickly instead of blocking for the (long) signing timeout before throwing.
+   * Whether the card is still there. Actively probes with a benign read command rather than
+   * trusting whatever the transport believes about its own connection, since a cached presence
+   * state can stay `true` after the card has physically left. Uses a short timeout so a card that
+   * has gone is reported quickly instead of blocking for the (long) signing timeout before throwing.
    */
   fun isPresent(): Boolean = runCatching {
-    isoDep.timeout = PRESENCE_PROBE_TIMEOUT_MS
-    isoDep.transceive(GET_APPLICATION_RELATED_DATA)
+    transport.transceive(GET_APPLICATION_RELATED_DATA, PRESENCE_PROBE_TIMEOUT_MS)
     true
   }
     .getOr(false)
 
   override fun close() {
-    runCatching { isoDep.close() }
+    runCatching { transport.close() }
     onClose()
   }
 
   private fun transceive(command: ByteArray): ByteArray {
-    val response = isoDep.transceive(command)
+    val response = transport.transceive(command)
     if (response.size < 2) throw IOException("Malformed NFC response")
     val sw1 = response[response.size - 2].toInt() and 0xff
     val sw2 = response[response.size - 1].toInt() and 0xff
@@ -231,7 +237,7 @@ class OpenPgpCard(
     payload: ByteArray,
     expectedLength: Int,
   ): ByteArray {
-    val chunkSize = (isoDep.maxTransceiveLength - 6).coerceIn(1, MAX_APDU_NC)
+    val chunkSize = (transport.maxTransceiveLength - 6).coerceIn(1, MAX_APDU_NC)
     var offset = 0
     var response = byteArrayOf()
     while (offset < payload.size) {
@@ -408,9 +414,8 @@ class OpenPgpCard(
               ?: throw IOException(activity.getString(R.string.openpgp_nfc_not_iso_dep))
           activity.runOnUiThread { onCardDetected() }
           isoDep.connect()
-          isoDep.timeout = 30_000
           val card =
-            OpenPgpCard(isoDep) {
+            OpenPgpCard(IsoDepTransport(isoDep)) {
               if (disableReaderModeOnClose) {
                 activity.runOnUiThread { disableReaderMode(activity) }
               }
@@ -591,9 +596,8 @@ private constructor(private val activity: Activity, private val adapter: NfcAdap
       val isoDep = IsoDep.get(tag) ?: continue
       try {
         isoDep.connect()
-        isoDep.timeout = 30_000
         onCardDetected()
-        val card = OpenPgpCard(isoDep)
+        val card = OpenPgpCard(IsoDepTransport(isoDep))
         card.selectOpenPgpApplet()
         return card
       } catch (e: OpenPgpCardStatusException) {

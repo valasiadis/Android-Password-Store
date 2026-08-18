@@ -8,6 +8,7 @@ package app.passwordstore.util.crypto
 import android.app.Activity
 import android.content.Context
 import app.passwordstore.R
+import com.github.michaelbull.result.runCatching
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation

@@ -40,7 +40,6 @@ import com.github.michaelbull.result.get
 import com.github.michaelbull.result.getError
 import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.onErr
-import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
@@ -49,6 +48,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.URL
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -161,34 +161,35 @@ class PGPKeyImportActivity : AppCompatActivity() {
           progressDialog.setMessage(
             cardPresentMessage(this@PGPKeyImportActivity, reader.connections)
           )
-          runCatching {
-            val card =
-              withContext(dispatcherProvider.io()) {
-                reader.awaitCard { connection ->
-                  runOnUiThread {
-                    progressDialog.setTitle(R.string.openpgp_card_hold_title)
-                    progressDialog.setMessage(
-                      cardHoldMessage(this@PGPKeyImportActivity, connection)
-                    )
+          val cardInfo =
+            try {
+              val card =
+                withContext(dispatcherProvider.io()) {
+                  reader.awaitCard { connection ->
+                    runOnUiThread {
+                      progressDialog.setTitle(R.string.openpgp_card_hold_title)
+                      progressDialog.setMessage(
+                        cardHoldMessage(this@PGPKeyImportActivity, connection)
+                      )
+                    }
                   }
                 }
-              }
-            withContext(dispatcherProvider.io()) { card.use { it.readCardInfo() } }
-          }
-            .onOk { cardInfo ->
-              progressDialog.dismiss()
-              setupSmartcardKey(cardInfo)
-              return@launch
-            }
-            .onErr { e ->
+              withContext(dispatcherProvider.io()) { card.use { it.readCardInfo() } }
+            } catch (e: CancellationException) {
+              // The user pressed cancel, which is what took this wait down. There is nobody left to
+              // report it to: the screen is already on its way out.
+              throw e
+            } catch (e: Throwable) {
               logcat(ERROR) { e.asLog() }
               // A card that slipped mid-read is simply asked for again; anything else is reported.
-              if (!OpenPgpCard.isTransceiveFailure(e)) {
-                progressDialog.dismiss()
-                showCardErrorDialog(e.message ?: getString(R.string.pgp_key_import_failed))
-                return@launch
-              }
+              if (OpenPgpCard.isTransceiveFailure(e)) continue
+              progressDialog.dismiss()
+              showCardErrorDialog(e.message ?: getString(R.string.pgp_key_import_failed))
+              return@launch
             }
+          progressDialog.dismiss()
+          setupSmartcardKey(cardInfo)
+          return@launch
         }
       }
   }

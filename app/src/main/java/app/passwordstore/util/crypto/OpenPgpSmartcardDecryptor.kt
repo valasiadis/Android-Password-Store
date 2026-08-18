@@ -114,7 +114,7 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
     pin: CharArray,
     ciphertextStream: InputStream,
     outputStream: OutputStream,
-    card: OpenPgpNfcCard,
+    card: OpenPgpCard,
     cardFingerprints: List<ByteArray>,
   ) {
     val cert = KeyUtils.tryParseCertificateOrKey(key) ?: throw PGPException("Invalid PGP key")
@@ -147,7 +147,7 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
         try {
           candidate to candidate.getSessionKey(decryptorFactory)
         } catch (e: Throwable) {
-          if (OpenPgpNfcCard.isTransceiveFailure(e)) throw e
+          if (OpenPgpCard.isTransceiveFailure(e)) throw e
           if (e.isCardAuthenticationFailure()) throw e
           if (firstFailure == null) firstFailure = e as? Exception
           null
@@ -204,7 +204,7 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
   }
 
 
-  private class OpenPgpCardDecryptorFactory(private val card: OpenPgpNfcCard) :
+  private class OpenPgpCardDecryptorFactory(private val card: OpenPgpCard) :
     AbstractPublicKeyDataDecryptorFactory() {
 
     private val contentDecryptorFactory = BcPublicKeyDataDecryptorFactory(null)

@@ -17,7 +17,7 @@ import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.CardReader
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
-import app.passwordstore.util.crypto.OpenPgpNfcCard
+import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import app.passwordstore.util.crypto.SmartcardOperationHandledException
 import app.passwordstore.util.extensions.hideKeyboard
@@ -194,7 +194,7 @@ class OpenPgpCommitSigner(
       val publicKey = findCardSigningKey(key, cardFingerprints)
       val activeReader =
         runBlocking { prompt.createReader() }
-          ?: throw IOException(activity.getString(R.string.openpgp_nfc_unavailable))
+          ?: throw IOException(activity.getString(R.string.openpgp_card_reader_unavailable))
       reader = activeReader
       val outcome = runBlocking {
         prompt.runWithPin(
@@ -205,7 +205,7 @@ class OpenPgpCommitSigner(
           identityLabel = identityLabel(key),
           pinMode = OpenPgpCardPrompt.PinMode.SIGNATURE,
           presentMessage = activity.getString(R.string.git_signing_tap_card),
-          commFailedMessage = activity.getString(R.string.openpgp_nfc_card_comm_failed),
+          commFailedMessage = activity.getString(R.string.openpgp_card_comm_failed),
         ) { card, currentPin ->
           // The whole card exchange (applet select -> verify -> sign) runs on a single thread
           // with no hop, so a genuine wrong PIN reliably comes back as a card status word (e.g.
@@ -384,7 +384,7 @@ class OpenPgpCommitSigner(
   // to compute the signature.
   private class CardContentSignerBuilder(
     private val publicKey: PGPPublicKey,
-    private val card: OpenPgpNfcCard,
+    private val card: OpenPgpCard,
   ) : PGPContentSignerBuilder {
 
     override fun build(signatureType: Int, privateKey: PGPPrivateKey): PGPContentSigner {

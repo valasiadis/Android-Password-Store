@@ -29,7 +29,7 @@ import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.TextInputDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.OpenPgpCardInfo
-import app.passwordstore.util.crypto.OpenPgpNfcCard
+import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.get
@@ -93,8 +93,8 @@ class PGPKeyImportActivity : AppCompatActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    if (intent.getBooleanExtra(EXTRA_IMPORT_FROM_NFC, false)) {
-      importFromNfc()
+    if (intent.getBooleanExtra(EXTRA_IMPORT_FROM_CARD, false)) {
+      importFromCard()
       return
     }
     runCatching { pgpKeyImportAction.launch("*/*") }
@@ -105,48 +105,48 @@ class PGPKeyImportActivity : AppCompatActivity() {
   }
 
   override fun onDestroy() {
-    OpenPgpNfcCard.disableReaderMode(this)
+    OpenPgpCard.disableReaderMode(this)
     super.onDestroy()
   }
 
-  private fun importFromNfc() {
+  private fun importFromCard() {
     val progressDialog =
       MaterialAlertDialogBuilder(this)
-        .setTitle(R.string.openpgp_nfc_setup_title)
-        .setMessage(R.string.openpgp_nfc_tap_card)
+        .setTitle(R.string.openpgp_card_setup_title)
+        .setMessage(R.string.openpgp_card_present)
         .setNegativeButton(R.string.dialog_cancel, null)
         .setCancelable(true)
         .show()
     val cancelSignal = CompletableDeferred<Unit>()
     var canceled = false
-    fun cancelNfcDialog() {
+    fun cancelCardDialog() {
       if (cancelSignal.complete(Unit)) {
         canceled = true
-        OpenPgpNfcCard.disableReaderMode(this)
+        OpenPgpCard.disableReaderMode(this)
         progressDialog.dismiss()
         setResult(RESULT_CANCELED)
         finish()
       }
     }
     progressDialog.setCanceledOnTouchOutside(true)
-    progressDialog.setOnCancelListener { cancelNfcDialog() }
+    progressDialog.setOnCancelListener { cancelCardDialog() }
     progressDialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
-      cancelNfcDialog()
+      cancelCardDialog()
     }
     lifecycleScope.launch(dispatcherProvider.main()) {
       while (!canceled) {
-        progressDialog.setTitle(R.string.openpgp_nfc_setup_title)
-        progressDialog.setMessage(getString(R.string.openpgp_nfc_tap_card))
+        progressDialog.setTitle(R.string.openpgp_card_setup_title)
+        progressDialog.setMessage(getString(R.string.openpgp_card_present))
         runCatching {
           val card =
-            OpenPgpNfcCard.waitForCardOrNull(
+            OpenPgpCard.waitForCardOrNull(
               this@PGPKeyImportActivity,
               cancelSignal,
               disableReaderModeOnError = false,
               disableReaderModeOnClose = false,
               onCardDetected = {
-                progressDialog.setTitle(R.string.openpgp_nfc_hold_card_title)
-                progressDialog.setMessage(getString(R.string.openpgp_nfc_hold_card))
+                progressDialog.setTitle(R.string.openpgp_card_hold_title)
+                progressDialog.setMessage(getString(R.string.openpgp_card_hold))
               },
             ) ?: return@launch
           card.use { it.readCardInfo() }
@@ -157,12 +157,12 @@ class PGPKeyImportActivity : AppCompatActivity() {
             return@launch
           }
           .onErr { e ->
-            if (OpenPgpNfcCard.isTransceiveFailure(e)) {
+            if (OpenPgpCard.isTransceiveFailure(e)) {
               logcat(ERROR) { e.asLog() }
             } else {
               progressDialog.dismiss()
               logcat(ERROR) { e.asLog() }
-              showNfcErrorDialog(e.message ?: getString(R.string.pgp_key_import_failed))
+              showCardErrorDialog(e.message ?: getString(R.string.pgp_key_import_failed))
               return@launch
             }
           }
@@ -172,14 +172,14 @@ class PGPKeyImportActivity : AppCompatActivity() {
 
   private suspend fun setupSmartcardKey(cardInfo: OpenPgpCardInfo) {
     if (cardInfo.fingerprints.isEmpty()) {
-      showNfcErrorDialog(getString(R.string.openpgp_nfc_no_fingerprints))
+      showCardErrorDialog(getString(R.string.openpgp_card_no_fingerprints))
       return
     }
 
     // Reading the card is done; what follows — searching this store for a matching key, and
     // fetching the public half from wherever the card says it lives — takes as long as a network
     // round trip, with the card prompt already gone and nothing else on the screen to show for it.
-    val progress = ProgressOverlay.show(this, R.string.openpgp_nfc_importing_key)
+    val progress = ProgressOverlay.show(this, R.string.openpgp_card_importing_key)
     try {
       importSmartcardKey(cardInfo)
     } finally {
@@ -201,7 +201,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
     }
 
     if (cardInfo.url.isNullOrBlank()) {
-      showNfcSetupDialog(cardInfo)
+      showCardSetupDialog(cardInfo)
       return
     }
 
@@ -210,11 +210,11 @@ class PGPKeyImportActivity : AppCompatActivity() {
     }
     val bytes = downloadResult.get()
     if (bytes == null) {
-      showNfcSetupDialog(cardInfo)
+      showCardSetupDialog(cardInfo)
       return
     }
     if (!isCertificateOrKey(PGPKey(bytes))) {
-      showNfcErrorDialog(getString(R.string.openpgp_nfc_url_no_openpgp_key))
+      showCardErrorDialog(getString(R.string.openpgp_card_url_no_openpgp_key))
       return
     }
     pendingSmartcardInfo = cardInfo
@@ -247,19 +247,19 @@ class PGPKeyImportActivity : AppCompatActivity() {
     }
   }
 
-  private fun showNfcSetupDialog(cardInfo: OpenPgpCardInfo) {
+  private fun showCardSetupDialog(cardInfo: OpenPgpCardInfo) {
     MaterialAlertDialogBuilder(this)
-      .setTitle(R.string.openpgp_nfc_setup_detected_title)
+      .setTitle(R.string.openpgp_card_setup_detected_title)
       .setMessage(
-        if (cardInfo.url.isNullOrBlank()) R.string.openpgp_nfc_setup_detected_no_url_message
-        else R.string.openpgp_nfc_setup_detected_fetch_failed_message
+        if (cardInfo.url.isNullOrBlank()) R.string.openpgp_card_setup_detected_no_url_message
+        else R.string.openpgp_card_setup_detected_fetch_failed_message
       )
       .setPositiveButton(R.string.bottom_sheet_import_pgp_key) { _, _ ->
         pendingSmartcardInfo = cardInfo
         pgpKeyImportAction.launch("*/*")
       }
       .setNegativeButton(R.string.dialog_cancel) { _, _ ->
-        OpenPgpNfcCard.disableReaderMode(this)
+        OpenPgpCard.disableReaderMode(this)
         setResult(RESULT_CANCELED)
         finish()
       }
@@ -267,12 +267,12 @@ class PGPKeyImportActivity : AppCompatActivity() {
       .show()
   }
 
-  private fun showNfcErrorDialog(message: String) {
+  private fun showCardErrorDialog(message: String) {
     MaterialAlertDialogBuilder(this)
-      .setTitle(R.string.openpgp_nfc_setup_failed_title)
+      .setTitle(R.string.openpgp_card_setup_failed_title)
       .setMessage(message)
       .setPositiveButton(android.R.string.ok) { _, _ ->
-        OpenPgpNfcCard.disableReaderMode(this)
+        OpenPgpCard.disableReaderMode(this)
         setResult(RESULT_CANCELED)
         finish()
       }
@@ -299,7 +299,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
         pendingImports.add(PGPKey(it.getEncoded()))
       }
     if (pendingImports.isEmpty() && matchingFingerprints != null) {
-      showNfcErrorDialog(getString(R.string.openpgp_nfc_fingerprint_mismatch))
+      showCardErrorDialog(getString(R.string.openpgp_card_fingerprint_mismatch))
       return
     }
     processNextImport()
@@ -370,13 +370,13 @@ class PGPKeyImportActivity : AppCompatActivity() {
     showDialog: Boolean = true,
   ) {
     if (!containsAnyFingerprint(key, cardInfo.fingerprints)) {
-      showNfcErrorDialog(getString(R.string.openpgp_nfc_fingerprint_mismatch))
+      showCardErrorDialog(getString(R.string.openpgp_card_fingerprint_mismatch))
       return
     }
     val keyId =
       tryGetKeyId(key)
         ?: run {
-          showNfcErrorDialog(getString(R.string.pgp_key_import_failed))
+          showCardErrorDialog(getString(R.string.pgp_key_import_failed))
           return
         }
     smartcardStore.associate(keyId, cardInfo.fingerprints, cardInfo.url)
@@ -488,7 +488,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
   }
 
   companion object {
-    const val EXTRA_IMPORT_FROM_NFC = "app.passwordstore.extra.IMPORT_FROM_NFC"
+    const val EXTRA_IMPORT_FROM_CARD = "app.passwordstore.extra.IMPORT_FROM_CARD"
 
     // OpenPGP public keys are a few KiB at most; cap the card-URL download well above that.
     private const val MAX_KEY_DOWNLOAD_BYTES = 1 * 1024 * 1024

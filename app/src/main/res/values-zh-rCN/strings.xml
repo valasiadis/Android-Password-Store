@@ -75,7 +75,6 @@
   <string name="pref_category_repository_title">仓库</string>
   <string name="pref_edit_git_server_settings">编辑 Git 服务器设置</string>
   <string name="pref_ssh_keygen_title">生成SSH密钥</string>
-  <string name="pref_import_ssh_key_title">导入 SSH 密钥</string>
   <string name="pref_edit_git_config">本地Git配置 &amp; utilities</string>
   <string name="pref_ssh_see_key_title">查看生成的公开SSH密钥</string>
   <string name="pref_git_delete_repo_title">删除仓库</string>

@@ -74,7 +74,6 @@
   <string name="pref_category_repository_title">저장소</string>
   <string name="pref_edit_git_server_settings">Git 서버 설정 수정</string>
   <string name="pref_ssh_keygen_title">SSH 키쌍 생성</string>
-  <string name="pref_import_ssh_key_title">SSH 키 가져오기</string>
   <string name="pref_edit_git_config">로컬 Git 설정 &amp; 툴</string>
   <string name="pref_ssh_see_key_title">생성된 SSH 공개키 보기</string>
   <string name="pref_git_delete_repo_title">저장소 삭제</string>

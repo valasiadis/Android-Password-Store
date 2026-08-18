@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
+import android.widget.PopupMenu
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -68,10 +69,11 @@ class GitServerConfigActivity : BaseGitActivity() {
     enableEdgeToEdgeView(binding.root)
     isClone = intent?.extras?.getBoolean("cloning") ?: false
     setContentView(binding.root)
-    setUpChrome()
-
+    // Read before the chrome is put up: what it draws asks whether the way in is ready, and that
+    // question is about these.
     oldAuthMode = gitSettings.authMode
     newAuthMode = gitSettings.authMode
+    setUpChrome()
 
     binding.authModeGroup.apply {
       when (oldAuthMode) {
@@ -110,15 +112,7 @@ class GitServerConfigActivity : BaseGitActivity() {
       if (isClone) reportUrlState() else applySettings()
     }
 
-    binding.authKeyPgp.setOnClickListener {
-      authKeyAction.launch(intentFor<PgpAuthKeySelectionActivity>())
-    }
-    binding.authKeyGenerate.setOnClickListener {
-      authKeyAction.launch(intentFor<SshKeyGenActivity>())
-    }
-    binding.authKeyImport.setOnClickListener {
-      authKeyAction.launch(intentFor<SshKeyImportActivity>())
-    }
+    binding.authKeyRow.setOnClickListener { anchor -> showAuthKeySources(anchor) }
     binding.authKeyShow.setOnClickListener {
       ShowSshKeyFragment().show(supportFragmentManager, "public_key")
     }
@@ -212,7 +206,8 @@ class GitServerConfigActivity : BaseGitActivity() {
     val url = binding.serverUrl.text.toString().trim()
     val problem = problemWith(url)
     reportProblem(problem)
-    binding.setupFooter.setupNext.isEnabled = !cloning && url.isNotEmpty() && problem == null
+    binding.setupFooter.setupNext.isEnabled =
+      !cloning && url.isNotEmpty() && problem == null && authKeyReady()
   }
 
   /**
@@ -245,19 +240,61 @@ class GitServerConfigActivity : BaseGitActivity() {
   }
 
   /**
-   * The three ways this app can hold an authentication key, offered where the mode that needs one
-   * is chosen — with whether there is one yet, which is the question a prompt at clone time was
-   * answering far too late.
+   * Names the key public-key authentication would use, where the mode that needs one is chosen —
+   * which is the question a prompt at clone time was answering far too late.
    */
   private fun showAuthKeyState() {
     binding.authKeySection.isVisible = newAuthMode == AuthMode.SshKey
-    binding.authKeyStatus.setText(
-      if (SshKey.exists) R.string.setup_auth_key_set else R.string.setup_auth_key_none
-    )
+    binding.authKeyStatus.text = describeAuthKey()
     // Only some kinds of key can show their public half; the others were imported as a private
     // key alone, and the server was told about them elsewhere.
     binding.authKeyShow.isVisible = SshKey.canShowSshPublicKey
+    if (isClone) reportUrlState()
   }
+
+  /** The key in use, said as what it is rather than as whether one exists. */
+  private fun describeAuthKey(): String =
+    when (SshKey.type) {
+      null -> getString(R.string.setup_auth_key_none)
+      SshKey.Type.Imported -> getString(R.string.setup_auth_key_imported)
+      SshKey.Type.KeystoreNative,
+      SshKey.Type.KeystoreWrappedEd25519 -> getString(R.string.setup_auth_key_generated)
+      SshKey.Type.ImportedPGP ->
+        SshKey.pgpLongKeyId
+          .takeIf { it != 0L }
+          ?.let { getString(R.string.setup_auth_key_pgp, "%016x".format(it)) }
+          ?: getString(R.string.setup_auth_key_pgp_unnamed)
+    }
+
+  /**
+   * Offers the ways a key can come from, anchored to the row that names the one in use. Picking a
+   * PGP key opens the list of them, which is where that choice is actually made.
+   */
+  private fun showAuthKeySources(anchor: View) {
+    PopupMenu(this, anchor).apply {
+      menuInflater.inflate(R.menu.auth_key_sources, menu)
+      setOnMenuItemClickListener { item ->
+        when (item.itemId) {
+          R.id.auth_key_generate -> authKeyAction.launch(intentFor<SshKeyGenActivity>())
+          R.id.auth_key_import -> authKeyAction.launch(intentFor<SshKeyImportActivity>())
+          R.id.auth_key_pgp -> authKeyAction.launch(intentFor<PgpAuthKeySelectionActivity>())
+          else -> return@setOnMenuItemClickListener false
+        }
+        true
+      }
+      show()
+    }
+  }
+
+  /**
+   * Whether the way in that has been chosen is one this app could actually use.
+   *
+   * A key is something to be set up here and now, so cloning waits until there is one. A password
+   * is not: it is asked for by the clone itself, and there is nowhere on this screen to put one, so
+   * choosing that mode is as configured as it gets. Choosing nothing at all is only an answer over
+   * HTTPS, where it means a public repository nobody has to be let into.
+   */
+  private fun authKeyReady(): Boolean = newAuthMode != AuthMode.SshKey || SshKey.exists
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
     return when (item.itemId) {

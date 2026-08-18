@@ -119,8 +119,15 @@
   <string name="gpg_key_select_mandatory">Selecting a PGP key is required to proceed</string>
   <string name="setup_remote_title">Setup remote</string>
   <string name="setup_remote_message">The address of the Git repository holding your passwords, and how this app should be let in.</string>
-  <string name="setup_auth_key_none">No authentication key set yet. Pick one of these; the server needs the matching public key.</string>
-  <string name="setup_auth_key_set">An authentication key is set. Choosing another one replaces it.</string>
+  <string name="setup_auth_key_label">Authentication key</string>
+  <string name="setup_auth_key_source_generate">Generate a new key</string>
+  <string name="setup_auth_key_source_import">Import a key from a file</string>
+  <string name="setup_auth_key_source_pgp">Use a PGP key</string>
+  <string name="setup_auth_key_none">None yet — the server needs one before it will let you in</string>
+  <string name="setup_auth_key_generated">Generated on this phone</string>
+  <string name="setup_auth_key_imported">Imported from a file</string>
+  <string name="setup_auth_key_pgp">PGP key 0x%1$s</string>
+  <string name="setup_auth_key_pgp_unnamed">A PGP key</string>
   <string name="git_author_missing_title">Who is making these commits?</string>
   <string name="git_author_missing_message">Git records a name and email address with every change. Set yours before syncing, or the store will record commits under whatever name this device happens to have.</string>
   <string name="git_author_missing_confirm">Set them now</string>
@@ -162,7 +169,6 @@
   <string name="pref_category_repository_title">Git</string>
   <string name="pref_edit_git_server_settings">Repository &amp; authentication</string>
   <string name="pref_ssh_keygen_title">Generate SSH key pair</string>
-  <string name="pref_import_ssh_key_title">Import SSH key</string>
   <string name="pref_edit_git_config">Git config</string>
   <string name="pref_ssh_see_key_title">View public key</string>
   <string name="pref_git_delete_repo_title">Delete repository</string>

@@ -347,5 +347,4 @@
     <string name="pin_entry_description">Entreu el codi PIN per mostrar aquesta entrada</string>
     <string name="pin_entry_wrong_input">Entrada incorrecta</string>
   <string name="pref_ssh_keygen_title">Genera un parell de claus SSH</string>
-  <string name="pref_import_ssh_key_title">Importa clau SSH</string>
 </resources>

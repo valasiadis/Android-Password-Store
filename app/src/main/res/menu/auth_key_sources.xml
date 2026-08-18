@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!-- Where an authentication key can come from, offered where the key in use is named. -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+  <item
+    android:id="@+id/auth_key_generate"
+    android:title="@string/setup_auth_key_source_generate" />
+  <item
+    android:id="@+id/auth_key_import"
+    android:title="@string/setup_auth_key_source_import" />
+  <item
+    android:id="@+id/auth_key_pgp"
+    android:title="@string/setup_auth_key_source_pgp" />
+</menu>

@@ -11,7 +11,8 @@ Forked from the archived [Password Store](https://github.com/android-password-st
 > [!WARNING]
 > This repository is a direct fork of
 > [agrahn/Android-Password-Store](https://github.com/agrahn/Android-Password-Store), adding OpenPGP
-> smartcard support — including commit signing — and a number of UI/UX improvements. The changes are
+> smartcard support over NFC and USB — including commit signing — and a number of UI/UX
+> improvements. The changes are
 > mine, with contributions by
 > [norbusan](https://github.com/norbusan/Android-Password-Store).
 >
@@ -44,8 +45,8 @@ Utilising the standard `pass` file structure, passkey data is stored on the firs
 
 ### From an OpenPGP smartcard
 
-1. Go to `Settings > PGP settings > Key manager > +` and select `Set up NFC smartcard`
-2. Present your smartcard behind the phone on the NFC sensor and hold it there
+1. Go to `Settings > PGP settings > Key manager > +` and select `Set up smartcard`
+2. Hold your smartcard against the phone's NFC sensor, or plug it into the phone's USB port
 
 ### From GPG keyring
 ````bash

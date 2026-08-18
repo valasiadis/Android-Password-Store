@@ -28,11 +28,14 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -59,6 +62,12 @@ class OpenPgpCardPrompt(
 
   private val cardDialog = AtomicReference<AlertDialog?>(null)
   private val cardDialogCancel = AtomicReference<CompletableDeferred<Unit>?>(null)
+
+  /**
+   * Where a card exchange runs. Deliberately nobody's child: an exchange that has been given up on
+   * is left to finish in its own time rather than holding up whoever gave up on it.
+   */
+  private val cardScope = CoroutineScope(SupervisorJob())
 
   /** Outcome of a single [attempt]. */
   sealed interface Attempt<out T> {
@@ -89,43 +98,91 @@ class OpenPgpCardPrompt(
    * the already-open [reader], and runs [block] on it on the same thread, immediately after applet
    * selection. The dialog stays on screen for the whole exchange and for the next attempt; the
    * caller dismisses it via [dismissDialog] when the operation ends.
+   *
+   * The exchange runs on a scope of its own rather than as a child of the caller's, because
+   * cancelling it is not something a coroutine can do: the thread is inside a blocking transceive
+   * that runs until the card answers — which, for a card waiting to be touched, can be the better
+   * part of a minute. A `coroutineScope` here would dutifully wait for that thread before
+   * returning, so pressing cancel appeared to do nothing at all until the card was touched.
+   * Cancelling instead takes the card away from the exchange, which ends it where it stands.
    */
   suspend fun <T> attempt(
     reader: CardReader,
     message: String,
     block: (OpenPgpCard) -> T,
-  ): Attempt<T> = coroutineScope {
+  ): Attempt<T> {
     val cancel = CompletableDeferred<Unit>()
     cardDialogCancel.set(cancel)
     withContext(dispatcherProvider.main()) { showOrUpdateDialog(message) }
+    // The card in hand, so that cancelling has something to close.
+    val connected = AtomicReference<OpenPgpCard?>(null)
+    // Whether the outcome is the caller's. Set by whichever of the two gets there first, so the
+    // loser knows to clean up rather than hand over a card nobody will close.
+    val delivered = AtomicBoolean(false)
     val attemptJob =
-      async(dispatcherProvider.io()) {
-        val card = reader.awaitCard { connection -> announceCardDetected(connection) }
-        card.onTouchRequired = { announceTouchRequired(card.connection) }
-        try {
-          Attempt.Success(block(card), card)
-        } catch (e: Throwable) {
-          if (e is CancellationException) {
-            runCatching { card.close() }
+      cardScope.async(dispatcherProvider.io()) {
+        val outcome =
+          try {
+            val card = reader.awaitCard { connection -> announceCardDetected(connection) }
+            connected.set(card)
+            card.onTouchRequired = { announceTouchRequired(card.connection) }
+            try {
+              Attempt.Success(block(card), card)
+            } catch (e: Throwable) {
+              if (e is CancellationException) {
+                runCatching { card.close() }
+                throw e
+              }
+              // Leave the card open; the caller closes it (retry) or holds reader mode until it is
+              // removed (terminal failure).
+              Attempt.Error(e, card)
+            }
+          } catch (e: CancellationException) {
             throw e
+          } catch (e: Throwable) {
+            // The card wait itself failed: nothing was ever connected.
+            Attempt.Error(e, null)
           }
-          // Leave the card open; the caller closes it (retry) or holds reader mode until it is
-          // removed (terminal failure).
-          Attempt.Error(e, card)
+        // Arriving after the user has given up means the card is nobody's, and closing it is the
+        // last thing this exchange does.
+        if (!delivered.compareAndSet(false, true)) {
+          runCatching { outcome.card?.close() }
+          throw CancellationException("The card answered after the operation was cancelled")
         }
+        outcome
       }
-    try {
-      select<Attempt<T>> {
+    return try {
+      select {
         attemptJob.onAwait { it }
-        cancel.onAwait {
-          attemptJob.cancel()
-          Attempt.Cancelled
-        }
+        cancel.onAwait { abandon(attemptJob, connected, delivered) }
       }
-    } catch (e: Throwable) {
-      // The card wait itself failed (no card connected).
-      Attempt.Error(e, null)
+    } catch (e: CancellationException) {
+      // The caller went away — the screen was destroyed, say. The card exchange is not the
+      // caller's any more either.
+      abandon(attemptJob, connected, delivered)
+      throw e
     }
+  }
+
+  /**
+   * Gives up on an exchange that is still running, and says so.
+   *
+   * Closing the card is what actually stops it: a card waiting to be touched holds its answer back
+   * for as long as it likes, and the thread blocked on that answer cannot be interrupted. Closing
+   * drops the connection under it, which ends the wait here and abandons the operation on the card
+   * — so a touch that comes afterwards does nothing, rather than completing something the user has
+   * already walked away from.
+   */
+  private fun <T> abandon(
+    attemptJob: Deferred<Attempt<T>>,
+    connected: AtomicReference<OpenPgpCard?>,
+    delivered: AtomicBoolean,
+  ): Attempt<T> {
+    if (delivered.compareAndSet(false, true)) {
+      runCatching { connected.get()?.close() }
+      attemptJob.cancel()
+    }
+    return Attempt.Cancelled
   }
 
   /** The card has answered: say where it is and to leave it there. */

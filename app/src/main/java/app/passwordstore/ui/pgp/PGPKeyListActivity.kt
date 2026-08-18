@@ -51,7 +51,7 @@ import app.passwordstore.ui.dialogs.AddPgpKeyBottomSheet
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.PasswordDialog
-import app.passwordstore.ui.pgp.PGPKeyImportActivity.Companion.EXTRA_IMPORT_FROM_NFC
+import app.passwordstore.ui.pgp.PGPKeyImportActivity.Companion.EXTRA_IMPORT_FROM_CARD
 import app.passwordstore.util.extensions.wipe
 import app.passwordstore.util.git.sshj.SshKey
 import app.passwordstore.util.viewmodel.PGPKeyListViewModel
@@ -159,9 +159,9 @@ class PGPKeyListActivity : AppCompatActivity() {
           keyAction.launch(Intent(this, PGPKeyImportActivity::class.java))
           isAddingKeys = true
         }
-        ACTION_IMPORT_NFC -> {
+        ACTION_IMPORT_CARD -> {
           keyAction.launch(
-            Intent(this, PGPKeyImportActivity::class.java).putExtra(EXTRA_IMPORT_FROM_NFC, true)
+            Intent(this, PGPKeyImportActivity::class.java).putExtra(EXTRA_IMPORT_FROM_CARD, true)
           )
           isAddingKeys = true
         }
@@ -547,7 +547,7 @@ class PGPKeyListActivity : AppCompatActivity() {
     const val PGP_KEY_ADD_REQUEST_KEY = "add_pgp_key"
     const val ACTION_KEY = "action"
     const val ACTION_IMPORT_FILE = "from_file"
-    const val ACTION_IMPORT_NFC = "from_nfc"
+    const val ACTION_IMPORT_CARD = "from_card"
     const val ACTION_NEW_PGP_KEY = "generate_new"
 
     fun newIntent(

@@ -16,7 +16,7 @@ import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.crypto.PGPainlessCryptoHandler
 import app.passwordstore.injection.prefs.SettingsPreferences
 import app.passwordstore.util.coroutines.DispatcherProvider
-import app.passwordstore.util.crypto.OpenPgpNfcCard
+import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.crypto.OpenPgpSmartcardDecryptor
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import app.passwordstore.util.settings.PreferenceKeys
@@ -227,7 +227,7 @@ constructor(
     identities: List<PGPIdentifier>,
     encryptedMessage: ByteArrayInputStream,
     message: ByteArrayOutputStream,
-    card: OpenPgpNfcCard,
+    card: OpenPgpCard,
   ) =
     identities.mapUntil({ it.second.isOk }) { id ->
       encryptedMessage.reset()

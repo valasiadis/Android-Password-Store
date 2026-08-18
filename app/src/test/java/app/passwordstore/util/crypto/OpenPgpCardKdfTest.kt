@@ -21,7 +21,7 @@ class OpenPgpCardKdfTest {
   private val pin = "123456".toByteArray(Charsets.UTF_8)
 
   private fun derive(iterations: Int, digest: String = "SHA-256") =
-    OpenPgpNfcCard.deriveKdfPin(
+    OpenPgpCard.deriveKdfPin(
         pin.copyOf(),
         KdfParameters(digestAlgorithm = digest, iterations = iterations, salt = salt),
       )
@@ -59,7 +59,7 @@ class OpenPgpCardKdfTest {
 
   @Test
   fun `reads an iterated-salted KDF-DO`() {
-    val kdf = OpenPgpNfcCard.parseKdf(kdfDo(algorithm = 0x03, hash = 0x08, iterations = 100_000))
+    val kdf = OpenPgpCard.parseKdf(kdfDo(algorithm = 0x03, hash = 0x08, iterations = 100_000))
     requireNotNull(kdf)
     assertEquals("SHA-256", kdf.digestAlgorithm)
     assertEquals(100_000, kdf.iterations)
@@ -69,13 +69,13 @@ class OpenPgpCardKdfTest {
   @Test
   fun `treats a card without a KDF as one that wants the PIN itself`() {
     // Algorithm 0x00 is "none": the DO is present, but the PIN travels as the user typed it.
-    assertNull(OpenPgpNfcCard.parseKdf(kdfDo(algorithm = 0x00, hash = 0x08, iterations = 100_000)))
-    assertNull(OpenPgpNfcCard.parseKdf(byteArrayOf()))
+    assertNull(OpenPgpCard.parseKdf(kdfDo(algorithm = 0x00, hash = 0x08, iterations = 100_000)))
+    assertNull(OpenPgpCard.parseKdf(byteArrayOf()))
     // An unknown hash is not something to guess at: guessing costs a retry.
-    assertNull(OpenPgpNfcCard.parseKdf(kdfDo(algorithm = 0x03, hash = 0x63, iterations = 100_000)))
+    assertNull(OpenPgpCard.parseKdf(kdfDo(algorithm = 0x03, hash = 0x63, iterations = 100_000)))
     // Algorithm and hash present, but no salt to derive with.
     assertNull(
-      OpenPgpNfcCard.parseKdf(
+      OpenPgpCard.parseKdf(
         byteArrayOf(
           0x81.toByte(),
           0x01,

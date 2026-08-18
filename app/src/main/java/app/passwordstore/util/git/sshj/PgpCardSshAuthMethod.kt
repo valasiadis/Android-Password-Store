@@ -161,13 +161,13 @@ class CardSshSigner(
   }
 
   private fun driveCard(input: ByteArray): ByteArray {
-    val prompt = OpenPgpCardPrompt(activity, R.string.openpgp_nfc_ssh_title, dispatcherProvider)
+    val prompt = OpenPgpCardPrompt(activity, R.string.openpgp_card_ssh_title, dispatcherProvider)
     var reader: CardReader? = null
     var readerHandedOff = false
     try {
       val activeReader =
         runBlocking { prompt.createReader() }
-          ?: throw IOException(activity.getString(R.string.openpgp_nfc_unavailable))
+          ?: throw IOException(activity.getString(R.string.openpgp_card_reader_unavailable))
       reader = activeReader
       val outcome = runBlocking {
         prompt.runWithPin(
@@ -179,8 +179,8 @@ class CardSshSigner(
           // PW1 in mode 0x82 authorises INTERNAL AUTHENTICATE (the auth key slot), unlike PSO:CDS
           // (mode 0x81) used for commit signing.
           pinMode = OpenPgpCardPrompt.PinMode.USER,
-          presentMessage = activity.getString(R.string.openpgp_nfc_tap_card),
-          commFailedMessage = activity.getString(R.string.openpgp_nfc_card_comm_failed),
+          presentMessage = activity.getString(R.string.openpgp_card_present),
+          commFailedMessage = activity.getString(R.string.openpgp_card_comm_failed),
         ) { card, currentPin ->
           card.verifyUserPin(currentPin)
           card.internalAuthenticate(input)

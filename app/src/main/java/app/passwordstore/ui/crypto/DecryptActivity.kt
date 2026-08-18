@@ -33,7 +33,7 @@ import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.crypto.AESEncryption
 import app.passwordstore.util.crypto.AESEncryption.KeyType
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
-import app.passwordstore.util.crypto.OpenPgpNfcCard
+import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.extensions.base64
 import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.commitSavedChange
@@ -170,7 +170,7 @@ class DecryptActivity : BasePGPActivity() {
   }
 
   override fun onDestroy() {
-    OpenPgpNfcCard.disableReaderMode(this)
+    OpenPgpCard.disableReaderMode(this)
     encryptedEntryChars?.wipe()
     itemsAdapter?.clearItems()
     super.onDestroy()
@@ -288,10 +288,10 @@ class DecryptActivity : BasePGPActivity() {
     // operation run on the card's own thread, inline PIN entry with retries (so reader mode stays
     // on across wrong PINs and never triggers the NDEF-URL popup), and reader mode released only
     // once the card is physically removed. The shared loop lives in OpenPgpCardPrompt.runWithPin.
-    val prompt = OpenPgpCardPrompt(this, R.string.openpgp_nfc_decrypt_title, dispatcherProvider)
+    val prompt = OpenPgpCardPrompt(this, R.string.openpgp_card_decrypt_title, dispatcherProvider)
     val reader = prompt.createReader()
     if (reader == null) {
-      showSmartcardError(getString(R.string.openpgp_nfc_unavailable))
+      showSmartcardError(getString(R.string.openpgp_card_reader_unavailable))
       return
     }
     var readerHandedOff = false
@@ -312,8 +312,8 @@ class DecryptActivity : BasePGPActivity() {
           pinHintRes = R.string.openpgp_card_pin_hint,
           identityLabel = getIdentityLabelForIdentifiers(identifiers),
           pinMode = OpenPgpCardPrompt.PinMode.USER,
-          presentMessage = getString(R.string.openpgp_nfc_tap_card),
-          commFailedMessage = getString(R.string.openpgp_nfc_card_comm_failed),
+          presentMessage = getString(R.string.openpgp_card_present),
+          commFailedMessage = getString(R.string.openpgp_card_comm_failed),
           // A seeded secret the card turns down is dropped from the persistent store too, or it is
           // handed straight back to the card next time. A key that was once a software key keeps
           // its old passphrase there, and that passphrase is not this card's PIN. Only reached for
@@ -384,7 +384,7 @@ class DecryptActivity : BasePGPActivity() {
 
   private fun showSmartcardError(message: String) {
     MaterialAlertDialogBuilder(this)
-      .setTitle(R.string.openpgp_nfc_decrypt_failed_title)
+      .setTitle(R.string.openpgp_card_decrypt_failed_title)
       .setMessage(message)
       .setPositiveButton(android.R.string.ok) { _, _ ->
         // Reader mode is disabled by the removal watcher once the card is lifted; just finish.

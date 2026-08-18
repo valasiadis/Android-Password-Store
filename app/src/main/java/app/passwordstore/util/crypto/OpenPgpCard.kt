@@ -30,7 +30,7 @@ import logcat.LogPriority.WARN
 import logcat.asLog
 import logcat.logcat
 
-class OpenPgpNfcCard(
+class OpenPgpCard(
   private val isoDep: IsoDep,
   private val onClose: () -> Unit = {},
 ) : AutoCloseable {
@@ -390,11 +390,11 @@ class OpenPgpNfcCard(
       disableReaderModeOnError: Boolean = true,
       disableReaderModeOnClose: Boolean = true,
       onCardDetected: () -> Unit = {},
-    ): OpenPgpNfcCard = suspendCancellableCoroutine { continuation ->
+    ): OpenPgpCard = suspendCancellableCoroutine { continuation ->
       val adapter = NfcAdapter.getDefaultAdapter(activity)
       if (adapter == null || !adapter.isEnabled) {
         continuation.resumeWithException(
-          IOException(activity.getString(R.string.openpgp_nfc_unavailable))
+          IOException(activity.getString(R.string.openpgp_card_reader_unavailable))
         )
         return@suspendCancellableCoroutine
       }
@@ -410,7 +410,7 @@ class OpenPgpNfcCard(
           isoDep.connect()
           isoDep.timeout = 30_000
           val card =
-            OpenPgpNfcCard(isoDep) {
+            OpenPgpCard(isoDep) {
               if (disableReaderModeOnClose) {
                 activity.runOnUiThread { disableReaderMode(activity) }
               }
@@ -451,7 +451,7 @@ class OpenPgpNfcCard(
       disableReaderModeOnError: Boolean = true,
       disableReaderModeOnClose: Boolean = true,
       onCardDetected: () -> Unit = {},
-    ): OpenPgpNfcCard? = coroutineScope {
+    ): OpenPgpCard? = coroutineScope {
       val wait = async {
         waitForCard(
           activity,
@@ -585,7 +585,7 @@ private constructor(private val activity: Activity, private val adapter: NfcAdap
    * tag). [onCardDetected] is invoked once a card has connected. Throws
    * [OpenPgpCardStatusException] only when the card actively rejects the applet selection.
    */
-  suspend fun awaitCard(onCardDetected: () -> Unit): OpenPgpNfcCard {
+  suspend fun awaitCard(onCardDetected: () -> Unit): OpenPgpCard {
     while (true) {
       val tag = tags.receive()
       val isoDep = IsoDep.get(tag) ?: continue
@@ -593,7 +593,7 @@ private constructor(private val activity: Activity, private val adapter: NfcAdap
         isoDep.connect()
         isoDep.timeout = 30_000
         onCardDetected()
-        val card = OpenPgpNfcCard(isoDep)
+        val card = OpenPgpCard(isoDep)
         card.selectOpenPgpApplet()
         return card
       } catch (e: OpenPgpCardStatusException) {

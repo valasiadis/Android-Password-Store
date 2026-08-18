@@ -63,7 +63,7 @@ class OpenPgpCardPrompt(
   /** Outcome of a single [attempt]. */
   sealed interface Attempt<out T> {
     /** [card] is left open so reader mode can be released once it is physically removed. */
-    class Success<T>(val value: T, val card: OpenPgpNfcCard) : Attempt<T>
+    class Success<T>(val value: T, val card: OpenPgpCard) : Attempt<T>
 
     data object Cancelled : Attempt<Nothing>
 
@@ -72,7 +72,7 @@ class OpenPgpCardPrompt(
      * left open so the caller can hold reader mode until the card is physically removed (terminal
      * failure) or close it to allow the user to present it again (retry).
      */
-    class Error(val error: Throwable, val card: OpenPgpNfcCard?) : Attempt<Nothing>
+    class Error(val error: Throwable, val card: OpenPgpCard?) : Attempt<Nothing>
   }
 
   /** Enables reader mode for the operation. Returns `null` when NFC is unavailable or disabled. */
@@ -88,7 +88,7 @@ class OpenPgpCardPrompt(
   suspend fun <T> attempt(
     reader: CardReader,
     message: String,
-    block: (OpenPgpNfcCard) -> T,
+    block: (OpenPgpCard) -> T,
   ): Attempt<T> = coroutineScope {
     val cancel = CompletableDeferred<Unit>()
     cardDialogCancel.set(cancel)
@@ -98,8 +98,8 @@ class OpenPgpCardPrompt(
         val card = reader.awaitCard {
           activity.runOnUiThread {
             cardDialog.get()?.let { dialog ->
-              dialog.setTitle(R.string.openpgp_nfc_hold_card_title)
-              dialog.setMessage(activity.getString(R.string.openpgp_nfc_hold_card))
+              dialog.setTitle(R.string.openpgp_card_hold_title)
+              dialog.setMessage(activity.getString(R.string.openpgp_card_hold))
             }
           }
         }
@@ -137,7 +137,7 @@ class OpenPgpCardPrompt(
    * identified before anything is verified against it — and a PIN that belongs to some other card
    * is never offered, which would spend one of its retries.
    */
-  private fun cardIdentity(card: OpenPgpNfcCard): String? = runCatching {
+  private fun cardIdentity(card: OpenPgpCard): String? = runCatching {
     card.readCardInfo().fingerprints
   }
     .get()
@@ -181,13 +181,13 @@ class OpenPgpCardPrompt(
 
   /** Terminal outcome of [runWithPin]. Any [card] handed back is left open for the caller. */
   sealed interface CardOutcome<out T> {
-    class Success<T>(val value: T, val card: OpenPgpNfcCard) : CardOutcome<T>
+    class Success<T>(val value: T, val card: OpenPgpCard) : CardOutcome<T>
 
     data object Cancelled : CardOutcome<Nothing>
 
-    class Blocked(val card: OpenPgpNfcCard?) : CardOutcome<Nothing>
+    class Blocked(val card: OpenPgpCard?) : CardOutcome<Nothing>
 
-    class Failed(val error: Throwable, val card: OpenPgpNfcCard?) : CardOutcome<Nothing>
+    class Failed(val error: Throwable, val card: OpenPgpCard?) : CardOutcome<Nothing>
   }
 
   /**
@@ -227,7 +227,7 @@ class OpenPgpCardPrompt(
      * mistyped PIN is no reason to throw away a working secret and make them enrol it again.
      */
     onPinRejected: () -> Unit = {},
-    block: (OpenPgpNfcCard, CharArray) -> T,
+    block: (OpenPgpCard, CharArray) -> T,
   ): CardOutcome<T> {
     // Nothing is read from the cache up front: which card will be presented is not known until it
     // is, and a PIN fetched on a guess is a retry spent on the wrong card. The card is asked who it
@@ -383,7 +383,7 @@ class OpenPgpCardPrompt(
     }
   }
 
-  private fun readPinRetries(card: OpenPgpNfcCard?, pinMode: PinMode): Int? =
+  private fun readPinRetries(card: OpenPgpCard?, pinMode: PinMode): Int? =
     when (pinMode) {
       PinMode.USER -> card?.readUserPinRetries()
       PinMode.SIGNATURE -> card?.readSignaturePinRetries()
@@ -607,7 +607,7 @@ class OpenPgpCardPrompt(
    * [card] is null (e.g. the card was never connected), reader mode is disabled right away. Runs
    * off the calling thread on the activity scope so it does not delay the operation.
    */
-  fun releaseReaderWhenCardRemoved(card: OpenPgpNfcCard?, reader: CardReader) {
+  fun releaseReaderWhenCardRemoved(card: OpenPgpCard?, reader: CardReader) {
     activity.lifecycleScope.launch {
       if (card != null) {
         withContext(dispatcherProvider.io()) {
@@ -645,7 +645,7 @@ class OpenPgpCardPrompt(
    * and the card in reader mode — until the user removes it, so the platform never dispatches the
    * still-present card's NDEF URL.
    */
-  suspend fun awaitCardRemoval(card: OpenPgpNfcCard, reader: CardReader) {
+  suspend fun awaitCardRemoval(card: OpenPgpCard, reader: CardReader) {
     val dialog =
       withContext(dispatcherProvider.main()) {
         if (activity.isFinishing || activity.isDestroyed) return@withContext null

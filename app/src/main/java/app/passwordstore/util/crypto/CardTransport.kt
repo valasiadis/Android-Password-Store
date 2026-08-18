@@ -5,7 +5,19 @@
 
 package app.passwordstore.util.crypto
 
-import android.nfc.tech.IsoDep
+/**
+ * The ways a card can be reached from this phone.
+ *
+ * Only two things ever turn on this, and both are about the user rather than the protocol: what to
+ * ask them to do with the card, and whether the card has to be seen to leave before the reader is
+ * shut down. Every APDU below is the same either way.
+ */
+enum class CardConnection {
+  /** Held against the back of the phone. */
+  NFC,
+  /** Plugged into it. */
+  USB,
+}
 
 /**
  * The whole of what an OpenPGP card needs from whatever carries its commands: send one APDU, get
@@ -30,24 +42,11 @@ interface CardTransport : AutoCloseable {
   /** The largest command APDU that fits in a single exchange, which is what bounds chaining. */
   val maxTransceiveLength: Int
 
+  /** Which wire this is, for the sake of what the user is told and asked to do. */
+  val connection: CardConnection
+
   companion object {
     /** Long enough for the slowest thing a card is asked to do here: an RSA-4096 private-key op. */
     const val DEFAULT_TIMEOUT_MS = 30_000
-  }
-}
-
-/** Carries APDUs over NFC, to a card held against the phone. */
-class IsoDepTransport(private val isoDep: IsoDep) : CardTransport {
-
-  override val maxTransceiveLength: Int
-    get() = isoDep.maxTransceiveLength
-
-  override fun transceive(command: ByteArray, timeoutMs: Int): ByteArray {
-    isoDep.timeout = timeoutMs
-    return isoDep.transceive(command)
-  }
-
-  override fun close() {
-    isoDep.close()
   }
 }

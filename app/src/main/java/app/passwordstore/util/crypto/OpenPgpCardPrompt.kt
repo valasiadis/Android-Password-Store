@@ -75,9 +75,9 @@ class OpenPgpCardPrompt(
     class Error(val error: Throwable, val card: OpenPgpCard?) : Attempt<Nothing>
   }
 
-  /** Enables reader mode for the operation. Returns `null` when NFC is unavailable or disabled. */
+  /** Opens a reader for the operation. Returns `null` when there is nowhere a card could turn up. */
   suspend fun createReader(): CardReader? =
-    withContext(dispatcherProvider.main()) { CardReader.create(activity) }
+    withContext(dispatcherProvider.main()) { NfcCardReader.create(activity) }
 
   /**
    * Shows (or, on a retry, reuses and re-labels with [message]) the card dialog, awaits a tap on
@@ -95,7 +95,7 @@ class OpenPgpCardPrompt(
     withContext(dispatcherProvider.main()) { showOrUpdateDialog(message) }
     val attemptJob =
       async(dispatcherProvider.io()) {
-        val card = reader.awaitCard {
+        val card = reader.awaitCard { _ ->
           activity.runOnUiThread {
             cardDialog.get()?.let { dialog ->
               dialog.setTitle(R.string.openpgp_card_hold_title)

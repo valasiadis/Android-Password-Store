@@ -33,6 +33,7 @@ import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.crypto.AESEncryption
 import app.passwordstore.util.crypto.AESEncryption.KeyType
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
+import app.passwordstore.util.crypto.NfcCardReader
 import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.extensions.base64
 import app.passwordstore.util.extensions.commitChange
@@ -170,7 +171,7 @@ class DecryptActivity : BasePGPActivity() {
   }
 
   override fun onDestroy() {
-    OpenPgpCard.disableReaderMode(this)
+    NfcCardReader.disableReaderMode(this)
     encryptedEntryChars?.wipe()
     itemsAdapter?.clearItems()
     super.onDestroy()

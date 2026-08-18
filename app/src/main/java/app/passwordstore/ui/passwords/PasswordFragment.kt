@@ -389,11 +389,12 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     }
 
   /**
-   * Shows or hides the creation button, and hands the search field whatever room that leaves.
+   * Shows or hides the buttons on either side of the search field, and hands the field whatever
+   * room that leaves.
    *
-   * The button is gone while entries are being picked out, and while the keyboard is up: what is
-   * being typed then is a search, and starting a new entry is not what the screen is for until that
-   * search is over.
+   * Both are gone while entries are being picked out, and while the keyboard is up: what is being
+   * typed then is a search, and neither starting a new entry nor synchronising is what the screen
+   * is for until that search is over.
    */
   private fun updateFab() {
     binding.fab.scalesAway(fabVisible && !keyboardShowing)
@@ -403,7 +404,7 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
   fun updateFabSync() {
     // Called from the store screen, which can outlive this fragment's view.
     view ?: return
-    val syncShowing = PasswordRepository.getAheadCount() > 0 && fabVisible
+    val syncShowing = PasswordRepository.getAheadCount() > 0 && fabVisible && !keyboardShowing
     binding.fabSync.scalesAway(syncShowing)
     updateSearchBarWidth(syncShowing)
   }
@@ -419,10 +420,10 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
   /**
    * Gives the search field the room the buttons beside it are not using.
    *
-   * The sync button comes and goes with whether the store is ahead of its remote, and the creation
-   * button steps aside while the keyboard is up; a field that kept a gap for a button that is not
-   * there looks off-centre for no reason. The change is animated so the field grows and shrinks
-   * with the button rather than jumping the moment it appears.
+   * The sync button comes and goes with whether the store is ahead of its remote, and both buttons
+   * step aside while the keyboard is up; a field that kept a gap for a button that is not there
+   * looks off-centre for no reason. The change is animated so the field grows and shrinks with the
+   * button rather than jumping the moment it appears.
    */
   private fun updateSearchBarWidth(syncShowing: Boolean) {
     fun room(forButton: Boolean) =

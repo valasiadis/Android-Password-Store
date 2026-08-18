@@ -75,9 +75,23 @@ class OpenPgpCardPrompt(
     class Error(val error: Throwable, val card: OpenPgpCard?) : Attempt<Nothing>
   }
 
-  /** Opens a reader for the operation. Returns `null` when there is nowhere a card could turn up. */
+  /**
+   * Opens every way a card could reach this phone, for the length of the operation. Returns `null`
+   * when there is no way at all: NFC switched off or absent on a phone that cannot host USB either.
+   *
+   * Both are watched at once rather than one being chosen, because which one the user will reach
+   * for is not something this app can know — and asking them to say so in a setting, before they
+   * have picked up either, is asking the wrong question.
+   */
   suspend fun createReader(): CardReader? =
-    withContext(dispatcherProvider.main()) { NfcCardReader.create(activity) }
+    withContext(dispatcherProvider.main()) {
+      val readers = listOfNotNull(NfcCardReader.create(activity), UsbCardReader.create(activity))
+      when (readers.size) {
+        0 -> null
+        1 -> readers.single()
+        else -> CompositeCardReader(readers)
+      }
+    }
 
   /**
    * Shows (or, on a retry, reuses and re-labels with [message]) the card dialog, awaits a tap on
@@ -95,11 +109,11 @@ class OpenPgpCardPrompt(
     withContext(dispatcherProvider.main()) { showOrUpdateDialog(message) }
     val attemptJob =
       async(dispatcherProvider.io()) {
-        val card = reader.awaitCard { _ ->
+        val card = reader.awaitCard { connection ->
           activity.runOnUiThread {
             cardDialog.get()?.let { dialog ->
               dialog.setTitle(R.string.openpgp_card_hold_title)
-              dialog.setMessage(activity.getString(R.string.openpgp_card_hold))
+              dialog.setMessage(holdMessage(connection))
             }
           }
         }
@@ -128,6 +142,42 @@ class OpenPgpCardPrompt(
       Attempt.Error(e, null)
     }
   }
+
+  /**
+   * What to ask the user to do, given everywhere a card could turn up. Never says "tap" to someone
+   * whose phone is only watching a socket, or "plug in" to one that is only watching the air.
+   */
+  private fun presentMessage(connections: Set<CardConnection>): String =
+    activity.getString(
+      when {
+        connections.size > 1 -> R.string.openpgp_card_present_any
+        connections.single() == CardConnection.USB -> R.string.openpgp_card_present_usb
+        else -> R.string.openpgp_card_present
+      }
+    )
+
+  /** What to tell the user to do with the card that has answered, while it is being worked. */
+  private fun holdMessage(connection: CardConnection): String =
+    activity.getString(
+      when (connection) {
+        CardConnection.NFC -> R.string.openpgp_card_hold
+        CardConnection.USB -> R.string.openpgp_card_hold_usb
+      }
+    )
+
+  /**
+   * How to have another go after an exchange failed on the way. Asked of the card that failed,
+   * since that is the one the user has in their hand; when the failure came before any card
+   * answered there is nothing to say about where it is.
+   */
+  private fun retryMessage(connection: CardConnection?): String =
+    activity.getString(
+      when (connection) {
+        CardConnection.NFC -> R.string.openpgp_card_comm_failed
+        CardConnection.USB -> R.string.openpgp_card_comm_failed_usb
+        null -> R.string.openpgp_card_comm_failed_any
+      }
+    )
 
   /**
    * How a card names itself: the fingerprints of the keys it carries, read straight off it.
@@ -200,7 +250,7 @@ class OpenPgpCardPrompt(
    * performs the card operation via [attempt]. On a rejected PIN the PIN is wiped and dropped from
    * the cache, and the card's own remaining-attempts counter is consulted -- [pinMode] selects the
    * slot -- to either re-prompt inline or report the card as [CardOutcome.Blocked]. A transient
-   * transport error re-presents the card with [commFailedMessage]. A PIN typed here is cached only
+   * transport error re-presents the card, saying how. A PIN typed here is cached only
    * once [block] fully succeeds, so a rejected PIN is never persisted.
    *
    * The present-card dialog is dismissed on success and the PIN is always wiped before returning.
@@ -214,8 +264,6 @@ class OpenPgpCardPrompt(
     @StringRes pinHintRes: Int,
     identityLabel: String?,
     pinMode: PinMode,
-    presentMessage: String,
-    commFailedMessage: String,
     seedPin: CharArray? = null,
     /**
      * Run when the card rejects the PIN that came in as [seedPin], so the caller can drop whatever
@@ -237,6 +285,7 @@ class OpenPgpCardPrompt(
     var askFirst = false
     var cachePin = false
     var pinErrorMessage: String? = null
+    val presentMessage = presentMessage(reader.connections)
     var cardMessage = presentMessage
     // Set inside the card session, read after it: what the card called itself.
     var presentedIdentity: String? = null
@@ -361,10 +410,11 @@ class OpenPgpCardPrompt(
               pinErrorMessage = wrongPinMessage(remaining)
               continue
             }
-            // Any transient NFC/card hiccup never reaches the PIN counter: re-present the card.
+            // A transient hiccup on the way to the card never reaches the PIN counter: ask for the
+            // card again, in the terms of wherever it was.
             if (isRetryableCardError(e)) {
+              cardMessage = retryMessage(attempt.card?.connection)
               runCatching { attempt.card?.close() }
-              cardMessage = commFailedMessage
               continue
             }
             // Reported as itself rather than as a wrong PIN. A card that answers here has taken the
@@ -397,12 +447,18 @@ class OpenPgpCardPrompt(
    * can be built from. What it never does is blame the PIN, since by the time this is reached the
    * card has either accepted the PIN or never been asked about it.
    */
-  fun cardFailureMessage(error: Throwable?): String {
+  fun cardFailureMessage(error: Throwable?, connection: CardConnection? = null): String {
     val status = smartcardStatusWordPair(error)
     val (sw1, sw2) = status ?: return error?.message ?: activity.getString(R.string.error)
     return when {
-      // Conditions of use not satisfied — on a card with UIF set, the touch that never came.
-      sw1 == 0x69 && sw2 == 0x85 -> activity.getString(R.string.openpgp_card_error_touch_required)
+      // Conditions of use not satisfied — on a card with UIF set, the touch that never came. A card
+      // held against the phone cannot be touched while it is being read; one plugged in can, so the
+      // user is told to do it rather than told it cannot be done.
+      sw1 == 0x69 && sw2 == 0x85 ->
+        activity.getString(
+          if (connection == CardConnection.USB) R.string.openpgp_card_error_touch_required_usb
+          else R.string.openpgp_card_error_touch_required
+        )
       // Referenced data not found: nothing in the key slot the operation needs.
       sw1 == 0x6A && sw2 == 0x88 -> activity.getString(R.string.openpgp_card_error_no_key)
       // Security status not satisfied, raised by something that was not the VERIFY.
@@ -606,10 +662,14 @@ class OpenPgpCardPrompt(
    * whether it succeeded or failed — for instance while a result dialog is still on screen. When
    * [card] is null (e.g. the card was never connected), reader mode is disabled right away. Runs
    * off the calling thread on the activity scope so it does not delay the operation.
+   *
+   * A card that was plugged in is simply let go of. Nothing waits to be dispatched behind it, so
+   * there is nothing to hold reader mode against and no reason to keep watching a socket the user
+   * is entitled to leave a key in.
    */
   fun releaseReaderWhenCardRemoved(card: OpenPgpCard?, reader: CardReader) {
     activity.lifecycleScope.launch {
-      if (card != null) {
+      if (card != null && card.connection == CardConnection.NFC) {
         withContext(dispatcherProvider.io()) {
           try {
             val deadline = System.currentTimeMillis() + READER_MODE_RELEASE_TIMEOUT_MS
@@ -629,6 +689,8 @@ class OpenPgpCardPrompt(
             runCatching { card.close() }
           }
         }
+      } else if (card != null) {
+        withContext(dispatcherProvider.io()) { runCatching { card.close() } }
       }
       reader.close()
     }
@@ -644,8 +706,17 @@ class OpenPgpCardPrompt(
    * activity moves on once auth succeeds), holding the caller here keeps the activity foreground —
    * and the card in reader mode — until the user removes it, so the platform never dispatches the
    * still-present card's NDEF URL.
+   *
+   * A card that was plugged in is let go of and the caller carries straight on. There is nothing
+   * waiting to be dispatched, so standing between the user and their commit until they unplug their
+   * key would be asking for a ritual that serves nothing.
    */
   suspend fun awaitCardRemoval(card: OpenPgpCard, reader: CardReader) {
+    if (card.connection != CardConnection.NFC) {
+      withContext(dispatcherProvider.io()) { runCatching { card.close() } }
+      reader.close()
+      return
+    }
     val dialog =
       withContext(dispatcherProvider.main()) {
         if (activity.isFinishing || activity.isDestroyed) return@withContext null

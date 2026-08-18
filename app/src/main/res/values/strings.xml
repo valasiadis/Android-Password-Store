@@ -58,8 +58,9 @@
   <string name="git_signing_confirm_message">Sign this commit with the store OpenPGP key?</string>
   <string name="git_signing_confirm_positive">Sign</string>
   <string name="git_signing_confirm_unsigned">Don\'t sign</string>
-  <string name="git_signing_tap_card">Present your OpenPGP smartcard to sign the commit.</string>
   <string name="openpgp_card_comm_failed">Couldn\'t read the card. Present it again and hold it still until the operation finishes.</string>
+  <string name="openpgp_card_comm_failed_usb">Couldn\'t read the card. Unplug it, plug it back in, and leave it there until the operation finishes.</string>
+  <string name="openpgp_card_comm_failed_any">Couldn\'t read the card. Present it again and leave it in place until the operation finishes.</string>
   <string name="git_commit_signature_signed">Signed commit</string>
   <string name="git_commit_signature_unsigned">Unsigned commit</string>
 
@@ -475,9 +476,12 @@
   <string name="pgp_key_import_failed_replace_message">An existing key with the following ID was found:\n\n\t%1$s\n\nDo you want to replace it?</string>
   <string name="pgp_key_import_failed_unusable_message">The given key is not usable for encryption. Please ensure that a subkey for encryption exists and that it has not expired or been revoked.</string>
   <string name="openpgp_card_present">Present your OpenPGP smartcard.</string>
+  <string name="openpgp_card_present_usb">Plug in your OpenPGP smartcard.</string>
+  <string name="openpgp_card_present_any">Present your OpenPGP smartcard, or plug it in.</string>
   <string name="openpgp_card_hold_title">Smartcard detected</string>
   <string name="openpgp_card_hold">Keep the smartcard on your phone. Do not move it until this operation finishes.</string>
-  <string name="openpgp_card_reader_unavailable">NFC is unavailable or disabled.</string>
+  <string name="openpgp_card_hold_usb">Keep the smartcard plugged in until this operation finishes.</string>
+  <string name="openpgp_card_reader_unavailable">There is no way to reach a smartcard: NFC is unavailable or switched off, and this phone cannot take one plugged in.</string>
   <string name="openpgp_nfc_not_iso_dep">This NFC tag is not an ISO-DEP smartcard.</string>
   <string name="openpgp_card_setup_title">NFC smartcard setup</string>
   <string name="openpgp_card_importing_key">Importing key…</string>
@@ -502,6 +506,7 @@
   <string name="openpgp_card_pin_blocked">The OpenPGP card signing PIN is blocked. Reset it with an external tool before signing again.</string>
   <string name="openpgp_card_pin_bad_length">The card would not accept a PIN of that length. No attempt was used. Enter the PIN with the number of characters this card was set up for.</string>
   <string name="openpgp_card_error_touch_required">The card refused the operation. It may be waiting for you to touch it, which is not something this app can do for you over NFC.</string>
+  <string name="openpgp_card_error_touch_required_usb">The card refused the operation. It may be waiting for you to touch it: try again, and touch the key while it is asking.</string>
   <string name="openpgp_card_error_no_key">The card has no key in the slot this operation needs.</string>
   <string name="openpgp_card_error_not_allowed">The card accepted the PIN but would not perform the operation.</string>
   <string name="openpgp_card_error_generic">The OpenPGP card refused the operation (status %1$s).</string>

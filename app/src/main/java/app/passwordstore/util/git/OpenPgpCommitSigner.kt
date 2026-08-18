@@ -15,6 +15,7 @@ import app.passwordstore.crypto.PGPKey
 import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.util.coroutines.DispatcherProvider
+import app.passwordstore.util.crypto.CardConnection
 import app.passwordstore.util.crypto.CardReader
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.crypto.OpenPgpCard
@@ -187,6 +188,9 @@ class OpenPgpCommitSigner(
     // every terminal outcome — success or failure — so the finally only closes it if we exit
     // unexpectedly.
     var readerHandedOff = false
+    // Where the card that failed was, so the report below can be about that card rather than about
+    // cards in general. The failure itself is thrown on and caught outside this when.
+    var failedConnection: CardConnection? = null
     try {
       // Namespaced so the signing PIN cache is kept separate from the decryption PIN cache.
       val cacheKey = "sign:$primaryKeyId"
@@ -204,8 +208,6 @@ class OpenPgpCommitSigner(
           pinHintRes = R.string.openpgp_card_pin_hint,
           identityLabel = identityLabel(key),
           pinMode = OpenPgpCardPrompt.PinMode.SIGNATURE,
-          presentMessage = activity.getString(R.string.git_signing_tap_card),
-          commFailedMessage = activity.getString(R.string.openpgp_card_comm_failed),
         ) { card, currentPin ->
           // The whole card exchange (applet select -> verify -> sign) runs on a single thread
           // with no hop, so a genuine wrong PIN reliably comes back as a card status word (e.g.
@@ -247,6 +249,7 @@ class OpenPgpCommitSigner(
         }
         is OpenPgpCardPrompt.CardOutcome.Failed -> {
           readerHandedOff = true
+          failedConnection = outcome.card?.connection
           prompt.releaseReaderWhenCardRemoved(outcome.card, activeReader)
           throw outcome.error
         }
@@ -259,7 +262,7 @@ class OpenPgpCommitSigner(
         prompt.dismissDialog()
         prompt.showError(
           R.string.error,
-          prompt.cardFailureMessage(e).ifBlank {
+          prompt.cardFailureMessage(e, failedConnection).ifBlank {
             activity.getString(R.string.password_decryption_unknown_error)
           },
         )

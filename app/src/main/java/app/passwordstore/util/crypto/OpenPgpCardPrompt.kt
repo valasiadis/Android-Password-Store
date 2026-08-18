@@ -327,11 +327,23 @@ class OpenPgpCardPrompt(
               askFirst = true
               // Trust the card's own retry counter; if the status word omitted it, ask the card
               // directly with a non-destructive status check so we learn whether it is now blocked.
+              val reportedRemaining = smartcardPinRetriesRemaining(e)
               val remaining =
-                smartcardPinRetriesRemaining(e)
+                reportedRemaining
                   ?: withContext(dispatcherProvider.io()) {
                     runCatching { readPinRetries(attempt.card, pinMode) }.get()
                   }
+              // A report that says "the PIN is correct" is settled by where this count came from
+              // and whether it moves: a rejection that carries its own counter has just spent an
+              // attempt, while a count read back afterwards only says what the counter already
+              // stood at.
+              logcat {
+                "Card turned the PIN down at VERIFY " +
+                  "(${smartcardStatusWord(e) ?: "no status word"}), " +
+                  "${remaining ?: "unknown"} attempts left " +
+                  if (reportedRemaining != null) "per the rejection itself"
+                  else "per a follow-up status check"
+              }
               if (remaining == 0) return CardOutcome.Blocked(attempt.card)
               runCatching { attempt.card?.close() }
               pinErrorMessage = wrongPinMessage(remaining)
@@ -342,6 +354,12 @@ class OpenPgpCardPrompt(
               runCatching { attempt.card?.close() }
               cardMessage = commFailedMessage
               continue
+            }
+            // Reported as itself rather than as a wrong PIN. A card that answers here has taken the
+            // PIN and refused the work that came after it, which no amount of re-typing changes.
+            logcat {
+              "Card operation failed, and not over the PIN " +
+                "(${smartcardStatusWord(e) ?: e::class.java.simpleName}): ${e.asLog()}"
             }
             return CardOutcome.Failed(e, attempt.card)
           }
@@ -631,15 +649,35 @@ class OpenPgpCardPrompt(
     private val PIN_FAILURE_REGEX = Regex("""63 c[0-9a-f]""", RegexOption.IGNORE_CASE)
 
     /**
-     * Whether [error] is a smartcard PIN rejection, recognised whether it arrives as a structured
-     * [OpenPgpCardStatusException] or only in a wrapped message.
+     * Whether [error] is a smartcard PIN rejection — that is, whether the card turned the PIN down
+     * at the VERIFY, the only command that can.
+     *
+     * The command matters as much as the status word. `69 82` from a VERIFY is a wrong PIN; the
+     * same `69 82` from the PSO or INTERNAL AUTHENTICATE that follows one means the card would not
+     * perform that operation, which a correct PIN does nothing to fix. Reading the status word
+     * alone cannot tell them apart, and calling the second one a wrong PIN puts the user in an
+     * endless prompt: they re-enter a PIN the card keeps accepting, the operation keeps failing,
+     * and the card's retry counter never moves. So the answer comes from the type raised at the
+     * VERIFY itself ([SmartcardPinVerificationException]) rather than from the digits.
+     *
+     * Only when nothing in the chain says it reached the card at all — no typed status survived the
+     * trip — is the wire text worth reading, as a last resort for a layer that flattened its cause.
      */
     fun isSmartcardPinFailure(error: Throwable?): Boolean {
       var cause = error
+      var answeredWithStatusWord = false
       while (cause != null) {
-        // A PIN the card rejected for its length/format is also a (recoverable) PIN problem.
-        if (cause is SmartcardPinFormatException) return true
-        if (cause is OpenPgpCardStatusException && cause.isAuthenticationFailure) return true
+        // Covers SmartcardPinFormatException too: a PIN the card rejected for its length/format is
+        // a (recoverable) PIN problem raised at the same VERIFY.
+        if (cause is SmartcardPinVerificationException) return true
+        if (cause is OpenPgpCardStatusException) answeredWithStatusWord = true
+        cause = cause.cause
+      }
+      // The card answered, and not to a VERIFY: whatever it said, the PIN is not what it objected
+      // to.
+      if (answeredWithStatusWord) return false
+      cause = error
+      while (cause != null) {
         val message = cause.message.orEmpty()
         if (message.contains("69 82", ignoreCase = true)) return true
         if (message.contains("69 83", ignoreCase = true)) return true
@@ -647,6 +685,19 @@ class OpenPgpCardPrompt(
         cause = cause.cause
       }
       return false
+    }
+
+    /** The card status word behind [error] (e.g. `63 c2`), or null if the card never answered. */
+    fun smartcardStatusWord(error: Throwable?): String? =
+      smartcardStatusWordPair(error)?.let { (sw1, sw2) -> "%02x %02x".format(sw1, sw2) }
+
+    internal fun smartcardStatusWordPair(error: Throwable?): Pair<Int, Int>? {
+      var cause = error
+      while (cause != null) {
+        if (cause is OpenPgpCardStatusException) return cause.sw1 to cause.sw2
+        cause = cause.cause
+      }
+      return null
     }
 
     /** The card-reported number of PIN attempts still available, or null if the card didn't say. */

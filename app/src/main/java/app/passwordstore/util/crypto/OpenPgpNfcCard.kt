@@ -92,7 +92,10 @@ class OpenPgpNfcCard(
       // (67 xx / 6A 80) means the PIN didn't fit the card's PW length bounds — surface it as a
       // recoverable, re-promptable error rather than the raw status word.
       if (e.isDataFieldRejection) throw SmartcardPinFormatException(e.sw1, e.sw2)
-      throw e
+      // Every other rejection carries its status word onwards unchanged, but typed so callers can
+      // tell it came from a VERIFY. Only a VERIFY can turn a PIN down; the commands that follow one
+      // answer with overlapping status words (69 82 above all) that mean something else entirely.
+      throw SmartcardPinVerificationException(e.sw1, e.sw2)
     } finally {
       rawPin.fill(0)
       pinBytes.fill(0)
@@ -290,9 +293,11 @@ class OpenPgpNfcCard(
           else -> return null
         }
       val iterations =
-        findTlv(data, 0x83)?.takeIf { it.size == 4 }?.fold(0) { acc, byte ->
-          (acc shl 8) or (byte.toInt() and 0xff)
-        } ?: return null
+        findTlv(data, 0x83)
+          ?.takeIf { it.size == 4 }
+          ?.fold(0) { acc, byte ->
+            (acc shl 8) or (byte.toInt() and 0xff)
+          } ?: return null
       val salt = findTlv(data, 0x84)?.takeIf { it.isNotEmpty() } ?: return null
       return KdfParameters(digestAlgorithm, iterations, salt)
     }
@@ -516,13 +521,24 @@ open class OpenPgpCardStatusException(val sw1: Int, val sw2: Int) :
 }
 
 /**
+ * A status word the card answered a PIN VERIFY with — the one command whose rejection is about the
+ * PIN. Status words are not unique to a command: `69 82` means "wrong PIN" from a VERIFY but
+ * "security status not satisfied" from the PSO/INTERNAL AUTHENTICATE that follows one, and a card
+ * that has just accepted a PIN can still answer the next command that way. Typing the rejection at
+ * the point it is raised is what lets callers tell the two apart, rather than reading a status word
+ * out of an exception chain that no longer says which command produced it.
+ */
+open class SmartcardPinVerificationException(sw1: Int, sw2: Int) :
+  OpenPgpCardStatusException(sw1, sw2)
+
+/**
  * A PIN VERIFY the card rejected because the PIN did not fit its configured PW length bounds (the
  * OpenPGP Card spec defines a per-card min of 6 and a max in the PW Status Bytes). Some cards (e.g.
  * YubiKey) answer an over-long PIN with `6A 80` rather than a normal `63 Cx` wrong-PIN status. This
  * rejection does **not** decrement the retry counter, so it is recoverable: the user can simply
  * re-enter a PIN of acceptable length.
  */
-class SmartcardPinFormatException(sw1: Int, sw2: Int) : OpenPgpCardStatusException(sw1, sw2)
+class SmartcardPinFormatException(sw1: Int, sw2: Int) : SmartcardPinVerificationException(sw1, sw2)
 
 data class OpenPgpCardInfo(val fingerprints: List<ByteArray>, val url: String?)
 

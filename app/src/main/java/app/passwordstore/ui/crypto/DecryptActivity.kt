@@ -33,6 +33,7 @@ import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.crypto.AESEncryption
 import app.passwordstore.util.crypto.AESEncryption.KeyType
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
+import app.passwordstore.util.crypto.CardConnection
 import app.passwordstore.util.crypto.NfcCardReader
 import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.extensions.base64
@@ -313,8 +314,6 @@ class DecryptActivity : BasePGPActivity() {
           pinHintRes = R.string.openpgp_card_pin_hint,
           identityLabel = getIdentityLabelForIdentifiers(identifiers),
           pinMode = OpenPgpCardPrompt.PinMode.USER,
-          presentMessage = getString(R.string.openpgp_card_present),
-          commFailedMessage = getString(R.string.openpgp_card_comm_failed),
           // A seeded secret the card turns down is dropped from the persistent store too, or it is
           // handed straight back to the card next time. A key that was once a software key keeps
           // its old passphrase there, and that passphrase is not this card's PIN. Only reached for
@@ -374,7 +373,9 @@ class DecryptActivity : BasePGPActivity() {
         is OpenPgpCardPrompt.CardOutcome.Failed -> {
           readerHandedOff = true
           prompt.releaseReaderWhenCardRemoved(outcome.card, reader)
-          showSmartcardError(friendlySmartcardError(prompt, outcome.error))
+          showSmartcardError(
+            friendlySmartcardError(prompt, outcome.error, outcome.card?.connection)
+          )
         }
       }
     } finally {
@@ -400,8 +401,12 @@ class DecryptActivity : BasePGPActivity() {
    * for those inline and only hands back what it could not solve by asking again — so the card's
    * own refusal is named instead of the PIN being blamed for it.
    */
-  private fun friendlySmartcardError(prompt: OpenPgpCardPrompt, error: Throwable?): String =
-    prompt.cardFailureMessage(error).ifBlank {
+  private fun friendlySmartcardError(
+    prompt: OpenPgpCardPrompt,
+    error: Throwable?,
+    connection: CardConnection?,
+  ): String =
+    prompt.cardFailureMessage(error, connection).ifBlank {
       resources.getString(R.string.password_decryption_unknown_error)
     }
 

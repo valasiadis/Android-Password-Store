@@ -179,8 +179,6 @@ class CardSshSigner(
           // PW1 in mode 0x82 authorises INTERNAL AUTHENTICATE (the auth key slot), unlike PSO:CDS
           // (mode 0x81) used for commit signing.
           pinMode = OpenPgpCardPrompt.PinMode.USER,
-          presentMessage = activity.getString(R.string.openpgp_card_present),
-          commFailedMessage = activity.getString(R.string.openpgp_card_comm_failed),
         ) { card, currentPin ->
           card.verifyUserPin(currentPin)
           card.internalAuthenticate(input)
@@ -211,7 +209,7 @@ class CardSshSigner(
           prompt.releaseReaderWhenCardRemoved(outcome.card, activeReader)
           // The card's refusal, named as such: what surfaces to the user as the reason the clone or
           // push stopped, and never the PIN, which the prompt would have re-asked for itself.
-          throw SSHException(prompt.cardFailureMessage(outcome.error))
+          throw SSHException(prompt.cardFailureMessage(outcome.error, outcome.card?.connection))
         }
       }
     } finally {

@@ -41,10 +41,11 @@
   -->
   <dimen name="list_item_height">48dp</dimen>
   <!--
-    What separates one row from the next. Narrow enough that a list reads as one
-    block, as the grouped entries on the settings screen do.
+    What separates one row from the next. Narrow enough that a list still reads
+    as one block, as the grouped entries on the settings screen do, but wide
+    enough to tell one row from the next at a glance.
   -->
-  <dimen name="list_item_gap">4dp</dimen>
+  <dimen name="list_item_gap">6dp</dimen>
   <!-- The hairline drawn around a row's container. -->
   <dimen name="list_item_outline">1dp</dimen>
   <!--

@@ -29,6 +29,7 @@ import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.TextInputDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.OpenPgpCardInfo
+import app.passwordstore.util.crypto.NfcCardReader
 import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import com.github.michaelbull.result.Result
@@ -105,7 +106,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
   }
 
   override fun onDestroy() {
-    OpenPgpCard.disableReaderMode(this)
+    NfcCardReader.disableReaderMode(this)
     super.onDestroy()
   }
 
@@ -122,7 +123,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
     fun cancelCardDialog() {
       if (cancelSignal.complete(Unit)) {
         canceled = true
-        OpenPgpCard.disableReaderMode(this)
+        NfcCardReader.disableReaderMode(this)
         progressDialog.dismiss()
         setResult(RESULT_CANCELED)
         finish()
@@ -139,7 +140,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
         progressDialog.setMessage(getString(R.string.openpgp_card_present))
         runCatching {
           val card =
-            OpenPgpCard.waitForCardOrNull(
+            NfcCardReader.waitForCardOrNull(
               this@PGPKeyImportActivity,
               cancelSignal,
               disableReaderModeOnError = false,
@@ -259,7 +260,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
         pgpKeyImportAction.launch("*/*")
       }
       .setNegativeButton(R.string.dialog_cancel) { _, _ ->
-        OpenPgpCard.disableReaderMode(this)
+        NfcCardReader.disableReaderMode(this)
         setResult(RESULT_CANCELED)
         finish()
       }
@@ -272,7 +273,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
       .setTitle(R.string.openpgp_card_setup_failed_title)
       .setMessage(message)
       .setPositiveButton(android.R.string.ok) { _, _ ->
-        OpenPgpCard.disableReaderMode(this)
+        NfcCardReader.disableReaderMode(this)
         setResult(RESULT_CANCELED)
         finish()
       }

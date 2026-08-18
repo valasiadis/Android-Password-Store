@@ -500,6 +500,11 @@
     <item quantity="other">Wrong PIN. %d attempts remaining before the card is blocked.</item>
   </plurals>
   <string name="openpgp_card_pin_blocked">The OpenPGP card signing PIN is blocked. Reset it with an external tool before signing again.</string>
+  <string name="openpgp_card_pin_bad_length">The card would not accept a PIN of that length. No attempt was used. Enter the PIN with the number of characters this card was set up for.</string>
+  <string name="openpgp_card_error_touch_required">The card refused the operation. It may be waiting for you to touch it, which is not something this app can do for you over NFC.</string>
+  <string name="openpgp_card_error_no_key">The card has no key in the slot this operation needs.</string>
+  <string name="openpgp_card_error_not_allowed">The card accepted the PIN but would not perform the operation.</string>
+  <string name="openpgp_card_error_generic">The OpenPGP card refused the operation (status %1$s).</string>
   <string name="cache_openpgp_card_pin_until_screen_off">Keep PIN until screen-off</string>
   <string name="openpgp_nfc_decrypt_title">Decrypt with OpenPGP card</string>
   <string name="openpgp_nfc_ssh_title">SSH authentication with OpenPGP card</string>

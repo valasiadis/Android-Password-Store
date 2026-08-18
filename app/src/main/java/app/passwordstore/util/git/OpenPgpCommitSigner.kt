@@ -259,7 +259,9 @@ class OpenPgpCommitSigner(
         prompt.dismissDialog()
         prompt.showError(
           R.string.error,
-          e.message ?: activity.getString(R.string.password_decryption_unknown_error),
+          prompt.cardFailureMessage(e).ifBlank {
+            activity.getString(R.string.password_decryption_unknown_error)
+          },
         )
       }
       throw SmartcardOperationHandledException(e.message)

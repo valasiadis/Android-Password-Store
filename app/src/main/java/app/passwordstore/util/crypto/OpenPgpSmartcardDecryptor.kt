@@ -19,10 +19,12 @@ import org.bouncycastle.openpgp.PGPEncryptedData
 import org.bouncycastle.openpgp.PGPEncryptedDataList
 import org.bouncycastle.openpgp.PGPException
 import org.bouncycastle.openpgp.PGPLiteralData
+import org.bouncycastle.openpgp.PGPMarker
 import org.bouncycastle.openpgp.PGPObjectFactory
 import org.bouncycastle.openpgp.PGPOnePassSignatureList
 import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData
 import org.bouncycastle.openpgp.PGPSessionKey
+import org.bouncycastle.openpgp.PGPSignatureList
 import org.bouncycastle.openpgp.PGPUtil
 import org.bouncycastle.openpgp.operator.AbstractPublicKeyDataDecryptorFactory
 import org.bouncycastle.openpgp.operator.PGPDataDecryptor
@@ -46,6 +48,48 @@ import org.bouncycastle.util.io.Streams
  */
 internal fun hasIntegrityProtection(data: PGPEncryptedData): Boolean =
   data.isIntegrityProtected || data.encData is AEADEncDataPacket
+
+/**
+ * Writes the message's payload out of [inputStream] into [outputStream].
+ *
+ * What comes out of the decryption is a sequence of packets, not the text itself. Usually it is one
+ * literal packet, sometimes a compressed one wrapping it, and for a message that was signed as well
+ * as encrypted it is a one-pass signature, then the literal packet, then the signature — which is
+ * what `gpg --sign --encrypt` writes, and what an entry saved by some other tool can easily be.
+ *
+ * The packets are read from a single [PGPObjectFactory], asked for one object after another. Making
+ * a new factory to read the next packet — which is what this did after stepping over a signature
+ * header — starts a fresh parse partway into a stream the old one had already read ahead in, so the
+ * literal packet was never found and a signed entry died with "No literal OpenPGP data found" while
+ * gpg opened it perfectly well.
+ *
+ * Signatures are stepped over rather than checked. Whether the message is signed, and by whom, is
+ * not something this path has ever reported, and quietly accepting a bad signature is no worse than
+ * quietly ignoring a good one — but it is worth saying plainly that neither happens here.
+ */
+internal fun pipeLiteralData(inputStream: InputStream, outputStream: OutputStream) {
+  val factory = PGPObjectFactory(inputStream, JcaKeyFingerprintCalculator())
+  var current = factory.nextObject()
+  while (current != null) {
+    when (current) {
+      is PGPCompressedData -> {
+        pipeLiteralData(current.dataStream, outputStream)
+        return
+      }
+      is PGPLiteralData -> {
+        current.inputStream.use { Streams.pipeAll(it, outputStream) }
+        return
+      }
+      // A signed message opens with one of these and closes with the other; the payload is in
+      // between, so both are stepped over on the way to it.
+      is PGPOnePassSignatureList,
+      is PGPSignatureList,
+      is PGPMarker -> current = factory.nextObject()
+      else -> throw PGPException("Unsupported OpenPGP cleartext packet")
+    }
+  }
+  throw PGPException("No literal OpenPGP data found")
+}
 
 /**
  * Establishes that the plaintext just read out of [data] is the plaintext that was written.
@@ -159,26 +203,6 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
     return matchingKeyIds
   }
 
-  private fun pipeLiteralData(inputStream: InputStream, outputStream: OutputStream) {
-    var current = PGPObjectFactory(inputStream, JcaKeyFingerprintCalculator()).nextObject()
-    while (current != null) {
-      when (current) {
-        is PGPCompressedData -> {
-          pipeLiteralData(current.dataStream, outputStream)
-          return
-        }
-        is PGPLiteralData -> {
-          current.inputStream.use { Streams.pipeAll(it, outputStream) }
-          return
-        }
-        is PGPOnePassSignatureList -> {
-          current = PGPObjectFactory(inputStream, JcaKeyFingerprintCalculator()).nextObject()
-        }
-        else -> throw PGPException("Unsupported OpenPGP cleartext packet")
-      }
-    }
-    throw PGPException("No literal OpenPGP data found")
-  }
 
   private class OpenPgpCardDecryptorFactory(private val card: OpenPgpNfcCard) :
     AbstractPublicKeyDataDecryptorFactory() {

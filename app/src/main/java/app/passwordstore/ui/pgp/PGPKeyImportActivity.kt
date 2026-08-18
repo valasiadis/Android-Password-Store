@@ -28,10 +28,13 @@ import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.TextInputDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
+import app.passwordstore.util.crypto.CardReader
 import app.passwordstore.util.crypto.OpenPgpCardInfo
-import app.passwordstore.util.crypto.NfcCardReader
 import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
+import app.passwordstore.util.crypto.cardHoldMessage
+import app.passwordstore.util.crypto.cardPresentMessage
+import app.passwordstore.util.crypto.openCardReaders
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.getError
@@ -46,7 +49,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.URL
 import javax.inject.Inject
-import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
@@ -71,6 +74,10 @@ class PGPKeyImportActivity : AppCompatActivity() {
   /** Keys that ultimately failed to import along with the reason. */
   private val importFailures = mutableListOf<Pair<PGPKey, Throwable>>()
   private var pendingSmartcardInfo: OpenPgpCardInfo? = null
+
+  /** Kept open past the card being read, and closed with the dialog that read it. */
+  private var cardReader: CardReader? = null
+  private var cardWait: Job? = null
 
   private val pgpKeyImportAction =
     registerForActivityResult(GetContent()) { uri ->
@@ -106,69 +113,87 @@ class PGPKeyImportActivity : AppCompatActivity() {
   }
 
   override fun onDestroy() {
-    NfcCardReader.disableReaderMode(this)
+    cardReader?.close()
     super.onDestroy()
   }
 
+  /**
+   * Reads a card the user presents, so a key already on one can be set up here.
+   *
+   * The card is asked who it is and nothing more: no PIN, no operation, just the fingerprints and
+   * the URL it advertises. The reader is left open afterwards rather than closed with the card
+   * still on the phone, which over NFC is what would let the platform dispatch the card's own NDEF
+   * URL over the setup dialog; it closes with the dialog, or with the screen.
+   */
   private fun importFromCard() {
+    val reader = openCardReaders(this)
+    if (reader == null) {
+      showCardErrorDialog(getString(R.string.openpgp_card_reader_unavailable))
+      return
+    }
+    cardReader = reader
     val progressDialog =
       MaterialAlertDialogBuilder(this)
         .setTitle(R.string.openpgp_card_setup_title)
-        .setMessage(R.string.openpgp_card_present)
+        .setMessage(cardPresentMessage(this, reader.connections))
         .setNegativeButton(R.string.dialog_cancel, null)
         .setCancelable(true)
         .show()
-    val cancelSignal = CompletableDeferred<Unit>()
     var canceled = false
     fun cancelCardDialog() {
-      if (cancelSignal.complete(Unit)) {
-        canceled = true
-        NfcCardReader.disableReaderMode(this)
-        progressDialog.dismiss()
-        setResult(RESULT_CANCELED)
-        finish()
-      }
+      if (canceled) return
+      canceled = true
+      cardWait?.cancel()
+      closeCardReader()
+      progressDialog.dismiss()
+      setResult(RESULT_CANCELED)
+      finish()
     }
     progressDialog.setCanceledOnTouchOutside(true)
     progressDialog.setOnCancelListener { cancelCardDialog() }
     progressDialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
       cancelCardDialog()
     }
-    lifecycleScope.launch(dispatcherProvider.main()) {
-      while (!canceled) {
-        progressDialog.setTitle(R.string.openpgp_card_setup_title)
-        progressDialog.setMessage(getString(R.string.openpgp_card_present))
-        runCatching {
-          val card =
-            NfcCardReader.waitForCardOrNull(
-              this@PGPKeyImportActivity,
-              cancelSignal,
-              disableReaderModeOnError = false,
-              disableReaderModeOnClose = false,
-              onCardDetected = {
-                progressDialog.setTitle(R.string.openpgp_card_hold_title)
-                progressDialog.setMessage(getString(R.string.openpgp_card_hold))
-              },
-            ) ?: return@launch
-          card.use { it.readCardInfo() }
-        }
-          .onOk { cardInfo ->
-            progressDialog.dismiss()
-            setupSmartcardKey(cardInfo)
-            return@launch
+    cardWait =
+      lifecycleScope.launch(dispatcherProvider.main()) {
+        while (!canceled) {
+          progressDialog.setTitle(R.string.openpgp_card_setup_title)
+          progressDialog.setMessage(cardPresentMessage(this@PGPKeyImportActivity, reader.connections))
+          runCatching {
+            val card =
+              withContext(dispatcherProvider.io()) {
+                reader.awaitCard { connection ->
+                  runOnUiThread {
+                    progressDialog.setTitle(R.string.openpgp_card_hold_title)
+                    progressDialog.setMessage(
+                      cardHoldMessage(this@PGPKeyImportActivity, connection)
+                    )
+                  }
+                }
+              }
+            withContext(dispatcherProvider.io()) { card.use { it.readCardInfo() } }
           }
-          .onErr { e ->
-            if (OpenPgpCard.isTransceiveFailure(e)) {
-              logcat(ERROR) { e.asLog() }
-            } else {
+            .onOk { cardInfo ->
               progressDialog.dismiss()
-              logcat(ERROR) { e.asLog() }
-              showCardErrorDialog(e.message ?: getString(R.string.pgp_key_import_failed))
+              setupSmartcardKey(cardInfo)
               return@launch
             }
-          }
+            .onErr { e ->
+              logcat(ERROR) { e.asLog() }
+              // A card that slipped mid-read is simply asked for again; anything else is reported.
+              if (!OpenPgpCard.isTransceiveFailure(e)) {
+                progressDialog.dismiss()
+                showCardErrorDialog(e.message ?: getString(R.string.pgp_key_import_failed))
+                return@launch
+              }
+            }
+        }
       }
-    }
+  }
+
+  private fun closeCardReader() {
+    cardReader?.close()
+    cardReader = null
   }
 
   private suspend fun setupSmartcardKey(cardInfo: OpenPgpCardInfo) {
@@ -260,7 +285,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
         pgpKeyImportAction.launch("*/*")
       }
       .setNegativeButton(R.string.dialog_cancel) { _, _ ->
-        NfcCardReader.disableReaderMode(this)
+        closeCardReader()
         setResult(RESULT_CANCELED)
         finish()
       }
@@ -273,7 +298,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
       .setTitle(R.string.openpgp_card_setup_failed_title)
       .setMessage(message)
       .setPositiveButton(android.R.string.ok) { _, _ ->
-        NfcCardReader.disableReaderMode(this)
+        closeCardReader()
         setResult(RESULT_CANCELED)
         finish()
       }

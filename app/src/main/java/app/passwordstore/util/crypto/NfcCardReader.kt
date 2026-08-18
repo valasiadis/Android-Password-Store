@@ -10,17 +10,8 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
 import android.os.Bundle
-import app.passwordstore.R
-import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.selects.select
-import kotlinx.coroutines.suspendCancellableCoroutine
 import logcat.LogPriority.WARN
 import logcat.asLog
 import logcat.logcat
@@ -120,94 +111,6 @@ private constructor(private val activity: Activity, private val adapter: NfcAdap
         // onDestroy() cleanup (the platform has already torn down the activity's NFC state, so
         // reader mode is gone anyway). Swallow it so finishing the activity never crashes.
         logcat(WARN) { e.asLog() }
-      }
-    }
-
-    suspend fun waitForCard(
-      activity: Activity,
-      disableReaderModeOnError: Boolean = true,
-      disableReaderModeOnClose: Boolean = true,
-      onCardDetected: () -> Unit = {},
-    ): OpenPgpCard = suspendCancellableCoroutine { continuation ->
-      val adapter = NfcAdapter.getDefaultAdapter(activity)
-      if (adapter == null || !adapter.isEnabled) {
-        continuation.resumeWithException(
-          IOException(activity.getString(R.string.openpgp_card_reader_unavailable))
-        )
-        return@suspendCancellableCoroutine
-      }
-      val completed = AtomicBoolean(false)
-
-      val callback = NfcAdapter.ReaderCallback { tag: Tag ->
-        if (!completed.compareAndSet(false, true)) return@ReaderCallback
-        try {
-          val isoDep =
-            IsoDep.get(tag)
-              ?: throw IOException(activity.getString(R.string.openpgp_nfc_not_iso_dep))
-          activity.runOnUiThread { onCardDetected() }
-          isoDep.connect()
-          val card =
-            OpenPgpCard(IsoDepTransport(isoDep)) {
-              if (disableReaderModeOnClose) {
-                activity.runOnUiThread { disableReaderMode(activity) }
-              }
-            }
-          card.selectOpenPgpApplet()
-          if (continuation.isActive) {
-            continuation.resume(card)
-          } else {
-            card.close()
-          }
-        } catch (e: Throwable) {
-          if (disableReaderModeOnError) {
-            activity.runOnUiThread { disableReaderMode(activity) }
-          }
-          if (continuation.isActive) {
-            continuation.resumeWithException(e)
-          }
-        }
-      }
-
-      adapter.enableReaderMode(
-        activity,
-        callback,
-        NfcAdapter.FLAG_READER_NFC_A or
-          NfcAdapter.FLAG_READER_NFC_B or
-          NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
-          NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS,
-        Bundle().apply { putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 500) },
-      )
-      continuation.invokeOnCancellation {
-        if (completed.compareAndSet(false, true)) disableReaderMode(activity)
-      }
-    }
-
-    suspend fun waitForCardOrNull(
-      activity: Activity,
-      cancelSignal: Deferred<Unit>,
-      disableReaderModeOnError: Boolean = true,
-      disableReaderModeOnClose: Boolean = true,
-      onCardDetected: () -> Unit = {},
-    ): OpenPgpCard? = coroutineScope {
-      val wait = async {
-        waitForCard(
-          activity,
-          disableReaderModeOnError,
-          disableReaderModeOnClose,
-          onCardDetected,
-        )
-      }
-      try {
-        select {
-          wait.onAwait { it }
-          cancelSignal.onAwait {
-            wait.cancel()
-            disableReaderMode(activity)
-            null
-          }
-        }
-      } finally {
-        if (!wait.isCompleted) wait.cancel()
       }
     }
   }

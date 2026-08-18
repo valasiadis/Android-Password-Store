@@ -16,6 +16,7 @@ import com.github.michaelbull.result.getOr
 import com.github.michaelbull.result.runCatching
 import java.io.IOException
 import java.nio.CharBuffer
+import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -33,6 +34,9 @@ class OpenPgpNfcCard(
   private val isoDep: IsoDep,
   private val onClose: () -> Unit = {},
 ) : AutoCloseable {
+
+  private var kdfParameters: KdfParameters? = null
+  private var kdfRead = false
 
   fun selectOpenPgpApplet() {
     transceive(SELECT_OPENPGP)
@@ -72,7 +76,13 @@ class OpenPgpNfcCard(
     // Encode the PIN straight from the CharArray to a wipeable ByteArray. Going through
     // String.toByteArray() would leave the PIN in an immutable String that cannot be zeroed and
     // lingers on the heap until garbage collection.
-    val pinBytes = charArrayToUtf8Bytes(pin)
+    val rawPin = charArrayToUtf8Bytes(pin)
+    // A card set up with a KDF has been told to expect the derived hash of the PIN and never the
+    // PIN itself. Handing it the characters the user typed is simply a wrong PIN to it — and,
+    // since the hash is a fixed 32 or 64 bytes, usually a wrong *length* as well, which the card
+    // turns down without even spending one of the retries. That reads from the outside as a PIN
+    // rejected over and over while the card's counter never moves.
+    val pinBytes = kdfParameters()?.let { kdf -> deriveKdfPin(rawPin, kdf) } ?: rawPin
     try {
       transceive(
         byteArrayOf(0x00, 0x20, 0x00, reference.toByte(), pinBytes.size.toByte()) + pinBytes
@@ -84,8 +94,31 @@ class OpenPgpNfcCard(
       if (e.isDataFieldRejection) throw SmartcardPinFormatException(e.sw1, e.sw2)
       throw e
     } finally {
+      rawPin.fill(0)
       pinBytes.fill(0)
     }
+  }
+
+  /**
+   * The card's KDF-DO (`00F9`) if it carries one that asks for a derived PIN, else null.
+   *
+   * Read once per card session and remembered, since it cannot change under us. A card that has no
+   * such DO answers with a status word, which means the PIN goes to it as typed; a *transport*
+   * failure is left to propagate instead, so the caller re-presents the card rather than sending a
+   * raw PIN to a card that may well have wanted a derived one.
+   */
+  private fun kdfParameters(): KdfParameters? {
+    if (!kdfRead) {
+      val data =
+        try {
+          transceive(GET_KDF)
+        } catch (e: OpenPgpCardStatusException) {
+          null
+        }
+      kdfParameters = data?.takeIf { it.isNotEmpty() }?.let(::parseKdf)
+      kdfRead = true
+    }
+    return kdfParameters
   }
 
   /**
@@ -230,6 +263,62 @@ class OpenPgpNfcCard(
         byteArrayOf(0x00)
     private val GET_APPLICATION_RELATED_DATA = byteArrayOf(0x00, 0xCA.toByte(), 0x00, 0x6E, 0x00)
     private val GET_URL = byteArrayOf(0x00, 0xCA.toByte(), 0x5F, 0x50, 0x00)
+    private val GET_KDF = byteArrayOf(0x00, 0xCA.toByte(), 0x00, 0xF9.toByte(), 0x00)
+
+    /** The only KDF the OpenPGP Card spec defines beyond "none": iterated-and-salted S2K. */
+    private const val KDF_ITERSALTED_S2K = 0x03
+
+    /**
+     * Reads the KDF-DO's `81`/`82`/`83`/`84` fields — algorithm, hash, iteration count and the salt
+     * belonging to PW1. Returns null unless the card actually asks for a derived PIN, which covers
+     * both a card without the DO at all and one carrying it with the algorithm set to "none"; in
+     * either case the PIN travels as the user typed it.
+     *
+     * Only PW1's salt (`84`) is read: this app verifies PW1 in both its modes (0x81 signing and
+     * 0x82 decryption/authentication), which are two access conditions on one password, and never
+     * touches PW3 (`86`) or the resetting code (`85`).
+     */
+    internal fun parseKdf(data: ByteArray): KdfParameters? {
+      val algorithm = findTlv(data, 0x81)?.firstOrNull()?.toInt()?.and(0xff) ?: return null
+      if (algorithm != KDF_ITERSALTED_S2K) return null
+      val hash = findTlv(data, 0x82)?.firstOrNull()?.toInt()?.and(0xff) ?: return null
+      val digestAlgorithm =
+        when (hash) {
+          0x08 -> "SHA-256"
+          0x09 -> "SHA-384"
+          0x0A -> "SHA-512"
+          else -> return null
+        }
+      val iterations =
+        findTlv(data, 0x83)?.takeIf { it.size == 4 }?.fold(0) { acc, byte ->
+          (acc shl 8) or (byte.toInt() and 0xff)
+        } ?: return null
+      val salt = findTlv(data, 0x84)?.takeIf { it.isNotEmpty() } ?: return null
+      return KdfParameters(digestAlgorithm, iterations, salt)
+    }
+
+    /**
+     * Derives what a KDF card wants to be given in place of the PIN: the OpenPGP
+     * iterated-and-salted S2K (RFC 4880 sec. 3.7.1.3) of `salt ‖ pin`, hashed until
+     * [KdfParameters.iterations] octets have gone through the digest — and at least once in its
+     * entirety, however small that count is. This matches libgcrypt's `openpgp_s2k`, which is what
+     * gpg puts on the wire for the same card.
+     */
+    internal fun deriveKdfPin(pinBytes: ByteArray, kdf: KdfParameters): ByteArray {
+      val digest = MessageDigest.getInstance(kdf.digestAlgorithm)
+      val input = kdf.salt + pinBytes
+      try {
+        var remaining = maxOf(kdf.iterations, input.size)
+        while (remaining > 0) {
+          val chunk = minOf(remaining, input.size)
+          digest.update(input, 0, chunk)
+          remaining -= chunk
+        }
+        return digest.digest()
+      } finally {
+        input.fill(0)
+      }
+    }
 
     private fun parseFingerprints(value: ByteArray): List<ByteArray> =
       value
@@ -436,6 +525,17 @@ open class OpenPgpCardStatusException(val sw1: Int, val sw2: Int) :
 class SmartcardPinFormatException(sw1: Int, sw2: Int) : OpenPgpCardStatusException(sw1, sw2)
 
 data class OpenPgpCardInfo(val fingerprints: List<ByteArray>, val url: String?)
+
+/**
+ * What a card's KDF-DO (`00F9`) says about turning a PIN into the value the card wants to be given
+ * in its place. [salt] is PW1's, and [iterations] is a count of octets to push through the digest,
+ * not a number of passes.
+ */
+internal class KdfParameters(
+  val digestAlgorithm: String,
+  val iterations: Int,
+  val salt: ByteArray,
+)
 
 /**
  * Keeps NFC reader mode enabled for the whole duration of a multi-step card operation (such as

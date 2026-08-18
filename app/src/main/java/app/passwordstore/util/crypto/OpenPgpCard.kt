@@ -162,7 +162,8 @@ class OpenPgpCard(
    * Whether the card is still there. Actively probes with a benign read command rather than
    * trusting whatever the transport believes about its own connection, since a cached presence
    * state can stay `true` after the card has physically left. Uses a short timeout so a card that
-   * has gone is reported quickly instead of blocking for the (long) signing timeout before throwing.
+   * has gone is reported quickly instead of blocking for the (long) signing timeout before
+   * throwing.
    */
   fun isPresent(): Boolean = runCatching {
     transport.transceive(GET_APPLICATION_RELATED_DATA, PRESENCE_PROBE_TIMEOUT_MS)

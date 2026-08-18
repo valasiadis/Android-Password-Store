@@ -42,9 +42,9 @@ private constructor(private val context: Context, private val usbManager: UsbMan
   private val closed = AtomicBoolean(false)
 
   /**
-   * Tokens already asked about. A user who says no is not asked again for the same token while
-   * this reader is open — Android would put the same dialog up as many times a second as the loop
-   * goes round, and "no" was already an answer.
+   * Tokens already asked about. A user who says no is not asked again for the same token while this
+   * reader is open — Android would put the same dialog up as many times a second as the loop goes
+   * round, and "no" was already an answer.
    */
   private val asked = mutableSetOf<String>()
 
@@ -74,11 +74,11 @@ private constructor(private val context: Context, private val usbManager: UsbMan
    * Suspends until a card reader this app is allowed to talk to has a card in it and its OpenPGP
    * applet has been selected.
    *
-   * Anything that goes wrong on the way — a token that turns out not to speak OpenPGP, a
-   * connection that could not be opened, a permission the user declined — puts this back to
-   * waiting, exactly as a card lifted too early does over NFC: the next attach is another go. What
-   * does come out is the card refusing the applet outright, and a reader this app cannot hold up
-   * its end of the conversation with, since neither improves by trying again.
+   * Anything that goes wrong on the way — a token that turns out not to speak OpenPGP, a connection
+   * that could not be opened, a permission the user declined — puts this back to waiting, exactly
+   * as a card lifted too early does over NFC: the next attach is another go. What does come out is
+   * the card refusing the applet outright, and a reader this app cannot hold up its end of the
+   * conversation with, since neither improves by trying again.
    */
   override suspend fun awaitCard(onCardDetected: (CardConnection) -> Unit): OpenPgpCard {
     while (true) {
@@ -149,7 +149,8 @@ private constructor(private val context: Context, private val usbManager: UsbMan
      */
     fun create(context: Context): UsbCardReader? {
       if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)) return null
-      val usbManager = ContextCompat.getSystemService(context, UsbManager::class.java) ?: return null
+      val usbManager =
+        ContextCompat.getSystemService(context, UsbManager::class.java) ?: return null
       return UsbCardReader(context.applicationContext, usbManager)
     }
   }

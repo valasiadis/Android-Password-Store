@@ -39,8 +39,8 @@ interface CardReader : AutoCloseable {
 }
 
 /**
- * Every way a card could arrive, watched at once, so the user picks by picking up their card
- * rather than by answering a question about it first.
+ * Every way a card could arrive, watched at once, so the user picks by picking up their card rather
+ * than by answering a question about it first.
  *
  * Whichever [readers] produces a card first wins and the others are told to stop. A reader that had
  * one in hand by then — a card tapped at the very moment another was plugged in — has nobody to
@@ -53,18 +53,17 @@ class CompositeCardReader(private val readers: List<CardReader>) : CardReader {
   override suspend fun awaitCard(onCardDetected: (CardConnection) -> Unit): OpenPgpCard =
     coroutineScope {
       val handedOver = AtomicBoolean(false)
-      val attempts =
-        readers.map { reader ->
-          async {
-            val card = reader.awaitCard(onCardDetected)
-            if (handedOver.compareAndSet(false, true)) {
-              card
-            } else {
-              runCatching { card.close() }
-              awaitCancellation()
-            }
+      val attempts = readers.map { reader ->
+        async {
+          val card = reader.awaitCard(onCardDetected)
+          if (handedOver.compareAndSet(false, true)) {
+            card
+          } else {
+            runCatching { card.close() }
+            awaitCancellation()
           }
         }
+      }
       try {
         select { attempts.forEach { attempt -> attempt.onAwait { it } } }
       } finally {

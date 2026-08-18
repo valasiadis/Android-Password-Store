@@ -200,8 +200,8 @@ class OpenPgpCardPrompt(
    * performs the card operation via [attempt]. On a rejected PIN the PIN is wiped and dropped from
    * the cache, and the card's own remaining-attempts counter is consulted -- [pinMode] selects the
    * slot -- to either re-prompt inline or report the card as [CardOutcome.Blocked]. A transient
-   * transport error re-presents the card, saying how. A PIN typed here is cached only
-   * once [block] fully succeeds, so a rejected PIN is never persisted.
+   * transport error re-presents the card, saying how. A PIN typed here is cached only once [block]
+   * fully succeeds, so a rejected PIN is never persisted.
    *
    * The present-card dialog is dismissed on success and the PIN is always wiped before returning.
    * Reader-mode release and turning each [CardOutcome] into a user-facing action stay with the

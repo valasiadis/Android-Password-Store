@@ -10,19 +10,20 @@
   android:background="?android:attr/colorBackground"
   android:orientation="vertical">
 
-  <com.google.android.material.button.MaterialButton
+  <!-- The same mark that opens the settings from every other screen, in the same corner. -->
+  <androidx.appcompat.widget.AppCompatImageButton
     android:id="@+id/settings_button"
-    style="?attr/borderlessButtonStyle"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_alignParentTop="true"
-    android:layout_alignParentEnd="true"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:text="@string/action_settings"
-    android:textAllCaps="true"
-    android:textColor="?attr/colorOnBackground"
+    android:layout_width="48dp"
+    android:layout_height="48dp"
+    android:layout_marginTop="@dimen/spacing_small"
+    android:layout_marginEnd="@dimen/spacing_small"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:contentDescription="@string/action_settings"
+    android:scaleType="center"
+    android:src="@drawable/ic_settings_24dp"
     app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintTop_toTopOf="parent" />
+    app:layout_constraintTop_toTopOf="parent"
+    app:tint="?attr/colorOnBackground" />
 
   <androidx.appcompat.widget.AppCompatImageView
     android:id="@+id/app_icon"

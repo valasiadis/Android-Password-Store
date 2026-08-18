@@ -87,9 +87,10 @@
       </com.google.android.material.button.MaterialButtonToggleGroup>
 
       <!--
-        Public-key authentication needs a key, and this is where one is picked: the three ways of
-        getting one, said outright rather than behind a prompt that used to appear at the moment of
-        cloning, when it is too late to be a choice.
+        Public-key authentication needs a key, and this is where the one in use is named: a single
+        row that says what is set, and opens the ways of setting another. It used to be one button
+        per way of getting a key, side by side and all equally loud, which asked the question four
+        times without ever answering it.
       -->
       <LinearLayout
         android:id="@+id/auth_key_section"
@@ -99,40 +100,52 @@
         android:visibility="gone"
         tools:visibility="visible">
 
-        <androidx.appcompat.widget.AppCompatTextView
-          android:id="@+id/auth_key_status"
+        <LinearLayout
+          android:id="@+id/auth_key_row"
           android:layout_width="match_parent"
           android:layout_height="wrap_content"
           android:layout_marginTop="@dimen/spacing_large"
-          android:textAppearance="?attr/textAppearanceBodyMedium"
-          android:textColor="?attr/colorOnSurfaceVariant"
-          tools:text="No authentication key set yet" />
+          android:background="?attr/selectableItemBackground"
+          android:clickable="true"
+          android:focusable="true"
+          android:gravity="center_vertical"
+          android:minHeight="64dp"
+          android:orientation="horizontal"
+          android:paddingHorizontal="@dimen/spacing_small"
+          android:paddingVertical="@dimen/spacing_small">
 
-        <com.google.android.material.button.MaterialButton
-          android:id="@+id/auth_key_pgp"
-          style="?attr/materialButtonOutlinedStyle"
-          android:layout_width="match_parent"
-          android:layout_height="wrap_content"
-          android:layout_marginTop="@dimen/spacing_medium"
-          android:text="@string/ssh_preferences_dialog_pgp_key" />
+          <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-        <com.google.android.material.button.MaterialButton
-          android:id="@+id/auth_key_generate"
-          style="?attr/materialButtonOutlinedStyle"
-          android:layout_width="match_parent"
-          android:layout_height="wrap_content"
-          android:layout_marginTop="@dimen/spacing_small"
-          android:text="@string/ssh_preferences_dialog_generate" />
+            <androidx.appcompat.widget.AppCompatTextView
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/setup_auth_key_label"
+              android:textAppearance="?attr/textAppearanceTitleMedium" />
 
-        <com.google.android.material.button.MaterialButton
-          android:id="@+id/auth_key_import"
-          style="?attr/materialButtonOutlinedStyle"
-          android:layout_width="match_parent"
-          android:layout_height="wrap_content"
-          android:layout_marginTop="@dimen/spacing_small"
-          android:text="@string/pref_import_ssh_key_title" />
+            <androidx.appcompat.widget.AppCompatTextView
+              android:id="@+id/auth_key_status"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:textAppearance="?attr/textAppearanceBodyMedium"
+              android:textColor="?attr/colorOnSurfaceVariant"
+              tools:text="No key set yet" />
 
-        <!-- What the server needs to be told about the key, shown where the key is chosen. -->
+          </LinearLayout>
+
+          <androidx.appcompat.widget.AppCompatImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_keyboard_arrow_right_24dp"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        </LinearLayout>
+
+        <!-- What the server needs to be told about the key, which acts on it rather than picks it. -->
         <com.google.android.material.button.MaterialButton
           android:id="@+id/auth_key_show"
           style="?attr/materialButtonOutlinedStyle"

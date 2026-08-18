@@ -5,6 +5,9 @@
 
 package app.passwordstore.util.crypto
 
+import android.app.Activity
+import android.content.Context
+import app.passwordstore.R
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
@@ -72,3 +75,57 @@ class CompositeCardReader(private val readers: List<CardReader>) : CardReader {
     readers.forEach { runCatching { it.close() } }
   }
 }
+
+/**
+ * Opens every way a card could reach this phone, for the length of one operation. Returns `null`
+ * when there is no way at all: NFC switched off or absent on a phone that cannot host USB either.
+ *
+ * Both are watched at once rather than one being chosen, because which one the user will reach for
+ * is not something this app can know — and asking them to say so in a setting, before they have
+ * picked up either, is asking the wrong question. Must be called from the main thread, since
+ * enabling NFC reader mode is tied to the activity.
+ */
+fun openCardReaders(activity: Activity): CardReader? {
+  val readers = listOfNotNull(NfcCardReader.create(activity), UsbCardReader.create(activity))
+  return when (readers.size) {
+    0 -> null
+    1 -> readers.single()
+    else -> CompositeCardReader(readers)
+  }
+}
+
+/**
+ * What to ask the user to do, given everywhere a card could turn up. Never says "present" to
+ * someone whose phone is only watching a socket, or "plug in" to one only watching the air.
+ */
+fun cardPresentMessage(context: Context, connections: Set<CardConnection>): String =
+  context.getString(
+    when {
+      connections.size > 1 -> R.string.openpgp_card_present_any
+      connections.single() == CardConnection.USB -> R.string.openpgp_card_present_usb
+      else -> R.string.openpgp_card_present
+    }
+  )
+
+/** What to tell the user to do with the card that has answered, while it is being worked. */
+fun cardHoldMessage(context: Context, connection: CardConnection): String =
+  context.getString(
+    when (connection) {
+      CardConnection.NFC -> R.string.openpgp_card_hold
+      CardConnection.USB -> R.string.openpgp_card_hold_usb
+    }
+  )
+
+/**
+ * How to have another go after an exchange failed on the way. Asked of the card that failed, since
+ * that is the one the user has in their hand; when the failure came before any card answered there
+ * is nothing to say about where it is.
+ */
+fun cardRetryMessage(context: Context, connection: CardConnection?): String =
+  context.getString(
+    when (connection) {
+      CardConnection.NFC -> R.string.openpgp_card_comm_failed
+      CardConnection.USB -> R.string.openpgp_card_comm_failed_usb
+      null -> R.string.openpgp_card_comm_failed_any
+    }
+  )

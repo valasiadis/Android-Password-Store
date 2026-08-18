@@ -75,23 +75,9 @@ class OpenPgpCardPrompt(
     class Error(val error: Throwable, val card: OpenPgpCard?) : Attempt<Nothing>
   }
 
-  /**
-   * Opens every way a card could reach this phone, for the length of the operation. Returns `null`
-   * when there is no way at all: NFC switched off or absent on a phone that cannot host USB either.
-   *
-   * Both are watched at once rather than one being chosen, because which one the user will reach
-   * for is not something this app can know — and asking them to say so in a setting, before they
-   * have picked up either, is asking the wrong question.
-   */
+  /** Opens every way a card could reach this phone, for the length of the operation. */
   suspend fun createReader(): CardReader? =
-    withContext(dispatcherProvider.main()) {
-      val readers = listOfNotNull(NfcCardReader.create(activity), UsbCardReader.create(activity))
-      when (readers.size) {
-        0 -> null
-        1 -> readers.single()
-        else -> CompositeCardReader(readers)
-      }
-    }
+    withContext(dispatcherProvider.main()) { openCardReaders(activity) }
 
   /**
    * Shows (or, on a retry, reuses and re-labels with [message]) the card dialog, awaits a tap on
@@ -113,7 +99,7 @@ class OpenPgpCardPrompt(
           activity.runOnUiThread {
             cardDialog.get()?.let { dialog ->
               dialog.setTitle(R.string.openpgp_card_hold_title)
-              dialog.setMessage(holdMessage(connection))
+              dialog.setMessage(cardHoldMessage(activity, connection))
             }
           }
         }
@@ -142,42 +128,6 @@ class OpenPgpCardPrompt(
       Attempt.Error(e, null)
     }
   }
-
-  /**
-   * What to ask the user to do, given everywhere a card could turn up. Never says "tap" to someone
-   * whose phone is only watching a socket, or "plug in" to one that is only watching the air.
-   */
-  private fun presentMessage(connections: Set<CardConnection>): String =
-    activity.getString(
-      when {
-        connections.size > 1 -> R.string.openpgp_card_present_any
-        connections.single() == CardConnection.USB -> R.string.openpgp_card_present_usb
-        else -> R.string.openpgp_card_present
-      }
-    )
-
-  /** What to tell the user to do with the card that has answered, while it is being worked. */
-  private fun holdMessage(connection: CardConnection): String =
-    activity.getString(
-      when (connection) {
-        CardConnection.NFC -> R.string.openpgp_card_hold
-        CardConnection.USB -> R.string.openpgp_card_hold_usb
-      }
-    )
-
-  /**
-   * How to have another go after an exchange failed on the way. Asked of the card that failed,
-   * since that is the one the user has in their hand; when the failure came before any card
-   * answered there is nothing to say about where it is.
-   */
-  private fun retryMessage(connection: CardConnection?): String =
-    activity.getString(
-      when (connection) {
-        CardConnection.NFC -> R.string.openpgp_card_comm_failed
-        CardConnection.USB -> R.string.openpgp_card_comm_failed_usb
-        null -> R.string.openpgp_card_comm_failed_any
-      }
-    )
 
   /**
    * How a card names itself: the fingerprints of the keys it carries, read straight off it.
@@ -285,7 +235,7 @@ class OpenPgpCardPrompt(
     var askFirst = false
     var cachePin = false
     var pinErrorMessage: String? = null
-    val presentMessage = presentMessage(reader.connections)
+    val presentMessage = cardPresentMessage(activity, reader.connections)
     var cardMessage = presentMessage
     // Set inside the card session, read after it: what the card called itself.
     var presentedIdentity: String? = null
@@ -413,7 +363,7 @@ class OpenPgpCardPrompt(
             // A transient hiccup on the way to the card never reaches the PIN counter: ask for the
             // card again, in the terms of wherever it was.
             if (isRetryableCardError(e)) {
-              cardMessage = retryMessage(attempt.card?.connection)
+              cardMessage = cardRetryMessage(activity, attempt.card?.connection)
               runCatching { attempt.card?.close() }
               continue
             }

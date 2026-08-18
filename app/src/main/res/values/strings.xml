@@ -381,7 +381,7 @@
   <string name="bottom_sheet_create_new_password">Create new password</string>
   <string name="bottom_sheet_import_pgp_key">Restore backup/import from file</string>
   <string name="bottom_sheet_create_pgp_key">Create new key</string>
-  <string name="bottom_sheet_import_pgp_key_card">Set up NFC smartcard</string>
+  <string name="bottom_sheet_import_pgp_key_card">Set up smartcard</string>
   <string name="pref_debug_logging_summary">Enable debug logging (requires app restart).</string>
   <string name="pref_debug_logging_title">Debug logging</string>
   <string name="preference_default_username_summary">If the autofill function cannot retrieve the username from the contents of a password file, the value specified here will be used.</string>
@@ -482,13 +482,12 @@
   <string name="openpgp_card_hold">Keep the smartcard on your phone. Do not move it until this operation finishes.</string>
   <string name="openpgp_card_hold_usb">Keep the smartcard plugged in until this operation finishes.</string>
   <string name="openpgp_card_reader_unavailable">There is no way to reach a smartcard: NFC is unavailable or switched off, and this phone cannot take one plugged in.</string>
-  <string name="openpgp_nfc_not_iso_dep">This NFC tag is not an ISO-DEP smartcard.</string>
-  <string name="openpgp_card_setup_title">NFC smartcard setup</string>
+  <string name="openpgp_card_setup_title">Smartcard setup</string>
   <string name="openpgp_card_importing_key">Importing key…</string>
   <string name="openpgp_card_setup_detected_title">Smartcard detected</string>
-  <string name="openpgp_card_setup_detected_no_url_message">The app can talk to this OpenPGP card over NFC, but the card does not provide a public-key URL. Import the matching public key or GnuPG stub key file next; the app will verify it against the card fingerprints.</string>
-  <string name="openpgp_card_setup_detected_fetch_failed_message">The app can talk to this OpenPGP card over NFC, but could not download the public key from the card URL. Import the matching public key or GnuPG stub key file next; the app will verify it against the card fingerprints.</string>
-  <string name="openpgp_card_setup_failed_title">NFC smartcard unavailable</string>
+  <string name="openpgp_card_setup_detected_no_url_message">The app can talk to this OpenPGP card, but the card does not provide a public-key URL. Import the matching public key or GnuPG stub key file next; the app will verify it against the card fingerprints.</string>
+  <string name="openpgp_card_setup_detected_fetch_failed_message">The app can talk to this OpenPGP card, but could not download the public key from the card URL. Import the matching public key or GnuPG stub key file next; the app will verify it against the card fingerprints.</string>
+  <string name="openpgp_card_setup_failed_title">Smartcard unavailable</string>
   <string name="openpgp_card_no_fingerprints">The OpenPGP card did not report any key fingerprints.</string>
   <string name="openpgp_card_url_no_openpgp_key">The card URL did not return transferable OpenPGP key data.</string>
   <string name="openpgp_card_fingerprint_mismatch">The imported key does not match the fingerprints reported by the OpenPGP card.</string>

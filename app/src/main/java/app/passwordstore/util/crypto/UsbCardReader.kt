@@ -15,6 +15,8 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import androidx.core.content.ContextCompat
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.runCatching
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.channels.Channel
 import logcat.asLog
@@ -127,7 +129,7 @@ private constructor(private val context: Context, private val usbManager: UsbMan
         PendingIntent.FLAG_IMMUTABLE,
       )
     runCatching { usbManager.requestPermission(device, intent) }
-      .onFailure { e -> logcat { "Could not ask about ${device.deviceName}: ${e.asLog()}" } }
+      .onErr { e -> logcat { "Could not ask about ${device.deviceName}: ${e.asLog()}" } }
   }
 
   override fun close() {

@@ -26,6 +26,17 @@ class OpenPgpCard(
 
   private var kdfParameters: KdfParameters? = null
   private var kdfRead = false
+  private var applicationData: ByteArray? = null
+
+  /**
+   * Run just before the card is asked for something it will not do until it is touched.
+   *
+   * A card can be set up to require a finger on its contact for each private-key operation, and
+   * then it simply does not answer until that happens — for as long as its own patience lasts. From
+   * the outside that is indistinguishable from a slow card, so nothing could be said about it
+   * beyond "working", and a user who did not know their key wanted touching waited for a timeout.
+   */
+  var onTouchRequired: (CardOperation) -> Unit = {}
 
   /** Which wire this card turned up on, which decides what the user is asked to do with it. */
   val connection: CardConnection
@@ -131,11 +142,13 @@ class OpenPgpCard(
   }
 
   fun decipher(ciphertext: ByteArray): ByteArray {
+    announceTouch(CardOperation.DECRYPT)
     val payload = byteArrayOf(0x00) + ciphertext
     return transceiveData(0x2A, 0x80, 0x86, payload, expectedLength = ciphertext.size)
   }
 
   fun computeDigitalSignature(digestInfo: ByteArray, expectedLength: Int): ByteArray {
+    announceTouch(CardOperation.SIGN)
     return transceiveData(0x2A, 0x9E, 0x9A, digestInfo, expectedLength)
   }
 
@@ -146,16 +159,41 @@ class OpenPgpCard(
    * SSH public-key authentication.
    */
   fun internalAuthenticate(input: ByteArray): ByteArray {
+    announceTouch(CardOperation.AUTHENTICATE)
     // Le = 0 → request up to 256 bytes; longer responses (e.g. RSA) are pulled in via 61xx
     // chaining.
     return transceiveData(0x88, 0x00, 0x00, input, expectedLength = 0)
   }
 
   fun readCardInfo(): OpenPgpCardInfo {
-    val applicationData = transceive(GET_APPLICATION_RELATED_DATA)
-    val fingerprints = findTlv(applicationData, 0xC5)?.let(::parseFingerprints).orEmpty()
+    val fingerprints = findTlv(applicationData(), 0xC5)?.let(::parseFingerprints).orEmpty()
     val url = runCatching { transceive(GET_URL).toString(Charsets.UTF_8).trim() }.get()
     return OpenPgpCardInfo(fingerprints = fingerprints, url = url?.takeIf { it.isNotBlank() })
+  }
+
+  /**
+   * Everything the card says about itself in one answer: its keys' fingerprints, and which of its
+   * operations want a touch. Read once per session and remembered, since none of it can change
+   * while the card is in the field, and every attempt asks for it.
+   */
+  private fun applicationData(): ByteArray =
+    applicationData ?: transceive(GET_APPLICATION_RELATED_DATA).also { applicationData = it }
+
+  /**
+   * Whether the card will wait for a touch before it performs [operation].
+   *
+   * The card keeps one User Interaction Flag per operation (`D6`, `D7`, `D8`), each a byte that is
+   * zero when no touch is wanted and non-zero when one is — either switchable or set for good. A
+   * card that carries no such flag at all is one that never asks.
+   */
+  fun requiresTouch(operation: CardOperation): Boolean =
+    runCatching { findTlv(applicationData(), operation.uifTag) }
+      .get()
+      ?.firstOrNull()
+      ?.let { it.toInt() != 0 } == true
+
+  private fun announceTouch(operation: CardOperation) {
+    if (runCatching { requiresTouch(operation) }.getOr(false)) onTouchRequired(operation)
   }
 
   /**
@@ -377,6 +415,19 @@ class OpenPgpCard(
       return false
     }
   }
+}
+
+/**
+ * The three things this app asks a card's private keys to do, each with the User Interaction Flag
+ * that says whether the card wants to be touched before it does that one.
+ */
+enum class CardOperation(internal val uifTag: Int) {
+  /** PSO:CDS, which signs a commit. */
+  SIGN(0xD6),
+  /** PSO:DEC, which opens an entry. */
+  DECRYPT(0xD7),
+  /** INTERNAL AUTHENTICATE, which answers an SSH challenge. */
+  AUTHENTICATE(0xD8),
 }
 
 open class OpenPgpCardStatusException(val sw1: Int, val sw2: Int) :

@@ -19,6 +19,7 @@ import app.passwordstore.data.password.PasswordItem
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.PasswordRecyclerViewBinding
 import app.passwordstore.ui.adapters.PasswordItemRecyclerAdapter
+import app.passwordstore.ui.adapters.PasswordRowDecoration
 import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.viewBinding
@@ -63,6 +64,7 @@ class SelectFolderFragment : Fragment(R.layout.password_recycler_view) {
       itemAnimator = null
       adapter = recyclerAdapter
     }
+    PasswordRowDecoration(requireContext()).attachTo(binding.passRecycler)
 
     FastScrollerBuilder(binding.passRecycler).build()
     registerForContextMenu(binding.passRecycler)

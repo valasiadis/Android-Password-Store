@@ -37,6 +37,7 @@ import app.passwordstore.databinding.PasswordRecyclerViewBinding
 import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.injection.prefs.SettingsPreferences
 import app.passwordstore.ui.adapters.PasswordItemRecyclerAdapter
+import app.passwordstore.ui.adapters.PasswordRowDecoration
 import app.passwordstore.ui.dialogs.BasicBottomSheet
 import app.passwordstore.ui.dialogs.ItemCreationBottomSheet
 import app.passwordstore.ui.git.base.BaseGitActivity
@@ -210,11 +211,12 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     val recyclerView = binding.passRecycler
     recyclerView.apply {
       // No divider decoration: rows carry their own filled container and are
-      // separated by margins, so a rule between them reads as clutter.
+      // separated by a thin gap, so a rule between them reads as clutter.
       layoutManager = LinearLayoutManager(requireContext())
       itemAnimator = OnOffItemAnimator()
       adapter = recyclerAdapter
     }
+    PasswordRowDecoration(requireContext()).attachTo(recyclerView)
 
     FastScrollerBuilder(recyclerView).build()
     recyclerAdapter.makeSelectable(recyclerView)

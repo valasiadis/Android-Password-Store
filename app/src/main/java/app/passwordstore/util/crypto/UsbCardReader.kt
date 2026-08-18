@@ -19,6 +19,7 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.withTimeoutOrNull
 import logcat.asLog
 import logcat.logcat
 
@@ -107,7 +108,12 @@ private constructor(private val context: Context, private val usbManager: UsbMan
           }
         }
       }
-      changes.receive()
+      // The broadcast is how this normally wakes up; the timeout is what makes it not matter if
+      // one never arrives. The permission reply is a PendingIntent the system fills in and sends
+      // back, and a phone that mislays it would otherwise leave this waiting for ever on a token
+      // that is plugged in, permitted and ready — with no way for the user to make anything happen
+      // but cancel.
+      withTimeoutOrNull(RECHECK_INTERVAL_MS) { changes.receive() }
     }
   }
 
@@ -121,6 +127,9 @@ private constructor(private val context: Context, private val usbManager: UsbMan
 
   private fun requestPermission(device: UsbDevice) {
     if (!asked.add(device.deviceName)) return
+    // Immutable, though the system fills a device and a yes-or-no into the intent it sends back:
+    // nothing here reads them. The reply is only a nudge to look again, and looking again asks the
+    // USB manager itself, which is the authority on both.
     val intent =
       PendingIntent.getBroadcast(
         context,
@@ -141,6 +150,9 @@ private constructor(private val context: Context, private val usbManager: UsbMan
 
   companion object {
     private const val ACTION_USB_PERMISSION = "app.passwordstore.action.USB_PERMISSION"
+
+    /** How long to go without hearing anything before looking for a token anyway. */
+    private const val RECHECK_INTERVAL_MS = 1_000L
 
     /**
      * Opens a reader, or returns null when this phone cannot host a USB device at all — which is

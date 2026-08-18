@@ -16,8 +16,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.setFragmentResult
 import app.passwordstore.R
-import app.passwordstore.ui.pgp.PGPKeyListActivity.Companion.ACTION_IMPORT_FILE
 import app.passwordstore.ui.pgp.PGPKeyListActivity.Companion.ACTION_IMPORT_CARD
+import app.passwordstore.ui.pgp.PGPKeyListActivity.Companion.ACTION_IMPORT_FILE
 import app.passwordstore.ui.pgp.PGPKeyListActivity.Companion.ACTION_KEY
 import app.passwordstore.ui.pgp.PGPKeyListActivity.Companion.ACTION_NEW_PGP_KEY
 import app.passwordstore.ui.pgp.PGPKeyListActivity.Companion.PGP_KEY_ADD_REQUEST_KEY

@@ -32,10 +32,9 @@ import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.crypto.AESEncryption
 import app.passwordstore.util.crypto.AESEncryption.KeyType
-import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.crypto.CardConnection
 import app.passwordstore.util.crypto.NfcCardReader
-import app.passwordstore.util.crypto.OpenPgpCard
+import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.extensions.base64
 import app.passwordstore.util.extensions.commitChange
 import app.passwordstore.util.extensions.commitSavedChange

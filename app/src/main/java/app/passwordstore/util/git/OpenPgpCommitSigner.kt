@@ -17,8 +17,8 @@ import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.CardConnection
 import app.passwordstore.util.crypto.CardReader
-import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.crypto.OpenPgpCard
+import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import app.passwordstore.util.crypto.SmartcardOperationHandledException
 import app.passwordstore.util.extensions.hideKeyboard

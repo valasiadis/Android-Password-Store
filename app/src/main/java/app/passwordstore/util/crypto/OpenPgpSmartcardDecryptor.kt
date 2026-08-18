@@ -203,7 +203,6 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
     return matchingKeyIds
   }
 
-
   private class OpenPgpCardDecryptorFactory(private val card: OpenPgpCard) :
     AbstractPublicKeyDataDecryptorFactory() {
 

@@ -35,13 +35,15 @@ class CcidFramingTest {
 
   @Test
   fun `counts a long payload past a single byte`() {
-    val message = ccidMessage(messageType = 0x6F, sequence = 1, payload = ByteArray(300), parameter = 0)
+    val message =
+      ccidMessage(messageType = 0x6F, sequence = 1, payload = ByteArray(300), parameter = 0)
     assertContentEquals(byteArrayOf(0x2C, 0x01, 0x00, 0x00), message.copyOfRange(1, 5))
   }
 
   @Test
   fun `asks for a named voltage when powering the card up`() {
-    val message = ccidMessage(messageType = 0x62, sequence = 3, payload = byteArrayOf(), parameter = 2)
+    val message =
+      ccidMessage(messageType = 0x62, sequence = 3, payload = byteArrayOf(), parameter = 2)
     assertEquals(0x62, message[0].toInt() and 0xff)
     assertContentEquals(ByteArray(4), message.copyOfRange(1, 5))
     assertEquals(2, message[7].toInt()) // bPowerSelect: 3.0V

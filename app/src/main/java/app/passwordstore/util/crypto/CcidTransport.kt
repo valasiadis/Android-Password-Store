@@ -18,12 +18,12 @@ import logcat.logcat
  * Carries APDUs over USB to a card plugged into the phone, speaking the USB CCID class protocol
  * (`Universal Serial Bus Device Class: Smart Card CCID`, rev 1.1).
  *
- * NFC hands the card an APDU and gives back its answer; USB does not. Between the two sits a
- * reader — on a token like a YubiKey or a Nitrokey it is a reader welded to a card inside one
- * package, but it is a reader all the same — and everything it is told arrives wrapped in a CCID
- * message: a ten-byte header saying what kind of message this is, how long it is, which slot it is
- * for and which command it answers, then the APDU itself. This turns one into the other, and
- * nothing above it knows the difference.
+ * NFC hands the card an APDU and gives back its answer; USB does not. Between the two sits a reader
+ * — on a token like a YubiKey or a Nitrokey it is a reader welded to a card inside one package, but
+ * it is a reader all the same — and everything it is told arrives wrapped in a CCID message: a
+ * ten-byte header saying what kind of message this is, how long it is, which slot it is for and
+ * which command it answers, then the APDU itself. This turns one into the other, and nothing above
+ * it knows the difference.
  *
  * Only readers that do their own T=1 framing are spoken to (see [CcidExchangeLevel]), which is
  * every token that plugs straight into the phone. A reader that wants to be handed T=1 blocks is
@@ -104,16 +104,19 @@ private constructor(
       val response = read(remaining.toInt())
       if (response.sequence != expectedSequence) {
         // An answer to something we have already given up on; the one we are waiting for follows.
-        logcat { "Ignoring stale CCID response ${response.sequence} (waiting for $expectedSequence)" }
+        logcat {
+          "Ignoring stale CCID response ${response.sequence} (waiting for $expectedSequence)"
+        }
         continue
       }
       if (response.isTimeExtensionRequest) continue
       if (response.failed) {
         throw IOException(
-          "The card reader refused the command (status %02x, error %02x)".format(
-            response.status,
-            response.error,
-          )
+          "The card reader refused the command (status %02x, error %02x)"
+            .format(
+              response.status,
+              response.error,
+            )
         )
       }
       return response
@@ -200,12 +203,9 @@ private constructor(
           )
         }
         val usbInterface =
-          (0 until device.interfaceCount)
-            .map(device::getInterface)
-            .firstOrNull {
-              it.id == descriptor.interfaceNumber &&
-                it.interfaceClass == UsbConstants.USB_CLASS_CSCID
-            } ?: throw IOException("The smartcard reader interface went missing")
+          (0 until device.interfaceCount).map(device::getInterface).firstOrNull {
+            it.id == descriptor.interfaceNumber && it.interfaceClass == UsbConstants.USB_CLASS_CSCID
+          } ?: throw IOException("The smartcard reader interface went missing")
         val endpoints = (0 until usbInterface.endpointCount).map(usbInterface::getEndpoint)
         val bulkIn =
           endpoints.firstOrNull {
@@ -240,7 +240,9 @@ private constructor(
   }
 }
 
-/** Raised when a reader speaks CCID but not in a dialect this app knows how to hold up its end of. */
+/**
+ * Raised when a reader speaks CCID but not in a dialect this app knows how to hold up its end of.
+ */
 class UnsupportedCardReaderException(message: String) : IOException(message)
 
 /**

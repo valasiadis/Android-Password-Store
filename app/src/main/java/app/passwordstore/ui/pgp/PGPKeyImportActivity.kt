@@ -18,9 +18,9 @@ import app.passwordstore.crypto.KeyUtils.isCertificateOrKey
 import app.passwordstore.crypto.KeyUtils.parseAllCertificatesOrKeys
 import app.passwordstore.crypto.KeyUtils.tryGetKeyId
 import app.passwordstore.crypto.PGPIdentifier
-import app.passwordstore.crypto.displayName
 import app.passwordstore.crypto.PGPKey
 import app.passwordstore.crypto.PGPKeyManager
+import app.passwordstore.crypto.displayName
 import app.passwordstore.crypto.errors.KeyAlreadyExistsException
 import app.passwordstore.crypto.errors.UnusableKeyException
 import app.passwordstore.data.crypto.CryptoRepository
@@ -29,8 +29,8 @@ import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.TextInputDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.CardReader
-import app.passwordstore.util.crypto.OpenPgpCardInfo
 import app.passwordstore.util.crypto.OpenPgpCard
+import app.passwordstore.util.crypto.OpenPgpCardInfo
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import app.passwordstore.util.crypto.cardHoldMessage
 import app.passwordstore.util.crypto.cardPresentMessage
@@ -158,7 +158,9 @@ class PGPKeyImportActivity : AppCompatActivity() {
       lifecycleScope.launch(dispatcherProvider.main()) {
         while (!canceled) {
           progressDialog.setTitle(R.string.openpgp_card_setup_title)
-          progressDialog.setMessage(cardPresentMessage(this@PGPKeyImportActivity, reader.connections))
+          progressDialog.setMessage(
+            cardPresentMessage(this@PGPKeyImportActivity, reader.connections)
+          )
           runCatching {
             val card =
               withContext(dispatcherProvider.io()) {

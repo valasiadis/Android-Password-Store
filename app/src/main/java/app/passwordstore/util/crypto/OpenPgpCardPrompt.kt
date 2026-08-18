@@ -161,9 +161,9 @@ class OpenPgpCardPrompt(
    *
    * Only a PIN typed at this prompt was asked about — the dialog is where the user says whether to
    * keep it — so only that one is ever written back to the cache. Only a PIN the caller handed in
-   * is the caller's to forget when the card turns it down. And only a PIN this loop read out of
-   * the cache itself is this loop's to wipe; the other two belong to [runWithPin]'s own `pin`, or
-   * to whoever passed them in.
+   * is the caller's to forget when the card turns it down. And only a PIN this loop read out of the
+   * cache itself is this loop's to wipe; the other two belong to [runWithPin]'s own `pin`, or to
+   * whoever passed them in.
    */
   private enum class PinSource {
     TYPED,
@@ -325,6 +325,18 @@ class OpenPgpCardPrompt(
               pin?.wipe()
               pin = null
               askFirst = true
+              // A PIN the card would not even look at, because it was the wrong length for the
+              // bounds it was set up with, costs no attempt — so it is re-prompted as what it is,
+              // without a count that would have the user believe their retries are running out.
+              if (isSmartcardPinFormatFailure(e)) {
+                logcat {
+                  "Card rejected the PIN's length at VERIFY " +
+                    "(${smartcardStatusWord(e) ?: "no status word"}); no attempt was spent"
+                }
+                runCatching { attempt.card?.close() }
+                pinErrorMessage = activity.getString(R.string.openpgp_card_pin_bad_length)
+                continue
+              }
               // Trust the card's own retry counter; if the status word omitted it, ask the card
               // directly with a non-destructive status check so we learn whether it is now blocked.
               val reportedRemaining = smartcardPinRetriesRemaining(e)
@@ -376,6 +388,32 @@ class OpenPgpCardPrompt(
       PinMode.USER -> card?.readUserPinRetries()
       PinMode.SIGNATURE -> card?.readSignaturePinRetries()
     }
+
+  /**
+   * What to tell the user about a card failure that was not the PIN being wrong.
+   *
+   * Named where the status word says something we can act on, and otherwise reported plainly as a
+   * refusal with the status word attached — which is still honest, and still something a bug report
+   * can be built from. What it never does is blame the PIN, since by the time this is reached the
+   * card has either accepted the PIN or never been asked about it.
+   */
+  fun cardFailureMessage(error: Throwable?): String {
+    val status = smartcardStatusWordPair(error)
+    val (sw1, sw2) = status ?: return error?.message ?: activity.getString(R.string.error)
+    return when {
+      // Conditions of use not satisfied — on a card with UIF set, the touch that never came.
+      sw1 == 0x69 && sw2 == 0x85 -> activity.getString(R.string.openpgp_card_error_touch_required)
+      // Referenced data not found: nothing in the key slot the operation needs.
+      sw1 == 0x6A && sw2 == 0x88 -> activity.getString(R.string.openpgp_card_error_no_key)
+      // Security status not satisfied, raised by something that was not the VERIFY.
+      sw1 == 0x69 && sw2 == 0x82 -> activity.getString(R.string.openpgp_card_error_not_allowed)
+      else ->
+        activity.getString(
+          R.string.openpgp_card_error_generic,
+          "%02x %02x".format(sw1, sw2),
+        )
+    }
+  }
 
   private fun wrongPinMessage(remaining: Int?): String =
     if (remaining != null) {
@@ -691,13 +729,28 @@ class OpenPgpCardPrompt(
     fun smartcardStatusWord(error: Throwable?): String? =
       smartcardStatusWordPair(error)?.let { (sw1, sw2) -> "%02x %02x".format(sw1, sw2) }
 
-    internal fun smartcardStatusWordPair(error: Throwable?): Pair<Int, Int>? {
+    private fun smartcardStatusWordPair(error: Throwable?): Pair<Int, Int>? {
       var cause = error
       while (cause != null) {
         if (cause is OpenPgpCardStatusException) return cause.sw1 to cause.sw2
         cause = cause.cause
       }
       return null
+    }
+
+    /**
+     * Whether the card turned the PIN down over its *shape* rather than its value — too long or too
+     * short for the bounds it was set up with. Recoverable in the same breath as a wrong PIN, but
+     * not the same thing: the card does not count it as an attempt, so saying how many attempts are
+     * left would be telling the user they are burning through retries they still have.
+     */
+    fun isSmartcardPinFormatFailure(error: Throwable?): Boolean {
+      var cause = error
+      while (cause != null) {
+        if (cause is SmartcardPinFormatException) return true
+        cause = cause.cause
+      }
+      return false
     }
 
     /** The card-reported number of PIN attempts still available, or null if the card didn't say. */

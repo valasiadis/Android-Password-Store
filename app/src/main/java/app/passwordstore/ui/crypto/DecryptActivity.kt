@@ -373,7 +373,7 @@ class DecryptActivity : BasePGPActivity() {
         is OpenPgpCardPrompt.CardOutcome.Failed -> {
           readerHandedOff = true
           prompt.releaseReaderWhenCardRemoved(outcome.card, reader)
-          showSmartcardError(friendlySmartcardError(outcome.error))
+          showSmartcardError(friendlySmartcardError(prompt, outcome.error))
         }
       }
     } finally {
@@ -394,11 +394,14 @@ class DecryptActivity : BasePGPActivity() {
       .show()
   }
 
-  private fun friendlySmartcardError(error: Throwable?): String =
-    if (OpenPgpCardPrompt.isSmartcardPinFailure(error)) {
-      resources.getString(R.string.openpgp_card_wrong_pin)
-    } else {
-      error?.message ?: resources.getString(R.string.password_decryption_unknown_error)
+  /**
+   * A card failure that reached here is never a wrong PIN — [OpenPgpCardPrompt.runWithPin] re-asks
+   * for those inline and only hands back what it could not solve by asking again — so the card's
+   * own refusal is named instead of the PIN being blamed for it.
+   */
+  private fun friendlySmartcardError(prompt: OpenPgpCardPrompt, error: Throwable?): String =
+    prompt.cardFailureMessage(error).ifBlank {
+      resources.getString(R.string.password_decryption_unknown_error)
     }
 
   override fun onCreateOptionsMenu(menu: Menu): Boolean {

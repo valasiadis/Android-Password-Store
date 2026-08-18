@@ -222,12 +222,17 @@ class OpenPgpCommitSigner(
       }
       when (outcome) {
         is OpenPgpCardPrompt.CardOutcome.Success -> {
-          // Keep reader mode on until the card is physically lifted, so the platform never
-          // dispatches its NDEF URL while it is still present (e.g. while the success dialog is
-          // up).
           readerHandedOff = true
-          prompt.releaseReaderWhenCardRemoved(outcome.card, activeReader)
-          return outcome.value
+          val signature = outcome.value
+          // Block until the card is lifted, rather than watching for it in the background. What
+          // asked for this signature was a save, and a save that has been committed closes the
+          // editor immediately — taking the activity, its lifecycle scope, and with it any watcher
+          // running there. Reader mode would then end with the card still on the phone, and the
+          // platform would dispatch its NDEF URL as a pop-up over whatever came next. Holding here
+          // keeps the activity foreground until the user lifts the card, as the SSH path does for
+          // the same reason.
+          runBlocking { prompt.awaitCardRemoval(outcome.card, activeReader) }
+          return signature
         }
         OpenPgpCardPrompt.CardOutcome.Cancelled -> {
           readerHandedOff = true

@@ -117,6 +117,19 @@ fun cardHoldMessage(context: Context, connection: CardConnection): String =
   )
 
 /**
+ * What to tell the user while the card holds its answer back waiting to be touched. Said in terms
+ * of where the card is, since a card on the back of the phone has to be touched without being moved
+ * off it, and one in the socket only has to be touched.
+ */
+fun cardTouchMessage(context: Context, connection: CardConnection): String =
+  context.getString(
+    when (connection) {
+      CardConnection.NFC -> R.string.openpgp_card_touch_nfc
+      CardConnection.USB -> R.string.openpgp_card_touch_usb
+    }
+  )
+
+/**
  * How to have another go after an exchange failed on the way. Asked of the card that failed, since
  * that is the one the user has in their hand; when the failure came before any card answered there
  * is nothing to say about where it is.

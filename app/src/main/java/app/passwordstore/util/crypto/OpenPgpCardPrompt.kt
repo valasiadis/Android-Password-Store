@@ -62,17 +62,22 @@ class OpenPgpCardPrompt(
 
   /** Outcome of a single [attempt]. */
   sealed interface Attempt<out T> {
-    /** [card] is left open so reader mode can be released once it is physically removed. */
-    class Success<T>(val value: T, val card: OpenPgpCard) : Attempt<T>
+    /** The card this attempt ended up holding, if it got as far as connecting to one. */
+    val card: OpenPgpCard?
 
-    data object Cancelled : Attempt<Nothing>
+    /** [card] is left open so reader mode can be released once it is physically removed. */
+    class Success<T>(val value: T, override val card: OpenPgpCard) : Attempt<T>
+
+    data object Cancelled : Attempt<Nothing> {
+      override val card: OpenPgpCard? = null
+    }
 
     /**
      * [card] is the connected card when the failure happened after connecting (else null); it is
      * left open so the caller can hold reader mode until the card is physically removed (terminal
      * failure) or close it to allow the user to present it again (retry).
      */
-    class Error(val error: Throwable, val card: OpenPgpCard?) : Attempt<Nothing>
+    class Error(val error: Throwable, override val card: OpenPgpCard?) : Attempt<Nothing>
   }
 
   /** Opens every way a card could reach this phone, for the length of the operation. */
@@ -80,10 +85,10 @@ class OpenPgpCardPrompt(
     withContext(dispatcherProvider.main()) { openCardReaders(activity) }
 
   /**
-   * Shows (or, on a retry, reuses and re-labels with [message]) the card dialog, awaits a tap on
-   * the already-open [reader], and runs [block] on the connected card on the same thread,
-   * immediately after applet selection. The dialog stays on screen for the whole exchange and for
-   * the next attempt; the caller dismisses it via [dismissDialog] when the operation ends.
+   * Shows (or, on a retry, reuses and re-labels with [message]) the card dialog, awaits a card on
+   * the already-open [reader], and runs [block] on it on the same thread, immediately after applet
+   * selection. The dialog stays on screen for the whole exchange and for the next attempt; the
+   * caller dismisses it via [dismissDialog] when the operation ends.
    */
   suspend fun <T> attempt(
     reader: CardReader,
@@ -95,14 +100,8 @@ class OpenPgpCardPrompt(
     withContext(dispatcherProvider.main()) { showOrUpdateDialog(message) }
     val attemptJob =
       async(dispatcherProvider.io()) {
-        val card = reader.awaitCard { connection ->
-          activity.runOnUiThread {
-            cardDialog.get()?.let { dialog ->
-              dialog.setTitle(R.string.openpgp_card_hold_title)
-              dialog.setMessage(cardHoldMessage(activity, connection))
-            }
-          }
-        }
+        val card = reader.awaitCard { connection -> announceCardDetected(connection) }
+        card.onTouchRequired = { announceTouchRequired(card.connection) }
         try {
           Attempt.Success(block(card), card)
         } catch (e: Throwable) {
@@ -126,6 +125,26 @@ class OpenPgpCardPrompt(
     } catch (e: Throwable) {
       // The card wait itself failed (no card connected).
       Attempt.Error(e, null)
+    }
+  }
+
+  /** The card has answered: say where it is and to leave it there. */
+  private fun announceCardDetected(connection: CardConnection) {
+    activity.runOnUiThread {
+      cardDialog.get()?.let { dialog ->
+        dialog.setTitle(R.string.openpgp_card_hold_title)
+        dialog.setMessage(cardHoldMessage(activity, connection))
+      }
+    }
+  }
+
+  /** The card is holding its answer back until a finger arrives: say so, rather than "working". */
+  private fun announceTouchRequired(connection: CardConnection) {
+    activity.runOnUiThread {
+      cardDialog.get()?.let { dialog ->
+        dialog.setTitle(R.string.openpgp_card_touch_title)
+        dialog.setMessage(cardTouchMessage(activity, connection))
+      }
     }
   }
 

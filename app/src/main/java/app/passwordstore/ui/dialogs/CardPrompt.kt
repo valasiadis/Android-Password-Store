@@ -10,31 +10,33 @@ import android.animation.ValueAnimator
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.annotation.DrawableRes
-import androidx.appcompat.app.AlertDialog
-import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
 import app.passwordstore.R
 import app.passwordstore.databinding.ViewCardPromptBinding
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 
 /**
  * What the app puts on the screen while a card is in its hands.
  *
- * One prompt for the whole of an operation, told what to say as the operation moves through it:
- * present the card, hold it there, touch it, lift it off. The mark at the top waits with a slow
- * pulse and stands still once the card is being worked, where a bar underneath says that something
- * is happening — the stretch where the card must not be moved is exactly the stretch that otherwise
- * looks like nothing happening at all. It closes itself when the operation is done.
+ * A sheet up from the bottom, as the Yubico Authenticator does it and for the same reason: what is
+ * being asked concerns the back of the phone, not the screen, and a sheet leaves the screen where
+ * it was rather than covering it with a box in the middle. One sheet for the whole of an operation,
+ * told what to say as the operation moves through it — present the card, hold it there, touch it,
+ * lift it off — with the waiting drawn as a ring around the mark: a closed circle while the card
+ * has yet to arrive, turning while it is being worked. That is the stretch that takes time and the
+ * stretch where the card must not be moved, and it used to look exactly like the stretch where
+ * nothing was happening at all.
  *
  * Only what the card needs of the user is said here. Asking for the PIN is its own dialog, since
  * that is a question with an answer rather than a state to wait out.
  */
 class CardPrompt private constructor(private val binding: ViewCardPromptBinding) {
 
-  private var dialog: AlertDialog? = null
+  private var sheet: BottomSheetDialog? = null
   private var pulse: ObjectAnimator? = null
 
   /** One thing the prompt can be saying. */
@@ -51,30 +53,30 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
 
   /** Says [state], animating the change from whatever was being said before. */
   fun show(state: State) {
-    val shown = dialog
+    val shown = sheet
     if (shown == null || !shown.isShowing) return
     TransitionManager.beginDelayedTransition(binding.root, AutoTransition().setDuration(CHANGE_MS))
     binding.cardMark.setImageResource(state.mark)
     binding.cardTitle.text = state.title
     binding.cardMessage.text = state.message
     binding.cardMessage.isVisible = state.message.isNotEmpty()
-    // Kept in the layout rather than removed from it, so the prompt does not change height when the
-    // bar comes and goes.
-    binding.cardProgress.isInvisible = !state.working
-    binding.cardCancel.isVisible = state.cancellable
+    binding.cardRingBusy.isVisible = state.working
+    binding.cardRingIdle.isVisible = !state.working
+    binding.cardClose.isVisible = state.cancellable
     shown.setCancelable(state.cancellable)
+    shown.setCanceledOnTouchOutside(state.cancellable)
     if (state.waiting) startPulse() else stopPulse()
   }
 
   /**
-   * Marks the operation done and takes the prompt away.
+   * Marks the operation done and takes the sheet away.
    *
    * The tick stays up for a moment before it goes: an operation that finishes as fast as a card can
-   * answer would otherwise be a prompt that flashed and vanished, leaving the user unsure whether
+   * answer would otherwise be a sheet that flashed and vanished, leaving the user unsure whether
    * their card had been read at all.
    */
   fun dismissWithSuccess(onDone: () -> Unit = {}) {
-    val shown = dialog
+    val shown = sheet
     if (shown == null || !shown.isShowing) {
       onDone()
       return
@@ -82,8 +84,9 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
     stopPulse()
     TransitionManager.beginDelayedTransition(binding.root, AutoTransition().setDuration(CHANGE_MS))
     binding.cardMark.setImageResource(R.drawable.ic_done_24dp)
-    binding.cardProgress.isInvisible = true
-    binding.cardCancel.isVisible = false
+    binding.cardRingBusy.isVisible = false
+    binding.cardRingIdle.isVisible = false
+    binding.cardClose.isVisible = false
     binding.root.postDelayed(
       {
         dismiss()
@@ -95,12 +98,12 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
 
   fun dismiss() {
     stopPulse()
-    dialog?.let { if (it.isShowing) it.dismiss() }
-    dialog = null
+    sheet?.let { if (it.isShowing) it.dismiss() }
+    sheet = null
   }
 
   val isShowing: Boolean
-    get() = dialog?.isShowing == true
+    get() = sheet?.isShowing == true
 
   private fun startPulse() {
     if (pulse?.isRunning == true) return
@@ -127,28 +130,31 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
   }
 
   companion object {
-    private const val PULSE_SCALE = 1.12f
+    // Small enough that the mark stays inside its ring while it breathes.
+    private const val PULSE_SCALE = 1.08f
     private const val PULSE_MS = 850L
     private const val CHANGE_MS = 180L
     private const val SUCCESS_MS = 550L
 
     /**
-     * Puts the prompt on the screen saying [state]. [onCancel] runs when the user takes it down, by
-     * its own button or by the ways the system offers.
+     * Puts the sheet on the screen saying [state]. [onCancel] runs when the user takes it down, by
+     * its close button or by the ways a sheet offers of its own.
      */
     fun show(activity: FragmentActivity, state: State, onCancel: () -> Unit): CardPrompt {
       val binding = ViewCardPromptBinding.inflate(activity.layoutInflater)
       val prompt = CardPrompt(binding)
-      val dialog =
-        MaterialAlertDialogBuilder(activity)
-          .outlined(activity)
-          .setView(binding.root)
-          .setOnCancelListener { onCancel() }
-          .create()
-      dialog.window?.setWindowAnimations(R.style.CardPromptAnimation)
-      dialog.show()
-      prompt.dialog = dialog
-      binding.cardCancel.setOnClickListener {
+      val sheet =
+        BottomSheetDialog(activity).apply {
+          setContentView(binding.root)
+          setOnCancelListener { onCancel() }
+          // Nothing here is worth reading half of, so it arrives at its full height and leaves
+          // rather than resting half-open.
+          behavior.state = BottomSheetBehavior.STATE_EXPANDED
+          behavior.skipCollapsed = true
+        }
+      sheet.show()
+      prompt.sheet = sheet
+      binding.cardClose.setOnClickListener {
         prompt.dismiss()
         onCancel()
       }

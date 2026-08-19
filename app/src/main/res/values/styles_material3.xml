@@ -43,10 +43,4 @@
   </style>
 
 
-  <!-- How the smartcard prompt comes and goes. -->
-  <style name="CardPromptAnimation">
-    <item name="android:windowEnterAnimation">@anim/card_prompt_enter</item>
-    <item name="android:windowExitAnimation">@anim/card_prompt_exit</item>
-  </style>
-
 </resources>

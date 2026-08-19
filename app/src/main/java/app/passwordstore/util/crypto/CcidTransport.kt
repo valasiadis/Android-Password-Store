@@ -101,11 +101,9 @@ private constructor(
     sequence = (sequence + 1) and 0xff
     val expectedSequence = sequence
     val deadline = System.currentTimeMillis() + timeoutMs
-    write(ccidMessage(messageType, expectedSequence, payload, parameter), timeoutMs)
+    write(ccidMessage(messageType, expectedSequence, payload, parameter), remainingUntil(deadline))
     while (true) {
-      val remaining = deadline - System.currentTimeMillis()
-      if (remaining <= 0) throw IOException("The card reader did not answer in time")
-      val response = read(remaining.toInt())
+      val response = read(deadline)
       if (response.sequence != expectedSequence) {
         // An answer to something we have already given up on; the one we are waiting for follows.
         logcat {
@@ -127,17 +125,29 @@ private constructor(
     }
   }
 
+  /**
+   * What is left of the caller's patience, as a timeout a bulk transfer will accept.
+   *
+   * Every transfer in one exchange is bounded by the exchange's own deadline rather than each being
+   * given the whole of it afresh. A reader that answers with a packet a moment before the deadline,
+   * over and over, would otherwise keep a thread here for as long as it cared to.
+   */
+  private fun remainingUntil(deadline: Long): Int {
+    val remaining = deadline - System.currentTimeMillis()
+    if (remaining <= 0) throw IOException("The card reader did not answer in time")
+    return remaining.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+  }
+
   private fun write(message: ByteArray, timeoutMs: Int) {
-    val written =
-      deviceConnection.bulkTransfer(bulkOut, message, message.size, timeoutMs.coerceAtLeast(1))
+    val written = deviceConnection.bulkTransfer(bulkOut, message, message.size, timeoutMs)
     if (written != message.size) {
       throw IOException("Could not send the command to the card reader")
     }
   }
 
-  private fun read(timeoutMs: Int): CcidResponse {
+  private fun read(deadline: Long): CcidResponse {
     val buffer = ByteArray(maxMessageLength.coerceIn(CCID_HEADER_LENGTH + 2, MAX_MESSAGE_LENGTH))
-    var filled = readInto(buffer, 0, buffer.size, timeoutMs)
+    var filled = readInto(buffer, 0, buffer.size, deadline)
     if (filled < CCID_HEADER_LENGTH) throw IOException("Truncated answer from the card reader")
     val declared = readLittleEndianInt(buffer, 1)
     if (declared < 0 || declared > buffer.size - CCID_HEADER_LENGTH) {
@@ -145,16 +155,18 @@ private constructor(
     }
     val total = CCID_HEADER_LENGTH + declared
     // A long answer arrives in as many bulk packets as it takes; the header said how many bytes to
-    // expect, so keep reading until they are all here.
+    // expect, so keep reading until they are all here — or until the deadline says the rest is not
+    // coming. A reader that answers with nothing at all, which a zero-length packet is, would
+    // otherwise be waited on for ever.
     while (filled < total) {
-      filled += readInto(buffer, filled, total - filled, timeoutMs)
+      filled += readInto(buffer, filled, total - filled, deadline)
     }
     return parseCcidResponse(buffer, total)
   }
 
-  private fun readInto(buffer: ByteArray, offset: Int, length: Int, timeoutMs: Int): Int {
+  private fun readInto(buffer: ByteArray, offset: Int, length: Int, deadline: Long): Int {
     val read =
-      deviceConnection.bulkTransfer(bulkIn, buffer, offset, length, timeoutMs.coerceAtLeast(1))
+      deviceConnection.bulkTransfer(bulkIn, buffer, offset, length, remainingUntil(deadline))
     if (read < 0) throw IOException("The card reader stopped answering")
     return read
   }

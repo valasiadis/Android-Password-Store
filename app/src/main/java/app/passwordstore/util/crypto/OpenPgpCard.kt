@@ -438,45 +438,72 @@ class OpenPgpCard(
         .filter { fingerprint -> fingerprint.any { it != 0.toByte() } }
         .toList()
 
+    /**
+     * Finds the value of [expectedTag] in a card's BER-TLV answer, or null if it is not in there.
+     *
+     * Everything this walks came off the card, and a card is not obliged to make sense — a tag that
+     * runs off the end of the answer, a length field claiming more than there is, a length so large
+     * it wraps. So each step is asked whether it fits before it is taken, and anything that does
+     * not simply ends the search: there is no reading a malformed answer more carefully.
+     */
     private fun findTlv(data: ByteArray, expectedTag: Int): ByteArray? {
       var offset = 0
       while (offset < data.size) {
-        val (tag, tagEnd) = readTag(data, offset)
-        val (length, valueOffset) = readLength(data, tagEnd)
+        val (tag, tagEnd) = readTag(data, offset) ?: return null
+        val (length, valueOffset) = readLength(data, tagEnd) ?: return null
+        // Written as a subtraction so that a huge length cannot overflow its way past the check.
+        if (length > data.size - valueOffset) return null
         val valueEnd = valueOffset + length
-        if (valueEnd > data.size) return null
         val value = data.copyOfRange(valueOffset, valueEnd)
         if (tag == expectedTag) return value
         if (tag == 0x6E || tag == 0x73)
           findTlv(value, expectedTag)?.let {
             return it
           }
-        offset = valueEnd
+        // A zero-length value at a one-byte tag still moves; nothing here can stand still.
+        offset = if (valueEnd > offset) valueEnd else return null
       }
       return null
     }
 
-    private fun readTag(data: ByteArray, offset: Int): Pair<Int, Int> {
+    /** The tag at [offset] and where it ends, or null if it runs off the end of [data]. */
+    private fun readTag(data: ByteArray, offset: Int): Pair<Int, Int>? {
       var cursor = offset
+      if (cursor >= data.size) return null
       var tag = data[cursor++].toInt() and 0xff
       if (tag and 0x1f == 0x1f) {
+        var next: Int
         do {
-          val next = data[cursor++].toInt() and 0xff
+          if (cursor >= data.size) return null
+          next = data[cursor++].toInt() and 0xff
+          // Four bytes is every tag BER can express that fits in an Int, and far more than any tag
+          // an OpenPGP card uses.
+          if (cursor - offset > MAX_TAG_BYTES) return null
           tag = (tag shl 8) or next
-        } while (next and 0x80 == 0x80 && cursor < data.size)
+        } while (next and 0x80 == 0x80)
       }
       return tag to cursor
     }
 
-    private fun readLength(data: ByteArray, offset: Int): Pair<Int, Int> {
+    /** The length at [offset] and where the value starts, or null if it cannot be read as one. */
+    private fun readLength(data: ByteArray, offset: Int): Pair<Int, Int>? {
       var cursor = offset
+      if (cursor >= data.size) return null
       val first = data[cursor++].toInt() and 0xff
       if (first and 0x80 == 0) return first to cursor
       val count = first and 0x7f
+      // A length needing more than four bytes is longer than an Int holds, and nothing a card has
+      // to say is that long. The indefinite form (count 0) has no place in a card's answer either.
+      if (count == 0 || count > MAX_LENGTH_BYTES || cursor + count > data.size) return null
       var length = 0
       repeat(count) { length = (length shl 8) or (data[cursor++].toInt() and 0xff) }
+      // Four bytes with the top bit set wraps to a negative Int, which is no length at all.
+      if (length < 0) return null
       return length to cursor
     }
+
+    private const val MAX_TAG_BYTES = 4
+    private const val MAX_LENGTH_BYTES = 4
 
     fun isTransceiveFailure(error: Throwable?): Boolean {
       var cause = error

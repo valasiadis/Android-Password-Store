@@ -78,21 +78,20 @@
         </FrameLayout>
 
         <!--
-          Two indicators swapped rather than one changed: a progress indicator refuses to change
-          mode while it is on screen. The turning one keeps its track, so the circle stays whole
-          while the bright part of it goes round.
+          The ring, in two parts: one always there and still, and one that turns over it while the
+          card is being worked. Same colour, same width, same circle — the still one is a plain
+          drawable rather than a second indicator, so that no state of the prompt and no moment
+          between two of them can leave the mark standing without it.
+
+          Its size is the indicator's less one track thickness, which is where a circular indicator
+          draws its arc: that is what makes the two coincide exactly.
         -->
-        <com.google.android.material.progressindicator.CircularProgressIndicator
-          android:id="@+id/card_ring_idle"
-          android:layout_width="@dimen/card_prompt_ring_size"
-          android:layout_height="@dimen/card_prompt_ring_size"
+        <View
+          android:layout_width="@dimen/card_prompt_ring_inner"
+          android:layout_height="@dimen/card_prompt_ring_inner"
           android:layout_gravity="center"
-          android:indeterminate="false"
-          android:progress="100"
-          app:indicatorColor="?attr/colorPrimary"
-          app:indicatorSize="@dimen/card_prompt_ring_size"
-          app:indicatorTrackGapSize="0dp"
-          app:trackThickness="@dimen/card_prompt_ring_thickness" />
+          android:alpha="0.25"
+          android:background="@drawable/card_prompt_ring" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
           android:id="@+id/card_ring_busy"
@@ -104,6 +103,7 @@
           app:indicatorColor="?attr/colorPrimary"
           app:indicatorSize="@dimen/card_prompt_ring_size"
           app:indicatorTrackGapSize="0dp"
+          app:trackColor="@android:color/transparent"
           app:trackThickness="@dimen/card_prompt_ring_thickness"
           tools:visibility="visible" />
 

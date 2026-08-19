@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  The circle the smartcard mark sits in, always there and never animated. The moving indicator is
+  drawn over it in the same colour and the same width, so what turns is the bright part of one ring
+  rather than a ring appearing and disappearing around the mark.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+  android:shape="oval">
+  <stroke
+    android:width="@dimen/card_prompt_ring_thickness"
+    android:color="?attr/colorPrimary" />
+</shape>

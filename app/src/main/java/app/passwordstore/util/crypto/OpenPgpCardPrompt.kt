@@ -431,7 +431,10 @@ class OpenPgpCardPrompt(
                 offered
                   ?: identity
                     ?.let { readCachedPin(pinCacheKey(cacheKey, it)) }
-                    ?.also { cachedCopy = it }
+                    ?.also {
+                      cachedCopy = it
+                      pinSource = PinSource.CACHED
+                    }
                   ?: throw PinNotCached(identity)
               block(card, usable)
             }
@@ -904,6 +907,7 @@ class OpenPgpCardPrompt(
     // How long an operation whose screen is about to close will hold on, unseen, for the card to
     // be lifted before giving up and letting go of the reader.
     private const val READER_HOLD_MS = 4_000L
+
     /**
      * How many times in a row the way to the card may fail before the operation is reported as
      * failed rather than asked to be tried again. See where it is counted for why there is a limit

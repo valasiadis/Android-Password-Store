@@ -182,7 +182,7 @@ class OpenPgpCommitSigner(
     // present/hold-card dialog, and runs the card exchange on the card's own thread via
     // OpenPgpCardPrompt.runWithPin. Any smartcard failure is reported to the user in a dialog
     // (never a snackbar) by the outer catch below.
-    val prompt = OpenPgpCardPrompt(activity, R.string.git_signing_card_title, dispatcherProvider)
+    val prompt = OpenPgpCardPrompt(activity, R.string.openpgp_card_sign_title, dispatcherProvider)
     var reader: CardReader? = null
     // Reader mode is released via the removal watcher (which disables it once the card leaves) on
     // every terminal outcome — success or failure — so the finally only closes it if we exit

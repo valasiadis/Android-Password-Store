@@ -47,6 +47,8 @@ class OpenPgpCardCommandTest {
   /** The least a card can say about itself that is still an answer: an empty 6E. */
   private val minimalApplicationData = byteArrayOf(0x6E, 0x00)
 
+  private fun isGetData(command: ByteArray) = command.size > 1 && command[1] == 0xCA.toByte()
+
   @Test
   fun `a card that never finishes sending is not followed for ever`() {
     // One byte of data and "there is more", over and over. Followed without limit this recurses
@@ -81,5 +83,35 @@ class OpenPgpCardCommandTest {
     // for.
     assertContentEquals(byteArrayOf(0x00, 0xCA.toByte(), 0x00, 0x6E, 0x00), transport.commands[0])
     assertContentEquals(byteArrayOf(0x00, 0xCA.toByte(), 0x00, 0x6E, 0x05), transport.commands[1])
+  }
+
+  @Test
+  fun `a reader with a small buffer is handed commands that fit in it`() {
+    val transport =
+      RecordingTransport(maxTransceiveLength = 64) { command ->
+        if (isGetData(command)) minimalApplicationData + ok else byteArrayOf(0x00) + ok
+      }
+    OpenPgpCard(transport).internalAuthenticate(ByteArray(100))
+    assertTrue(
+      transport.commands.all { it.size <= 64 },
+      "sent a command of ${transport.commands.maxOf { it.size }} bytes to a 64-byte reader",
+    )
+    val dataCommands = transport.commands.filterNot(::isGetData)
+    // Chained: every command but the last says so in its class byte.
+    assertTrue(dataCommands.size > 1)
+    assertTrue(dataCommands.dropLast(1).all { it[0] == 0x10.toByte() })
+    assertEquals(0x00, dataCommands.last()[0].toInt())
+  }
+
+  @Test
+  fun `a reader with room for the whole command gets it in one`() {
+    val transport =
+      RecordingTransport(maxTransceiveLength = 261) { command ->
+        if (isGetData(command)) minimalApplicationData + ok else byteArrayOf(0x00) + ok
+      }
+    OpenPgpCard(transport).internalAuthenticate(ByteArray(100))
+    val dataCommands = transport.commands.filterNot(::isGetData)
+    assertEquals(1, dataCommands.size)
+    assertEquals(0x00, dataCommands.single()[0].toInt())
   }
 }

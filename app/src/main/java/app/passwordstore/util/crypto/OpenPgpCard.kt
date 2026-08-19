@@ -211,19 +211,6 @@ class OpenPgpCard(
     if (runCatching { requiresTouch(operation) }.getOr(false)) onTouchRequired(operation)
   }
 
-  /**
-   * Whether the card is still there. Actively probes with a benign read command rather than
-   * trusting whatever the transport believes about its own connection, since a cached presence
-   * state can stay `true` after the card has physically left. Uses a short timeout so a card that
-   * has gone is reported quickly instead of blocking for the (long) signing timeout before
-   * throwing.
-   */
-  fun isPresent(): Boolean = runCatching {
-    transport.transceive(GET_APPLICATION_RELATED_DATA, PRESENCE_PROBE_TIMEOUT_MS)
-    true
-  }
-    .getOr(false)
-
   override fun close() {
     runCatching { transport.close() }
     onClose()
@@ -301,10 +288,6 @@ class OpenPgpCard(
 
   companion object {
     private const val MAX_APDU_NC = 254
-
-    // Short transceive timeout used only for presence probing, so a removed card fails fast instead
-    // of waiting out the multi-second signing timeout.
-    private const val PRESENCE_PROBE_TIMEOUT_MS = 200
 
     // Opening the OpenPGP application is one command and one answer; a card that has not answered
     // in this long is a card that has gone.

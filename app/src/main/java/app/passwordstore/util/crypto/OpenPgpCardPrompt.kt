@@ -903,7 +903,16 @@ class OpenPgpCardPrompt(
     /** The minimum PW1 (user/signing) PIN length mandated by the OpenPGP Card specification. */
     const val MIN_PIN_LENGTH = 6
 
-    private const val READER_MODE_RELEASE_TIMEOUT_MS = 30_000L
+    /**
+     * How long the watch for a card being lifted runs before it lets go of the reader anyway.
+     *
+     * It runs on this prompt's own scope rather than the screen's, deliberately — a screen that has
+     * finished would otherwise take the watch down with it and leave reader mode on behind
+     * everything — which means it holds the activity for this long after the activity is done with.
+     * Long enough to cover somebody reading the tick and then lifting their card; not long enough
+     * to be worth calling a leak.
+     */
+    private const val READER_MODE_RELEASE_TIMEOUT_MS = 10_000L
     // How long an operation whose screen is about to close will hold on, unseen, for the card to
     // be lifted before giving up and letting go of the reader.
     private const val READER_HOLD_MS = 4_000L

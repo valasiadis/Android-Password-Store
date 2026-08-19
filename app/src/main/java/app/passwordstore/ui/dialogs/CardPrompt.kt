@@ -4,12 +4,12 @@
  */
 package app.passwordstore.ui.dialogs
 
-import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
-import android.animation.ValueAnimator
+import android.content.Context
+import android.graphics.Outline
 import android.view.View
-import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.ViewOutlineProvider
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 import androidx.transition.AutoTransition
@@ -37,17 +37,19 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 class CardPrompt private constructor(private val binding: ViewCardPromptBinding) {
 
   private var sheet: BottomSheetDialog? = null
-  private var pulse: ObjectAnimator? = null
 
   /** One thing the prompt can be saying. */
   class State(
     @DrawableRes val mark: Int,
     val title: String,
     val message: String,
-    /** Whether the mark waits with a pulse, which is what tells presenting apart from working. */
-    val waiting: Boolean,
     /** Whether the card is being worked, and so must be left where it is. */
     val working: Boolean,
+    /**
+     * Whether the mark is a card, and so carries the ring. The touch and the tick are neither round
+     * nor waiting on the card, and wear no ring at all.
+     */
+    val framed: Boolean = true,
     val cancellable: Boolean = true,
   )
 
@@ -56,48 +58,25 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
     val shown = sheet
     if (shown == null || !shown.isShowing) return
     TransitionManager.beginDelayedTransition(binding.root, AutoTransition().setDuration(CHANGE_MS))
-    binding.cardMark.setImageResource(state.mark)
     binding.cardTitle.text = state.title
     binding.cardMessage.text = state.message
     binding.cardMessage.isVisible = state.message.isNotEmpty()
-    binding.cardRingBusy.isVisible = state.working
-    binding.cardRingIdle.isVisible = !state.working
+    binding.cardMarkFramed.isVisible = state.framed
+    binding.cardMarkPlain.isVisible = !state.framed
+    if (state.framed) {
+      binding.cardMark.setImageResource(state.mark)
+      binding.cardMarkGhost.setImageResource(state.mark)
+      binding.cardRingBusy.isVisible = state.working
+      binding.cardRingIdle.isVisible = !state.working
+    } else {
+      binding.cardMarkPlain.setImageResource(state.mark)
+    }
     binding.cardClose.isVisible = state.cancellable
     shown.setCancelable(state.cancellable)
     shown.setCanceledOnTouchOutside(state.cancellable)
-    if (state.waiting) startPulse() else stopPulse()
-  }
-
-  /**
-   * Marks the operation done and takes the sheet away.
-   *
-   * The tick stays up for a moment before it goes: an operation that finishes as fast as a card can
-   * answer would otherwise be a sheet that flashed and vanished, leaving the user unsure whether
-   * their card had been read at all.
-   */
-  fun dismissWithSuccess(onDone: () -> Unit = {}) {
-    val shown = sheet
-    if (shown == null || !shown.isShowing) {
-      onDone()
-      return
-    }
-    stopPulse()
-    TransitionManager.beginDelayedTransition(binding.root, AutoTransition().setDuration(CHANGE_MS))
-    binding.cardMark.setImageResource(R.drawable.ic_done_24dp)
-    binding.cardRingBusy.isVisible = false
-    binding.cardRingIdle.isVisible = false
-    binding.cardClose.isVisible = false
-    binding.root.postDelayed(
-      {
-        dismiss()
-        onDone()
-      },
-      SUCCESS_MS,
-    )
   }
 
   fun dismiss() {
-    stopPulse()
     sheet?.let { if (it.isShowing) it.dismiss() }
     sheet = null
   }
@@ -105,36 +84,24 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
   val isShowing: Boolean
     get() = sheet?.isShowing == true
 
-  private fun startPulse() {
-    if (pulse?.isRunning == true) return
-    pulse =
-      ObjectAnimator.ofPropertyValuesHolder(
-          binding.cardMark,
-          PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, PULSE_SCALE),
-          PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, PULSE_SCALE),
-        )
-        .apply {
-          duration = PULSE_MS
-          repeatMode = ValueAnimator.REVERSE
-          repeatCount = ValueAnimator.INFINITE
-          interpolator = AccelerateDecelerateInterpolator()
-          start()
-        }
-  }
-
-  private fun stopPulse() {
-    pulse?.cancel()
-    pulse = null
-    binding.cardMark.scaleX = 1f
-    binding.cardMark.scaleY = 1f
-  }
-
   companion object {
-    // Small enough that the mark stays inside its ring while it breathes.
-    private const val PULSE_SCALE = 1.08f
-    private const val PULSE_MS = 850L
     private const val CHANGE_MS = 180L
-    private const val SUCCESS_MS = 550L
+
+    /** How long the tick stays up: long enough to be read before whatever comes next. */
+    const val SUCCESS_MS = 550L
+
+    /**
+     * The operation is done. Said by the sheet already up, which then goes or says the next thing.
+     */
+    fun done(context: Context, @StringRes title: Int) =
+      State(
+        mark = R.drawable.ic_done_24dp,
+        title = context.getString(title),
+        message = "",
+        working = false,
+        framed = false,
+        cancellable = false,
+      )
 
     /**
      * Puts the sheet on the screen saying [state]. [onCancel] runs when the user takes it down, by
@@ -151,6 +118,14 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
           // rather than resting half-open.
           behavior.state = BottomSheetBehavior.STATE_EXPANDED
           behavior.skipCollapsed = true
+        }
+      // The middle of the mark, cut back out of the faded whole at full strength.
+      binding.cardMarkClip.clipToOutline = true
+      binding.cardMarkClip.outlineProvider =
+        object : ViewOutlineProvider() {
+          override fun getOutline(view: View, outline: Outline) {
+            outline.setOval(0, 0, view.width, view.height)
+          }
         }
       sheet.show()
       prompt.sheet = sheet

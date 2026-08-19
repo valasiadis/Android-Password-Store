@@ -6,8 +6,7 @@
 <!--
   What the app says while a card is in its hands: where to put it, to hold it there, to touch it,
   to lift it off. Said in the order the Yubico Authenticator says it — what is being asked, then
-  why, then the mark that shows where — with the wait drawn as a ring around that mark rather than
-  as a bar somewhere else, so there is one thing to look at rather than two.
+  why, then the mark that shows where.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -44,48 +43,90 @@
       android:textColor="?attr/colorOnSurfaceVariant"
       tools:text="Keep the smartcard on your phone." />
 
-    <!--
-      The mark, inside the ring that says whether anything is happening. Two rings rather than one
-      switched between modes: a progress indicator refuses to change mode while it is on screen,
-      and swapping which one is visible says the same thing without the ceremony.
-    -->
     <FrameLayout
-      android:layout_width="@dimen/card_prompt_ring_size"
-      android:layout_height="@dimen/card_prompt_ring_size"
+      android:layout_width="@dimen/card_prompt_mark_size"
+      android:layout_height="@dimen/card_prompt_mark_size"
       android:layout_marginTop="@dimen/spacing_xlarge">
 
-      <com.google.android.material.progressindicator.CircularProgressIndicator
-        android:id="@+id/card_ring_idle"
+      <!--
+        The mark with the wait drawn into it rather than around it, which is how the Yubico
+        Authenticator does it: the ring is not a second circle outside the icon, it stands in for
+        the icon's own outer ring. Three layers make that work — the whole mark faded, the middle
+        of it clipped back out at full strength, and the ring running between the two. Turning
+        while the card is being worked, closed while it has yet to arrive.
+      -->
+      <FrameLayout
+        android:id="@+id/card_mark_framed"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:indeterminate="false"
-        android:progress="100"
-        app:indicatorColor="?attr/colorPrimary"
-        app:indicatorSize="@dimen/card_prompt_ring_size"
-        app:indicatorTrackGapSize="0dp"
-        app:trackColor="@android:color/transparent"
-        app:trackThickness="@dimen/card_prompt_ring_thickness" />
+        android:layout_height="match_parent">
 
-      <com.google.android.material.progressindicator.CircularProgressIndicator
-        android:id="@+id/card_ring_busy"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:indeterminate="true"
-        android:visibility="gone"
-        app:indicatorColor="?attr/colorPrimary"
-        app:indicatorSize="@dimen/card_prompt_ring_size"
-        app:trackColor="@android:color/transparent"
-        app:trackThickness="@dimen/card_prompt_ring_thickness"
-        tools:visibility="visible" />
+        <androidx.appcompat.widget.AppCompatImageView
+          android:id="@+id/card_mark_ghost"
+          android:layout_width="match_parent"
+          android:layout_height="match_parent"
+          android:alpha="0.4"
+          android:contentDescription="@null"
+          android:src="@drawable/ic_contactless_24dp"
+          app:tint="?attr/colorPrimary" />
 
+        <FrameLayout
+          android:id="@+id/card_mark_clip"
+          android:layout_width="@dimen/card_prompt_mark_core"
+          android:layout_height="@dimen/card_prompt_mark_core"
+          android:layout_gravity="center">
+
+          <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/card_mark"
+            android:layout_width="@dimen/card_prompt_mark_size"
+            android:layout_height="@dimen/card_prompt_mark_size"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_contactless_24dp"
+            app:tint="?attr/colorPrimary" />
+
+        </FrameLayout>
+
+        <!--
+          Two indicators swapped rather than one changed: a progress indicator refuses to change
+          mode while it is on screen.
+        -->
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+          android:id="@+id/card_ring_idle"
+          android:layout_width="@dimen/card_prompt_ring_size"
+          android:layout_height="@dimen/card_prompt_ring_size"
+          android:layout_gravity="center"
+          android:indeterminate="false"
+          android:progress="100"
+          app:indicatorColor="?attr/colorPrimary"
+          app:indicatorSize="@dimen/card_prompt_ring_size"
+          app:indicatorTrackGapSize="0dp"
+          app:trackColor="@android:color/transparent"
+          app:trackThickness="@dimen/card_prompt_ring_thickness" />
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+          android:id="@+id/card_ring_busy"
+          android:layout_width="@dimen/card_prompt_ring_size"
+          android:layout_height="@dimen/card_prompt_ring_size"
+          android:layout_gravity="center"
+          android:indeterminate="true"
+          android:visibility="gone"
+          app:indicatorColor="?attr/colorPrimary"
+          app:indicatorSize="@dimen/card_prompt_ring_size"
+          app:trackColor="@android:color/transparent"
+          app:trackThickness="@dimen/card_prompt_ring_thickness"
+          tools:visibility="visible" />
+
+      </FrameLayout>
+
+      <!-- A mark that is not a card and has no waiting in it: the touch, and the tick at the end. -->
       <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/card_mark"
-        android:layout_width="@dimen/card_prompt_mark_size"
-        android:layout_height="@dimen/card_prompt_mark_size"
-        android:layout_gravity="center"
+        android:id="@+id/card_mark_plain"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:contentDescription="@null"
-        android:src="@drawable/ic_contactless_24dp"
-        app:tint="?attr/colorPrimary" />
+        android:visibility="gone"
+        app:tint="?attr/colorPrimary"
+        tools:src="@drawable/ic_done_24dp" />
 
     </FrameLayout>
 

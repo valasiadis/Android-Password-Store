@@ -488,6 +488,7 @@
   <string name="openpgp_card_hold">Keep the smartcard on your phone. Do not move it until this operation finishes.</string>
   <string name="openpgp_card_hold_usb">Keep the smartcard plugged in until this operation finishes.</string>
   <string name="openpgp_card_touch_title">Touch your smartcard</string>
+  <string name="openpgp_card_done_title">Done</string>
   <string name="openpgp_card_touch">The card is waiting to be touched before it will do this. Touch it, and leave it plugged in.</string>
   <string name="openpgp_card_reader_unavailable">There is no way to reach a smartcard: NFC is unavailable or switched off, and this phone cannot take one plugged in.</string>
   <string name="openpgp_card_setup_title">Smartcard setup</string>

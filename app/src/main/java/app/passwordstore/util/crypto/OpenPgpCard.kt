@@ -264,6 +264,16 @@ class OpenPgpCard(
     throw OpenPgpCardStatusException(sw1, sw2)
   }
 
+  /**
+   * The largest command data field that still fits in one exchange on this wire.
+   *
+   * Bounded by the short-APDU maximum, and by what the wire will carry: a reader that announces a
+   * small message buffer is handed commands that fit in it, rather than a full-length APDU it has
+   * no room for.
+   */
+  private val maxPayloadPerCommand: Int
+    get() = (transport.maxTransceiveLength - APDU_OVERHEAD).coerceIn(1, MAX_APDU_NC)
+
   private fun transceiveData(
     ins: Int,
     p1: Int,
@@ -271,7 +281,7 @@ class OpenPgpCard(
     payload: ByteArray,
     expectedLength: Int,
   ): ByteArray {
-    return if (payload.size <= MAX_APDU_NC) {
+    return if (payload.size <= maxPayloadPerCommand) {
       transceiveShort(ins, p1, p2, payload, expectedLength)
     } else {
       transceiveChained(ins, p1, p2, payload, expectedLength)
@@ -299,7 +309,7 @@ class OpenPgpCard(
     payload: ByteArray,
     expectedLength: Int,
   ): ByteArray {
-    val chunkSize = (transport.maxTransceiveLength - 6).coerceIn(1, MAX_APDU_NC)
+    val chunkSize = maxPayloadPerCommand
     var offset = 0
     var response = byteArrayOf()
     while (offset < payload.size) {
@@ -319,6 +329,9 @@ class OpenPgpCard(
 
   companion object {
     private const val MAX_APDU_NC = 254
+
+    /** CLA INS P1 P2 Lc around the data field, and Le after it. */
+    private const val APDU_OVERHEAD = 6
 
     /**
      * How many times a card may send us somewhere else — for the rest of an answer, or for the same

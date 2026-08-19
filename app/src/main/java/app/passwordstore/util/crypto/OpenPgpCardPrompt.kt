@@ -213,17 +213,27 @@ class OpenPgpCardPrompt(
    * — so a touch that comes afterwards does nothing, rather than completing something the user has
    * already walked away from.
    */
+  /**
+   * Lets a card go without waiting for it.
+   *
+   * Closing one is I/O — powering it down, giving the interface back — and every place that does it
+   * is somewhere the answer is of no interest: the card has already failed, or been given up on, or
+   * been finished with. Done on the caller's thread it stops the screen for as long as a card that
+   * is no longer answering takes to be let go, which is the whole of the delay between lifting a
+   * card mid-operation and being told so.
+   */
+  private fun releaseCard(card: OpenPgpCard?) {
+    val toClose = card ?: return
+    cardScope.launch(dispatcherProvider.io()) { runCatching { toClose.close() } }
+  }
+
   private fun <T> abandon(
     attemptJob: Deferred<Attempt<T>>,
     connected: AtomicReference<OpenPgpCard?>,
     delivered: AtomicBoolean,
   ): Attempt<T> {
     if (delivered.compareAndSet(false, true)) {
-      // Closing a card is I/O — powering it down, letting the interface go — and this runs
-      // wherever the caller was, which for opening an entry is the main thread. Handed off rather
-      // than waited for: the point of it is to unblock the exchange, and the answer is of no
-      // interest to anybody.
-      cardScope.launch(dispatcherProvider.io()) { runCatching { connected.get()?.close() } }
+      releaseCard(connected.get())
       attemptJob.cancel()
     }
     return Attempt.Cancelled
@@ -425,13 +435,15 @@ class OpenPgpCardPrompt(
           is Attempt.Success -> {
             showSuccess()
             // Written back only for a PIN typed here, and only now that the whole operation has
-            // succeeded — under the card that did it, asked again of the card in hand rather than
-            // trusted from before the exchange. A seeded or cached PIN is already kept wherever it
-            // belongs, and putting one through storeCachedPin with `cache` unset would clear this
-            // cache and switch the caching preference off behind the user's back.
+            // succeeded, under the card that did it — the name it gave inside the session that
+            // just worked, rather than a fresh question put to it afterwards. Asking again meant
+            // one more exchange with a card the user has very likely already lifted, which is a
+            // wait for the deadline to pass, with the tick on screen and nothing happening. A
+            // seeded or cached PIN is already kept wherever it belongs, and putting one through
+            // storeCachedPin with `cache` unset would clear this cache and switch the caching
+            // preference off behind the user's back.
             if (pinSource == PinSource.TYPED && offered != null) {
-              val identity = cardIdentity(attempt.card) ?: presentedIdentity
-              storeCachedPin(pinCacheKey(cacheKey, identity), offered, cachePin)
+              storeCachedPin(pinCacheKey(cacheKey, presentedIdentity), offered, cachePin)
             }
             return CardOutcome.Success(attempt.value, attempt.card)
           }
@@ -440,7 +452,7 @@ class OpenPgpCardPrompt(
             val e = attempt.error
             if (e is PinNotCached) {
               // The card is known and has no PIN here: let it go, ask, and take it again.
-              runCatching { attempt.card?.close() }
+              releaseCard(attempt.card)
               pin?.wipe()
               pin = null
               askFirst = true
@@ -466,7 +478,7 @@ class OpenPgpCardPrompt(
                   "Card rejected the PIN's length at VERIFY " +
                     "(${smartcardStatusWord(e) ?: "no status word"}); no attempt was spent"
                 }
-                runCatching { attempt.card?.close() }
+                releaseCard(attempt.card)
                 pinErrorMessage = activity.getString(R.string.openpgp_card_pin_bad_length)
                 continue
               }
@@ -490,7 +502,7 @@ class OpenPgpCardPrompt(
                   else "per a follow-up status check"
               }
               if (remaining == 0) return CardOutcome.Blocked(attempt.card)
-              runCatching { attempt.card?.close() }
+              releaseCard(attempt.card)
               pinErrorMessage = wrongPinMessage(remaining)
               continue
             }
@@ -498,7 +510,7 @@ class OpenPgpCardPrompt(
             // card again, in the terms of wherever it was.
             if (isRetryableCardError(e)) {
               cardMessage = cardRetryMessage(activity, attempt.card?.connection)
-              runCatching { attempt.card?.close() }
+              releaseCard(attempt.card)
               continue
             }
             // Reported as itself rather than as a wrong PIN. A card that answers here has taken the
@@ -861,8 +873,8 @@ class OpenPgpCardPrompt(
     private const val READER_MODE_REMOVAL_TIMEOUT_MS = 60_000L
     private const val READER_MODE_POLL_INTERVAL_MS = 300L
     // How often the wire is asked whether it still has a card while an exchange is running. Two
-    // consecutive misses end it, so a card that goes is noticed within half a second.
-    private const val LIVENESS_POLL_INTERVAL_MS = 250L
+    // consecutive misses end it, so a card that goes is noticed inside a third of a second.
+    private const val LIVENESS_POLL_INTERVAL_MS = 150L
     private val PIN_FAILURE_REGEX = Regex("""63 c[0-9a-f]""", RegexOption.IGNORE_CASE)
 
     /**

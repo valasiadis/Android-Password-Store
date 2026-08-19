@@ -20,9 +20,9 @@ import app.passwordstore.R
 import app.passwordstore.crypto.KeyUtils.tryGetKeyId
 import app.passwordstore.crypto.KeyUtils.tryGetSecretSubkeyIdsUsagesIsStripped
 import app.passwordstore.crypto.PGPIdentifier
-import app.passwordstore.crypto.displayName
 import app.passwordstore.crypto.PGPIdentifier.KeyId
 import app.passwordstore.crypto.PGPKeyManager
+import app.passwordstore.crypto.displayName
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.databinding.PgpKeyChangePassphraseActivityBinding
 import app.passwordstore.ui.compose.R as composeR
@@ -224,8 +224,15 @@ class PGPKeyChangePassphraseActivity : AppCompatActivity() {
         .setTitle(getString(R.string.pgp_key_change_passphrase_succeeded))
         .setMessage(
           if (subkeyIdentifier == null)
-            getString(R.string.pgp_key_change_passphrase_succeeded_message, tryGetKeyId(key)?.displayName)
-          else getString(R.string.pgp_subkey_change_passphrase_succeeded_message, subkeyIdentifier.displayName)
+            getString(
+              R.string.pgp_key_change_passphrase_succeeded_message,
+              tryGetKeyId(key)?.displayName,
+            )
+          else
+            getString(
+              R.string.pgp_subkey_change_passphrase_succeeded_message,
+              subkeyIdentifier.displayName,
+            )
         )
         .setPositiveButton(android.R.string.ok) { _, _ ->
           setResult(RESULT_OK)

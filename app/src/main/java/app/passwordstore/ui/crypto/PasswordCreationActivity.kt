@@ -191,8 +191,8 @@ class PasswordCreationActivity : BasePGPActivity() {
    * one way to lose it — and a back gesture is easy to make by accident on the way to somewhere
    * else in the entry.
    *
-   * Only once there is something to lose: asking on the way out of a screen nothing was done to
-   * is a question with one sensible answer, which teaches the answer rather than the question.
+   * Only once there is something to lose: asking on the way out of a screen nothing was done to is
+   * a question with one sensible answer, which teaches the answer rather than the question.
    */
   private val confirmDiscard =
     object : OnBackPressedCallback(false) {
@@ -223,8 +223,8 @@ class PasswordCreationActivity : BasePGPActivity() {
    * Whether anything on this screen has been changed since it opened, and so is there to lose.
    *
    * Set by the fields themselves rather than by comparing against what they started with: the
-   * comparison would mean keeping a second copy of the password in a String, which is the one
-   * shape of memory this app cannot wipe when it is done.
+   * comparison would mean keeping a second copy of the password in a String, which is the one shape
+   * of memory this app cannot wipe when it is done.
    */
   private var edited = false
     set(value) {

@@ -210,8 +210,8 @@ fun KeyList(
  *
  * Absent here does not mean useless. A store is usually shared, and the entries in it are usually
  * encrypted to everyone who reads them — so a key this device cannot open anything with is
- * routinely the one the machine at the other end depends on. Dimmed to say it will be no help
- * here, and left selectable so that keeping it stays the user's call.
+ * routinely the one the machine at the other end depends on. Dimmed to say it will be no help here,
+ * and left selectable so that keeping it stays the user's call.
  */
 @Composable
 private fun MissingKeyItem(

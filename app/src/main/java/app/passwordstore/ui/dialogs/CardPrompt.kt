@@ -82,6 +82,9 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
         height = size
       }
       binding.cardRingBusy.isVisible = state.working
+      // Solid while it is the whole of the circle; dimmed to a track only while the moving part is
+      // travelling over it, so that what moves is what stands out.
+      binding.cardRing.alpha = if (state.working) RING_TRACK_ALPHA else 1f
     } else {
       binding.cardMarkPlain.setImageResource(state.mark)
     }
@@ -100,6 +103,8 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
 
   companion object {
     private const val CHANGE_MS = 180L
+
+    private const val RING_TRACK_ALPHA = 0.25f
 
     /** How long the tick stays up: long enough to be read before whatever comes next. */
     const val SUCCESS_MS = 1_200L

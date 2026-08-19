@@ -87,10 +87,10 @@
           draws its arc: that is what makes the two coincide exactly.
         -->
         <View
+          android:id="@+id/card_ring"
           android:layout_width="@dimen/card_prompt_ring_inner"
           android:layout_height="@dimen/card_prompt_ring_inner"
           android:layout_gravity="center"
-          android:alpha="0.25"
           android:background="@drawable/card_prompt_ring" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator

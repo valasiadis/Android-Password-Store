@@ -371,7 +371,9 @@ open class BasePGPActivity : AppCompatActivity() {
           .setMessage(
             getString(R.string.folder_key_partial_dialog_message) +
               "\n\n" +
-              ids.filterNot { it in idsWithKey }.joinToString("\n") { "\u2022\u2002${it.displayName}" }
+              ids
+                .filterNot { it in idsWithKey }
+                .joinToString("\n") { "\u2022\u2002${it.displayName}" }
           )
           .setCancelable(false)
           .setPositiveButton(R.string.dialog_ok) { _, _ -> onKeysExist(ids) }
@@ -464,9 +466,9 @@ open class BasePGPActivity : AppCompatActivity() {
   /**
    * The keys [entryFile] says it was encrypted to, empty where it says nothing.
    *
-   * Nothing outside the store is read. The path an entry screen is opened on arrives in an intent
-   * — from autofill, from a passkey request, from a home-screen shortcut — and a store's keys are
-   * for opening what is in the store.
+   * Nothing outside the store is read. The path an entry screen is opened on arrives in an intent —
+   * from autofill, from a passkey request, from a home-screen shortcut — and a store's keys are for
+   * opening what is in the store.
    */
   protected fun entryRecipients(entryFile: File): List<PGPIdentifier> =
     if (entryFile.isFile && entryFile.isInsideRepository())
@@ -496,8 +498,8 @@ open class BasePGPActivity : AppCompatActivity() {
    *    presented — unless the folder named one, in which case it was already tried in step 1.
    *
    * A file that is not there, or not in the store, has no candidates at all. Trying everything is
-   * the answer to a message that will not name its recipients, not to a path that should never
-   * have been asked about — and the paths these screens open on arrive in intents.
+   * the answer to a message that will not name its recipients, not to a path that should never have
+   * been asked about — and the paths these screens open on arrive in intents.
    */
   protected fun decryptionCandidates(entryFile: File, subDir: String): List<PGPIdentifier> {
     if (!entryFile.isFile || !entryFile.isInsideRepository()) return emptyList()
@@ -505,10 +507,9 @@ open class BasePGPActivity : AppCompatActivity() {
     val named = recipients.filterNot(PGPIdentifier::isHiddenRecipient)
     val folderSpelling =
       folderIdentifiers(subDir).associateBy { repository.getLongKeyIdFromKeyId(it) }
-    val spelled =
-      named.map { recipient ->
-        folderSpelling[repository.getLongKeyIdFromKeyId(recipient)] ?: recipient
-      }
+    val spelled = named.map { recipient ->
+      folderSpelling[repository.getLongKeyIdFromKeyId(recipient)] ?: recipient
+    }
     val candidates =
       if (named.size < recipients.size || named.isEmpty()) spelled + repository.allKeyIds()
       else spelled

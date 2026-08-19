@@ -70,9 +70,9 @@ class PasswordRowDecoration(context: Context) : RecyclerView.ItemDecoration() {
   /**
    * The container, and a ripple masked to it, as one background.
    *
-   * There are four of these — the list's first row, its last, one that is both, one that is
-   * neither — so each is built once and handed out as a new drawable sharing that constant state,
-   * rather than a fresh drawable every time a row is laid out.
+   * There are four of these — the list's first row, its last, one that is both, one that is neither
+   * — so each is built once and handed out as a new drawable sharing that constant state, rather
+   * than a fresh drawable every time a row is laid out.
    */
   private fun containerDrawable(view: View, place: PlaceInList): Drawable {
     val prototype = containers.getOrPut(place) { newContainerDrawable(view, place) }

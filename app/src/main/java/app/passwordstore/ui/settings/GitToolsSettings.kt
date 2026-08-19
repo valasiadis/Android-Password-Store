@@ -53,15 +53,20 @@ class GitToolsSettings(private val activity: SettingsActivity) : SettingsProvide
    * Every preference on this screen whose state is a fact about the repository rather than a
    * setting, so that an operation which changes the repository can have them all read it again.
    *
-   * Built once when the screen is, but what they say — which branch HEAD is on, whether a rebase
-   * is under way, whether a lock is lying about — is answered by the repository at that moment.
+   * Built once when the screen is, but what they say — which branch HEAD is on, whether a rebase is
+   * under way, whether a lock is lying about — is answered by the repository at that moment.
    * Running any of them from here is exactly what changes those answers.
    */
   private val repositoryState = mutableListOf<Pair<Preference, () -> Unit>>()
 
   private fun Preference.reads(refresh: Preference.() -> Unit) {
     refresh()
-    repositoryState += this to { refresh(); requestRebind() }
+    repositoryState +=
+      this to
+        {
+          refresh()
+          requestRebind()
+        }
   }
 
   /** Asks the repository again and redraws whatever it told the screen last time. */

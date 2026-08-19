@@ -5,14 +5,11 @@
 package app.passwordstore.ui.dialogs
 
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Outline
 import android.view.View
 import android.view.ViewOutlineProvider
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.appcompat.R as AppCompatR
-import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentActivity
@@ -22,7 +19,6 @@ import app.passwordstore.R
 import app.passwordstore.databinding.ViewCardPromptBinding
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.color.MaterialColors
 
 /**
  * What the app puts on the screen while a card is in its hands.
@@ -86,7 +82,6 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
         height = size
       }
       binding.cardRingBusy.isVisible = state.working
-      binding.cardRingIdle.isVisible = !state.working
     } else {
       binding.cardMarkPlain.setImageResource(state.mark)
     }
@@ -108,8 +103,6 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
 
     /** How long the tick stays up: long enough to be read before whatever comes next. */
     const val SUCCESS_MS = 1_200L
-
-    private const val TRACK_ALPHA = 0x40
 
     /**
      * The operation is done. Said by the sheet already up, which then goes or says the next thing.
@@ -140,21 +133,6 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
           behavior.state = BottomSheetBehavior.STATE_EXPANDED
           behavior.skipCollapsed = true
         }
-      // The unlit part of the ring: the same colour kept faint, and the same width, so the circle
-      // is whole in both states — a complete ring while the card is awaited, and a track with the
-      // bright part travelling round it while the card is worked. Given to both indicators, since
-      // the two of them stand in for one ring.
-      val track =
-        ColorUtils.setAlphaComponent(
-          MaterialColors.getColor(
-            binding.cardRingBusy,
-            AppCompatR.attr.colorPrimary,
-            Color.TRANSPARENT,
-          ),
-          TRACK_ALPHA,
-        )
-      binding.cardRingBusy.trackColor = track
-      binding.cardRingIdle.trackColor = track
       // The middle of the mark, cut out of it into the ring.
       binding.cardMarkClip.clipToOutline = true
       binding.cardMarkClip.outlineProvider =

@@ -219,7 +219,11 @@ class OpenPgpCardPrompt(
     delivered: AtomicBoolean,
   ): Attempt<T> {
     if (delivered.compareAndSet(false, true)) {
-      runCatching { connected.get()?.close() }
+      // Closing a card is I/O — powering it down, letting the interface go — and this runs
+      // wherever the caller was, which for opening an entry is the main thread. Handed off rather
+      // than waited for: the point of it is to unblock the exchange, and the answer is of no
+      // interest to anybody.
+      cardScope.launch(dispatcherProvider.io()) { runCatching { connected.get()?.close() } }
       attemptJob.cancel()
     }
     return Attempt.Cancelled

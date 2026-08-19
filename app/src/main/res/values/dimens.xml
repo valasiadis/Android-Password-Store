@@ -10,6 +10,8 @@
     across screens.
   -->
   <dimen name="spacing_xsmall">4dp</dimen>
+  <!-- A 24dp settings icon and the gap after it, in place of the library's 56dp column. -->
+  <dimen name="settings_icon_frame">40dp</dimen>
   <dimen name="spacing_small">8dp</dimen>
   <dimen name="spacing_medium">12dp</dimen>
   <dimen name="spacing_large">16dp</dimen>

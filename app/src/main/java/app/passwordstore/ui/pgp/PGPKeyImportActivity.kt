@@ -52,6 +52,7 @@ import java.net.URL
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
@@ -139,7 +140,6 @@ class PGPKeyImportActivity : AppCompatActivity() {
         mark = cardMark(reader.connections),
         title = getString(R.string.openpgp_card_setup_title),
         message = cardPresentMessage(this, reader.connections),
-        waiting = true,
         working = false,
       )
     var canceled = false
@@ -169,7 +169,6 @@ class PGPKeyImportActivity : AppCompatActivity() {
                           mark = cardMark(connection),
                           title = getString(R.string.openpgp_card_hold_title),
                           message = cardHoldMessage(this@PGPKeyImportActivity, connection),
-                          waiting = false,
                           working = true,
                         )
                       )
@@ -189,8 +188,13 @@ class PGPKeyImportActivity : AppCompatActivity() {
               showCardErrorDialog(e.message ?: getString(R.string.pgp_key_import_failed))
               return@launch
             }
-          // The tick is left to fade on its own while the key this card names is looked for.
-          prompt.dismissWithSuccess()
+          // The tick is left up for its moment, and goes on its own while the key this card names
+          // is being looked for.
+          prompt.show(CardPrompt.done(this@PGPKeyImportActivity, R.string.openpgp_card_done_title))
+          launch {
+            delay(CardPrompt.SUCCESS_MS)
+            prompt.dismiss()
+          }
           setupSmartcardKey(cardInfo)
           return@launch
         }

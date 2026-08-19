@@ -235,7 +235,6 @@ class OpenPgpCardPrompt(
             mark = cardMark(connection),
             title = activity.getString(R.string.openpgp_card_hold_title),
             message = cardHoldMessage(activity, connection),
-            waiting = false,
             working = true,
           )
         )
@@ -252,10 +251,8 @@ class OpenPgpCardPrompt(
             mark = R.drawable.ic_touch_app_24dp,
             title = activity.getString(R.string.openpgp_card_touch_title),
             message = cardTouchMessage(activity),
-            // The pulse is the invitation: this is the one state that is waiting on the user rather
-            // than on the card.
-            waiting = true,
             working = true,
+            framed = false,
           )
         )
     }
@@ -421,7 +418,7 @@ class OpenPgpCardPrompt(
             }
         ) {
           is Attempt.Success -> {
-            dismissWithSuccess()
+            showSuccess()
             // Written back only for a PIN typed here, and only now that the whole operation has
             // succeeded — under the card that did it, asked again of the card in hand rather than
             // trusted from before the exchange. A seeded or cached PIN is already kept wherever it
@@ -576,7 +573,6 @@ class OpenPgpCardPrompt(
         mark = cardMark(connections),
         title = activity.getString(titleRes),
         message = message,
-        waiting = true,
         working = false,
       )
     val existing = cardPrompt.get()
@@ -595,16 +591,26 @@ class OpenPgpCardPrompt(
   }
 
   /**
-   * Marks the operation done, leaves the tick up for a moment and then takes the prompt away, all
-   * without holding up the caller: what comes next is the thing the card was asked for, and that
-   * should not wait on an animation.
+   * Marks the operation done, in the sheet that is already up and without taking it down.
+   *
+   * What follows a success is either nothing — the sheet goes, having said so — or being asked to
+   * lift the card, and that is the same sheet saying something else rather than a second one
+   * arriving after the first has left. Whoever ends the operation takes it down; until then
+   * [dismissDialog] leaves it alone.
    */
-  private suspend fun dismissWithSuccess() {
-    val prompt = cardPrompt.getAndSet(null) ?: return
+  private suspend fun showSuccess() {
+    val prompt = cardPrompt.get() ?: return
     finishing.set(true)
     withContext(dispatcherProvider.main()) {
-      prompt.dismissWithSuccess { finishing.set(false) }
+      prompt.show(CardPrompt.done(activity, R.string.openpgp_card_done_title))
     }
+  }
+
+  /** Takes the prompt down, tick or no tick. */
+  private suspend fun closePrompt() {
+    finishing.set(false)
+    val prompt = cardPrompt.getAndSet(null) ?: return
+    withContext(dispatcherProvider.main()) { prompt.dismiss() }
   }
 
   class SecretEntry(val secret: CharArray, val cache: Boolean)
@@ -761,6 +767,9 @@ class OpenPgpCardPrompt(
    */
   fun releaseReaderWhenCardRemoved(card: OpenPgpCard?, reader: CardReader) {
     activity.lifecycleScope.launch {
+      // Long enough for the tick to be read, and then the sheet has said all it has to say.
+      delay(CardPrompt.SUCCESS_MS)
+      closePrompt()
       if (card != null && card.connection == CardConnection.NFC) {
         withContext(dispatcherProvider.io()) {
           try {
@@ -793,40 +802,35 @@ class OpenPgpCardPrompt(
    */
   suspend fun awaitCardRemoval(card: OpenPgpCard, reader: CardReader) {
     if (card.connection != CardConnection.NFC) {
+      delay(CardPrompt.SUCCESS_MS)
+      closePrompt()
       withContext(dispatcherProvider.io()) { runCatching { card.close() } }
       reader.close()
       return
     }
     try {
       // Most people lift the card the moment the operation is over, and being told to do what they
-      // are already doing is worse than being told nothing. So the card is given a moment to go on
-      // its own, and only a card still sitting there afterwards is asked about.
-      if (withContext(dispatcherProvider.io()) { awaitAbsence(card, REMOVAL_GRACE_MS) }) return
-      val prompt =
-        withContext(dispatcherProvider.main()) {
-          if (activity.isFinishing || activity.isDestroyed) return@withContext null
-          CardPrompt.show(
-            activity,
+      // are already doing is worse than being told nothing. So the card is given the length of the
+      // tick to go on its own, and only a card still sitting there afterwards is asked about.
+      if (withContext(dispatcherProvider.io()) { awaitAbsence(card, CardPrompt.SUCCESS_MS) }) return
+      withContext(dispatcherProvider.main()) {
+        cardPrompt
+          .get()
+          ?.show(
             CardPrompt.State(
               mark = cardMark(CardConnection.NFC),
               title = activity.getString(R.string.openpgp_nfc_remove_card_title),
               message = activity.getString(R.string.openpgp_nfc_remove_card_message),
-              waiting = true,
               working = false,
               // There is nothing to cancel: the operation is done, and this is only about the
               // moment between it finishing and the card leaving the field.
               cancellable = false,
-            ),
-          ) {}
-        }
-      try {
-        withContext(dispatcherProvider.io()) {
-          awaitAbsence(card, READER_MODE_REMOVAL_TIMEOUT_MS)
-        }
-      } finally {
-        withContext(dispatcherProvider.main()) { runCatching { prompt?.dismiss() } }
+            )
+          )
       }
+      withContext(dispatcherProvider.io()) { awaitAbsence(card, READER_MODE_REMOVAL_TIMEOUT_MS) }
     } finally {
+      closePrompt()
       runCatching { card.close() }
       reader.close()
     }

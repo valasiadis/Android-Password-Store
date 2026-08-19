@@ -216,9 +216,20 @@ class OpenPgpCard(
     onClose()
   }
 
+  /**
+   * Sends one command and reads the answer, following the card wherever the status word points.
+   *
+   * Two status words are not answers but instructions: `61 xx` means the rest is waiting to be
+   * fetched, and `6C xx` means the same command with a different Le. Both are followed, and both
+   * are bounded — a card is at liberty to answer `61 ff` for ever, and a chain nothing stops is a
+   * chain that fills the heap and then overflows the stack. [remainingSteps] and [collected] are
+   * what is left of each budget; a card that spends either has stopped making sense.
+   */
   private fun transceive(
     command: ByteArray,
     timeoutMs: Int = transport.defaultTimeoutMs,
+    remainingSteps: Int = MAX_CHAIN_STEPS,
+    collected: Int = 0,
   ): ByteArray {
     val response = transport.transceive(command, timeoutMs)
     if (response.size < 2) throw IOException("Malformed card response")
@@ -226,10 +237,30 @@ class OpenPgpCard(
     val sw2 = response[response.size - 1].toInt() and 0xff
     val data = response.copyOf(response.size - 2)
     if (sw1 == 0x90 && sw2 == 0x00) return data
-    if (sw1 == 0x61)
+    if (sw1 == 0x61) {
+      val total = collected + data.size
+      if (remainingSteps <= 0 || total > MAX_RESPONSE_LENGTH) {
+        throw IOException("The card kept asking to be read from and never finished")
+      }
       return data +
-        transceive(byteArrayOf(0x00, 0xC0.toByte(), 0x00, 0x00, sw2.toByte()), timeoutMs)
-    if (sw1 == 0x6C) return transceive(command.copyOf(command.size - 1) + sw2.toByte(), timeoutMs)
+        transceive(
+          byteArrayOf(0x00, 0xC0.toByte(), 0x00, 0x00, sw2.toByte()),
+          timeoutMs,
+          remainingSteps - 1,
+          total,
+        )
+    }
+    // Only a command that actually ends in an Le byte has one to correct. Rewriting the last byte
+    // of a command that has none — a Case-1 VERIFY, say, whose four bytes end in the password
+    // reference — would send something else entirely, and against another password at that.
+    if (sw1 == 0x6C && remainingSteps > 0 && hasLeByte(command)) {
+      return transceive(
+        command.copyOf(command.size - 1) + sw2.toByte(),
+        timeoutMs,
+        remainingSteps - 1,
+        collected,
+      )
+    }
     throw OpenPgpCardStatusException(sw1, sw2)
   }
 
@@ -289,9 +320,33 @@ class OpenPgpCard(
   companion object {
     private const val MAX_APDU_NC = 254
 
+    /**
+     * How many times a card may send us somewhere else — for the rest of an answer, or for the same
+     * command at another length — before it is not being followed any further. The longest
+     * legitimate chain is an RSA-4096 answer read 256 bytes at a time, which is two.
+     */
+    private const val MAX_CHAIN_STEPS = 16
+
+    /** More than any answer an OpenPGP card has to give, and far less than anything that hurts. */
+    private const val MAX_RESPONSE_LENGTH = 1 shl 16
+
     // Opening the OpenPGP application is one command and one answer; a card that has not answered
     // in this long is a card that has gone.
     private const val SELECT_TIMEOUT_MS = 2_000
+
+    /**
+     * Whether [command] ends in an Le byte, which is what a `6C xx` offers to correct.
+     *
+     * The four cases of ISO 7816-4, told apart by length: four bytes is Case 1 and carries neither
+     * a data field nor Le; five is Case 2, all Le; longer means a data field whose length byte says
+     * whether one byte is left over at the end for Le (Case 4) or not (Case 3).
+     */
+    private fun hasLeByte(command: ByteArray): Boolean =
+      when {
+        command.size == 5 -> true
+        command.size > 5 -> command.size == 5 + (command[4].toInt() and 0xff) + 1
+        else -> false
+      }
 
     private fun encodeShortLe(expectedLength: Int): ByteArray =
       byteArrayOf(if (expectedLength >= 256) 0x00 else expectedLength.toByte())

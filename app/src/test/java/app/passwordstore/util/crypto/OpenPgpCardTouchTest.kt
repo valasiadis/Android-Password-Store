@@ -22,6 +22,7 @@ class OpenPgpCardTouchTest {
 
     override val connection = CardConnection.USB
     override val maxTransceiveLength = 261
+    override val isConnected = true
 
     override fun transceive(command: ByteArray, timeoutMs: Int): ByteArray {
       exchanges++

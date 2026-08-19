@@ -42,6 +42,12 @@ class OpenPgpCard(
   val connection: CardConnection
     get() = transport.connection
 
+  /**
+   * Whether the card is still on the end of the wire, asked of the wire rather than of the card.
+   */
+  val isConnected: Boolean
+    get() = transport.isConnected
+
   fun selectOpenPgpApplet() {
     transceive(SELECT_OPENPGP)
   }

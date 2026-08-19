@@ -45,6 +45,15 @@ interface CardTransport : AutoCloseable {
   /** Which wire this is, for the sake of what the user is told and asked to do. */
   val connection: CardConnection
 
+  /**
+   * Whether the wire still has a card on the end of it, answered without sending anything.
+   *
+   * Asked while an exchange is in flight, when actually addressing the card is not an option: the
+   * point is to notice a card that has gone in the middle of an operation, which otherwise shows up
+   * only when the exchange finally times out.
+   */
+  val isConnected: Boolean
+
   companion object {
     /** Long enough for the slowest thing a card is asked to do here: an RSA-4096 private-key op. */
     const val DEFAULT_TIMEOUT_MS = 30_000

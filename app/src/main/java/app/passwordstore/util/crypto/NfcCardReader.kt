@@ -10,6 +10,7 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
 import android.os.Bundle
+import com.github.michaelbull.result.getOr
 import com.github.michaelbull.result.runCatching
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -25,6 +26,11 @@ class IsoDepTransport(private val isoDep: IsoDep) : CardTransport {
 
   override val maxTransceiveLength: Int
     get() = isoDep.maxTransceiveLength
+
+  // Kept up to date by the platform's own presence check, which is why that check being frequent
+  // matters as much as it does.
+  override val isConnected: Boolean
+    get() = runCatching { isoDep.isConnected }.getOr(false)
 
   override fun transceive(command: ByteArray, timeoutMs: Int): ByteArray {
     isoDep.timeout = timeoutMs

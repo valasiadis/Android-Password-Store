@@ -15,7 +15,10 @@ import android.view.View
 import android.view.ViewGroup.MarginLayoutParams
 import android.widget.ImageView
 import androidx.appcompat.R as AppCompatR
+import androidx.core.content.res.use
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePaddingRelative
 import androidx.recyclerview.widget.RecyclerView
 import app.passwordstore.R
 import com.google.android.material.R as MaterialR
@@ -39,6 +42,14 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
   private val entrySpacing = context.resources.getDimensionPixelSize(R.dimen.spacing_xsmall)
   private val groupSpacing = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
   private val contentMargin = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
+  private val iconRowPadding = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
+  private val iconFrameWidth = context.resources.getDimensionPixelSize(R.dimen.settings_icon_frame)
+  private val iconFrameGap = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
+  /** What the library's own layout leads with, restored to a recycled row that has no icon. */
+  private val plainRowPadding =
+    context.obtainStyledAttributes(intArrayOf(android.R.attr.listPreferredItemPaddingStart)).use {
+      it.getDimensionPixelSize(0, iconRowPadding)
+    }
   private val containers = mutableMapOf<PlaceInGroup, RippleDrawable>()
   private val applied = java.util.WeakHashMap<View, PlaceInGroup>()
 
@@ -64,10 +75,12 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
           } else {
             applied.remove(view)
           }
-          view.findViewById<ImageView>(android.R.id.icon)?.imageTintList =
+          val icon = view.findViewById<ImageView>(android.R.id.icon)
+          icon?.imageTintList =
             ColorStateList.valueOf(
               MaterialColors.getColor(view, AppCompatR.attr.colorPrimary, Color.TRANSPARENT)
             )
+          drawIconIn(view, icon)
         }
 
         override fun onChildViewDetachedFromWindow(view: View) = Unit
@@ -96,6 +109,29 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
       applied[view] = place
     }
     outRect.bottom = if (place.endsGroup) groupSpacing else entrySpacing
+  }
+
+  /**
+   * Pulls an entry that carries an icon in from the left edge.
+   *
+   * The library reserves a fixed column for the icon and starts the title after it, which puts the
+   * icon well inside the container and the title further in still — so a screen with icons sits
+   * noticeably further right than one without, and the two read as different lists. The column is
+   * narrowed to what a 24dp icon and a gap actually need, and the row's leading padding with it.
+   *
+   * Asked of the icon itself rather than of the screen, so a sub-screen that grows icons later is
+   * treated the same without anything being told about it, and a row with none is left alone.
+   */
+  private fun drawIconIn(row: View, icon: ImageView?) {
+    val frame = icon?.parent as? View
+    val carriesIcon = frame != null && frame.isVisible
+    if (carriesIcon) {
+      frame.updateLayoutParams { width = iconFrameWidth }
+      frame.updatePaddingRelative(start = 0, end = iconFrameGap)
+    }
+    // Said either way: rows are recycled, and one that has just given up its icon would otherwise
+    // keep the leading edge it only had because of it.
+    row.updatePaddingRelative(start = if (carriesIcon) iconRowPadding else plainRowPadding)
   }
 
   /**

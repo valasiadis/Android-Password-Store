@@ -92,7 +92,6 @@
           app:indicatorColor="?attr/colorPrimary"
           app:indicatorSize="@dimen/card_prompt_ring_size"
           app:indicatorTrackGapSize="0dp"
-          app:trackColor="@android:color/transparent"
           app:trackThickness="@dimen/card_prompt_ring_thickness" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator

@@ -125,7 +125,14 @@ class OpenPgpCardPrompt(
           try {
             val card = reader.awaitCard { connection -> announceCardDetected(connection) }
             connected.set(card)
-            card.onTouchRequired = { announceTouchRequired(card.connection) }
+            // Only a card in the socket is known to be waiting for a finger. A card held against
+            // the phone may have the same flag set and still not wait: the tap can be what
+            // satisfies it, and then the operation simply runs — with the prompt telling the user
+            // to touch a card that wants nothing of the sort. When such a card does wait, it says
+            // so afterwards in its own words, which is what the refusal message is for.
+            if (card.connection == CardConnection.USB) {
+              card.onTouchRequired = { announceTouchRequired() }
+            }
             try {
               Attempt.Success(block(card), card)
             } catch (e: Throwable) {
@@ -196,11 +203,11 @@ class OpenPgpCardPrompt(
   }
 
   /** The card is holding its answer back until a finger arrives: say so, rather than "working". */
-  private fun announceTouchRequired(connection: CardConnection) {
+  private fun announceTouchRequired() {
     activity.runOnUiThread {
       cardDialog.get()?.let { dialog ->
         dialog.setTitle(R.string.openpgp_card_touch_title)
-        dialog.setMessage(cardTouchMessage(activity, connection))
+        dialog.setMessage(cardTouchMessage(activity))
       }
     }
   }

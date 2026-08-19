@@ -66,34 +66,48 @@
       app:layout_constraintTop_toTopOf="parent"
       app:layout_constraintVertical_bias="0.56">
 
-      <TextView
-        android:id="@+id/repo_type"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:autoSizeMaxTextSize="24sp"
-        android:autoSizeMinTextSize="16sp"
-        android:autoSizeTextType="uniform"
-        android:singleLine="true"
-        android:text="@string/select_n_repository_type"
-        android:textAlignment="center"
-        android:textAppearance="?attr/textAppearanceHeadlineSmall"
-        android:textStyle="bold" />
-
       <!--
-        What the two buttons below mean, kept behind the mark rather than spelled out under the
-        question: the sentence was a restatement of the title for anyone who did not need it, and a
-        paragraph in the way for everyone who did.
+        The question, centred on the screen, with the mark that explains it set against its right
+        edge. The text is what is centred, not the pair: a mark counted into the centring would
+        push the question off it, and the question is what the screen is for. The text view is
+        sized to its text rather than to the row so the mark has an edge to sit against, while
+        staying bounded by the row so it can still shrink to fit a narrow screen.
       -->
-      <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/repo_type_help"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="@dimen/spacing_medium"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:padding="@dimen/spacing_small"
-        android:src="@drawable/ic_help_20dp"
-        app:tint="?attr/colorOnSurfaceVariant" />
+      <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+          android:id="@+id/repo_type"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:autoSizeMaxTextSize="24sp"
+          android:autoSizeMinTextSize="16sp"
+          android:autoSizeTextType="uniform"
+          android:singleLine="true"
+          android:text="@string/select_n_repository_type"
+          android:textAlignment="center"
+          android:textAppearance="?attr/textAppearanceHeadlineSmall"
+          android:textStyle="bold"
+          app:layout_constrainedWidth="true"
+          app:layout_constraintEnd_toEndOf="parent"
+          app:layout_constraintStart_toStartOf="parent"
+          app:layout_constraintTop_toTopOf="parent"
+          app:layout_constraintWidth_default="wrap" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+          android:id="@+id/repo_type_help"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:background="?attr/selectableItemBackgroundBorderless"
+          android:padding="@dimen/spacing_small"
+          android:src="@drawable/ic_help_20dp"
+          app:layout_constraintBottom_toBottomOf="@id/repo_type"
+          app:layout_constraintStart_toEndOf="@id/repo_type"
+          app:layout_constraintTop_toTopOf="@id/repo_type"
+          app:tint="?attr/colorOnSurfaceVariant" />
+
+      </androidx.constraintlayout.widget.ConstraintLayout>
 
       <com.google.android.material.button.MaterialButton
         android:id="@+id/clone_remote"

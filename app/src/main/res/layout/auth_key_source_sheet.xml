@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  Where an authentication key can come from, in the same sheet the key manager uses to ask where a
+  PGP key comes from: the choices as a short column, each said in full and marked with what it is.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="vertical"
+  android:paddingVertical="@dimen/spacing_small">
+
+  <com.google.android.material.button.MaterialButton
+    android:id="@+id/auth_key_generate"
+    style="@style/Widget.Material3.Button.TextButton"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/bottom_sheet_item_height"
+    android:layout_marginHorizontal="@dimen/normal_margin"
+    android:text="@string/setup_auth_key_source_generate"
+    android:textAlignment="viewStart"
+    android:textAllCaps="false"
+    android:textColor="?attr/colorOnSurface"
+    app:icon="@drawable/ic_software_key_24dp"
+    app:iconPadding="@dimen/normal_margin"
+    app:iconTint="?attr/colorSecondary"
+    app:rippleColor="?attr/colorSecondary" />
+
+  <com.google.android.material.button.MaterialButton
+    android:id="@+id/auth_key_import"
+    style="@style/Widget.Material3.Button.TextButton"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/bottom_sheet_item_height"
+    android:layout_marginHorizontal="@dimen/normal_margin"
+    android:text="@string/setup_auth_key_source_import"
+    android:textAlignment="viewStart"
+    android:textAllCaps="false"
+    android:textColor="?attr/colorOnSurface"
+    app:icon="@drawable/ic_action_new_folder"
+    app:iconPadding="@dimen/normal_margin"
+    app:iconTint="?attr/colorSecondary"
+    app:rippleColor="?attr/colorSecondary" />
+
+  <com.google.android.material.button.MaterialButton
+    android:id="@+id/auth_key_pgp"
+    style="@style/Widget.Material3.Button.TextButton"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/bottom_sheet_item_height"
+    android:layout_marginHorizontal="@dimen/normal_margin"
+    android:text="@string/setup_auth_key_source_pgp"
+    android:textAlignment="viewStart"
+    android:textAllCaps="false"
+    android:textColor="?attr/colorOnSurface"
+    app:icon="@drawable/ic_action_new_pgp_key"
+    app:iconPadding="@dimen/normal_margin"
+    app:iconTint="?attr/colorSecondary"
+    app:rippleColor="?attr/colorSecondary" />
+
+</LinearLayout>

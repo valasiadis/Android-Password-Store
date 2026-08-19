@@ -9,7 +9,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
-import android.widget.PopupMenu
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -17,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitCloneBinding
+import app.passwordstore.ui.dialogs.AuthKeySourceBottomSheet
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.git.base.BaseGitActivity
@@ -27,6 +27,7 @@ import app.passwordstore.ui.sshkeygen.ShowSshKeyFragment
 import app.passwordstore.ui.sshkeygen.SshKeyGenActivity
 import app.passwordstore.ui.sshkeygen.SshKeyImportActivity
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
+import app.passwordstore.util.extensions.hideKeyboard
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.git.sshj.SshKey
 import app.passwordstore.util.settings.AuthMode
@@ -112,7 +113,13 @@ class GitServerConfigActivity : BaseGitActivity() {
       if (isClone) reportUrlState() else applySettings()
     }
 
-    binding.authKeyRow.setOnClickListener { anchor -> showAuthKeySources(anchor) }
+    binding.authKeyRow.setOnClickListener { showAuthKeySources() }
+    supportFragmentManager.setFragmentResultListener(
+      AuthKeySourceBottomSheet.AUTH_KEY_SOURCE_REQUEST_KEY,
+      this,
+    ) { _, result ->
+      useAuthKeyFrom(result.getString(AuthKeySourceBottomSheet.SOURCE_KEY))
+    }
     binding.authKeyShow.setOnClickListener {
       ShowSshKeyFragment().show(supportFragmentManager, "public_key")
     }
@@ -267,22 +274,26 @@ class GitServerConfigActivity : BaseGitActivity() {
     }
 
   /**
-   * Offers the ways a key can come from, anchored to the row that names the one in use. Picking a
-   * PGP key opens the list of them, which is where that choice is actually made.
+   * Offers the ways a key can come from, in the sheet the key manager uses for the same question
+   * about PGP keys. Picking a PGP key opens the list of them, which is where that choice is
+   * actually made.
+   *
+   * The keyboard goes first: this row sits under a text field, and a sheet rising behind an open
+   * keyboard would be half covered by it.
    */
-  private fun showAuthKeySources(anchor: View) {
-    PopupMenu(this, anchor).apply {
-      menuInflater.inflate(R.menu.auth_key_sources, menu)
-      setOnMenuItemClickListener { item ->
-        when (item.itemId) {
-          R.id.auth_key_generate -> authKeyAction.launch(intentFor<SshKeyGenActivity>())
-          R.id.auth_key_import -> authKeyAction.launch(intentFor<SshKeyImportActivity>())
-          R.id.auth_key_pgp -> authKeyAction.launch(intentFor<PgpAuthKeySelectionActivity>())
-          else -> return@setOnMenuItemClickListener false
-        }
-        true
-      }
-      show()
+  private fun showAuthKeySources() {
+    hideKeyboard()
+    AuthKeySourceBottomSheet().show(supportFragmentManager, "auth_key_source")
+  }
+
+  private fun useAuthKeyFrom(source: String?) {
+    when (source) {
+      AuthKeySourceBottomSheet.SOURCE_GENERATE ->
+        authKeyAction.launch(intentFor<SshKeyGenActivity>())
+      AuthKeySourceBottomSheet.SOURCE_IMPORT ->
+        authKeyAction.launch(intentFor<SshKeyImportActivity>())
+      AuthKeySourceBottomSheet.SOURCE_PGP ->
+        authKeyAction.launch(intentFor<PgpAuthKeySelectionActivity>())
     }
   }
 

@@ -48,8 +48,17 @@ class OpenPgpCard(
   val isConnected: Boolean
     get() = transport.isConnected
 
+  /**
+   * Opens the card's OpenPGP application, which is the first thing said to any card.
+   *
+   * Held to a short deadline of its own. It is a one-command exchange that any card answers at
+   * once, and it happens in the moment right after the card has been found — when the user is most
+   * likely to be still settling it into place, or to have lifted it again. Left on the ordinary
+   * deadline, a card that goes at that moment leaves the prompt saying it has been found for the
+   * best part of a minute, with nothing listening for the card being presented again.
+   */
   fun selectOpenPgpApplet() {
-    transceive(SELECT_OPENPGP)
+    transceive(SELECT_OPENPGP, SELECT_TIMEOUT_MS)
   }
 
   fun verifyUserPin(pin: CharArray) {
@@ -220,16 +229,20 @@ class OpenPgpCard(
     onClose()
   }
 
-  private fun transceive(command: ByteArray): ByteArray {
-    val response = transport.transceive(command)
-    if (response.size < 2) throw IOException("Malformed NFC response")
+  private fun transceive(
+    command: ByteArray,
+    timeoutMs: Int = transport.defaultTimeoutMs,
+  ): ByteArray {
+    val response = transport.transceive(command, timeoutMs)
+    if (response.size < 2) throw IOException("Malformed card response")
     val sw1 = response[response.size - 2].toInt() and 0xff
     val sw2 = response[response.size - 1].toInt() and 0xff
     val data = response.copyOf(response.size - 2)
     if (sw1 == 0x90 && sw2 == 0x00) return data
     if (sw1 == 0x61)
-      return data + transceive(byteArrayOf(0x00, 0xC0.toByte(), 0x00, 0x00, sw2.toByte()))
-    if (sw1 == 0x6C) return transceive(command.copyOf(command.size - 1) + sw2.toByte())
+      return data +
+        transceive(byteArrayOf(0x00, 0xC0.toByte(), 0x00, 0x00, sw2.toByte()), timeoutMs)
+    if (sw1 == 0x6C) return transceive(command.copyOf(command.size - 1) + sw2.toByte(), timeoutMs)
     throw OpenPgpCardStatusException(sw1, sw2)
   }
 
@@ -292,6 +305,10 @@ class OpenPgpCard(
     // Short transceive timeout used only for presence probing, so a removed card fails fast instead
     // of waiting out the multi-second signing timeout.
     private const val PRESENCE_PROBE_TIMEOUT_MS = 200
+
+    // Opening the OpenPGP application is one command and one answer; a card that has not answered
+    // in this long is a card that has gone.
+    private const val SELECT_TIMEOUT_MS = 2_000
 
     private fun encodeShortLe(expectedLength: Int): ByteArray =
       byteArrayOf(if (expectedLength >= 256) 0x00 else expectedLength.toByte())

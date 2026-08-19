@@ -32,6 +32,8 @@ class IsoDepTransport(private val isoDep: IsoDep) : CardTransport {
   override val isConnected: Boolean
     get() = runCatching { isoDep.isConnected }.getOr(false)
 
+  override val defaultTimeoutMs = HELD_CARD_TIMEOUT_MS
+
   override fun transceive(command: ByteArray, timeoutMs: Int): ByteArray {
     isoDep.timeout = timeoutMs
     return isoDep.transceive(command)
@@ -41,6 +43,9 @@ class IsoDepTransport(private val isoDep: IsoDep) : CardTransport {
     isoDep.close()
   }
 }
+
+/** Longer than any card takes to answer, and shorter than anyone holds a card against a phone. */
+private const val HELD_CARD_TIMEOUT_MS = 10_000
 
 /**
  * Watches for a card held against the phone, keeping NFC reader mode enabled for the whole of one

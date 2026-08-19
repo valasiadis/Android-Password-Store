@@ -147,13 +147,6 @@ fun cardMarkIsCropped(connections: Set<CardConnection>): Boolean =
   connections.singleOrNull() != CardConnection.USB
 
 /**
- * What to tell the user while a plugged-in card holds its answer back waiting to be touched. Only
- * ever said of a card in the socket: see where this is hooked up for why a card on the back of the
- * phone is not spoken for.
- */
-fun cardTouchMessage(context: Context): String = context.getString(R.string.openpgp_card_touch)
-
-/**
  * How to have another go after an exchange failed on the way. Asked of the card that failed, since
  * that is the one the user has in their hand; when the failure came before any card answered there
  * is nothing to say about where it is.

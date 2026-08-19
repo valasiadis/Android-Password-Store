@@ -913,6 +913,8 @@ class OpenPgpCardPrompt(
         // Covers SmartcardPinFormatException too: a PIN the card rejected for its length/format is
         // a (recoverable) PIN problem raised at the same VERIFY.
         if (cause is SmartcardPinVerificationException) return true
+        // A PIN turned down before it was sent is a PIN problem as much as one the card refused.
+        if (cause is PinTooLongForCardException) return true
         if (cause is OpenPgpCardStatusException) answeredWithStatusWord = true
         cause = cause.cause
       }
@@ -953,6 +955,7 @@ class OpenPgpCardPrompt(
       var cause = error
       while (cause != null) {
         if (cause is SmartcardPinFormatException) return true
+        if (cause is PinTooLongForCardException) return true
         cause = cause.cause
       }
       return false

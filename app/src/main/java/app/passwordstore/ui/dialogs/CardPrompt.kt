@@ -13,7 +13,7 @@ import androidx.annotation.StringRes
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentActivity
-import androidx.transition.AutoTransition
+import androidx.transition.Fade
 import androidx.transition.TransitionManager
 import app.passwordstore.R
 import app.passwordstore.databinding.ViewCardPromptBinding
@@ -64,10 +64,12 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
   fun show(state: State) {
     val shown = sheet
     if (shown == null || !shown.isShowing) return
-    TransitionManager.beginDelayedTransition(binding.root, AutoTransition().setDuration(CHANGE_MS))
+    // A crossfade and nothing else. Anything that animates bounds slides the mark into place as
+    // the words above it change length, which reads as the mark being unsure where it goes.
+    TransitionManager.beginDelayedTransition(binding.root, Fade().setDuration(CHANGE_MS))
     binding.cardTitle.text = state.title
-    // Kept in the layout even when it says nothing, so that the sheet is the same height
-    // throughout and one state turns into the next rather than the whole thing resizing under it.
+    // Kept in the layout even when it says nothing, and holding its two lines whatever it says, so
+    // that the sheet is the same height throughout and the mark never has to move.
     binding.cardMessage.text = state.message
     binding.cardMarkFramed.isVisible = state.framed
     binding.cardMarkPlain.isVisible = !state.framed

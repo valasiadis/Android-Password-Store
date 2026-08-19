@@ -15,6 +15,7 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
 import java.util.concurrent.atomic.AtomicBoolean
@@ -43,15 +44,27 @@ private constructor(private val context: Context, private val usbManager: UsbMan
   private val closed = AtomicBoolean(false)
 
   /**
-   * Tokens already asked about. A user who says no is not asked again for the same token while this
-   * reader is open — Android would put the same dialog up as many times a second as the loop goes
-   * round, and "no" was already an answer.
+   * Tokens already asked about, and still plugged in.
+   *
+   * A user who says no is not asked again for the same token while it stays where it is — Android
+   * would otherwise put the same dialog up as many times a second as the loop goes round, and "no"
+   * was already an answer. Unplugging it clears that, so somebody who declined by accident, or who
+   * has changed their mind, has the ordinary way of asking again: take the key out and put it back.
+   *
+   * A yes lasts as long as the token stays in the socket, which is Android's doing rather than
+   * ours: the only way to be granted a token for longer is to be registered as the app that
+   * *handles* it, and then plugging it in opens this app and stops offering the user any other.
+   * That is a bargain to be struck by somebody who wants it, not one to be struck on their behalf.
    */
   private val asked = mutableSetOf<String>()
 
   private val receiver =
     object : BroadcastReceiver() {
       override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
+          IntentCompat.getParcelableExtra(intent, UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+            ?.let { device -> synchronized(asked) { asked.remove(device.deviceName) } }
+        }
         changes.trySend(Unit)
       }
     }
@@ -126,7 +139,8 @@ private constructor(private val context: Context, private val usbManager: UsbMan
     }
 
   private fun requestPermission(device: UsbDevice) {
-    if (!asked.add(device.deviceName)) return
+    // The receiver clears this from its own thread when the token is unplugged.
+    if (!synchronized(asked) { asked.add(device.deviceName) }) return
     // Immutable, though the system fills a device and a yes-or-no into the intent it sends back:
     // nothing here reads them. The reply is only a nudge to look again, and looking again asks the
     // USB manager itself, which is the authority on both.

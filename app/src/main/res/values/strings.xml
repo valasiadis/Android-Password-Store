@@ -518,8 +518,9 @@
   <string name="openpgp_card_error_not_allowed">The card accepted the PIN but would not perform the operation.</string>
   <string name="openpgp_card_error_generic">The OpenPGP card refused the operation (status %1$s).</string>
   <string name="cache_openpgp_card_pin_until_screen_off">Keep PIN until screen-off</string>
-  <string name="openpgp_card_decrypt_title">Decrypt with OpenPGP card</string>
-  <string name="openpgp_card_ssh_title">SSH authentication with OpenPGP card</string>
+  <string name="openpgp_card_decrypt_title">Decrypt entry</string>
+  <string name="openpgp_card_sign_title">Sign commit</string>
+  <string name="openpgp_card_ssh_title">SSH authentication</string>
   <string name="openpgp_nfc_remove_card_title">Remove your card</string>
   <string name="openpgp_nfc_remove_card_message">Authentication succeeded. Lift your OpenPGP card off the phone to continue.</string>
   <string name="openpgp_card_decrypt_failed_title">OpenPGP card decryption failed</string>

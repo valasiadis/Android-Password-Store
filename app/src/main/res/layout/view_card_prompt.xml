@@ -5,69 +5,103 @@
 
 <!--
   What the app says while a card is in its hands: where to put it, to hold it there, to touch it,
-  to lift it off. One mark and one line at a time, with a bar underneath for the stretch where the
-  card must not be moved, so that waiting looks like waiting rather than like nothing happening.
+  to lift it off. Said in the order the Yubico Authenticator says it — what is being asked, then
+  why, then the mark that shows where — with the wait drawn as a ring around that mark rather than
+  as a bar somewhere else, so there is one thing to look at rather than two.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:id="@+id/card_prompt"
   android:layout_width="match_parent"
-  android:layout_height="wrap_content"
-  android:gravity="center_horizontal"
-  android:orientation="vertical"
-  android:paddingHorizontal="@dimen/spacing_xlarge"
-  android:paddingTop="@dimen/spacing_xlarge"
-  android:paddingBottom="@dimen/spacing_large">
+  android:layout_height="wrap_content">
 
-  <androidx.appcompat.widget.AppCompatImageView
-    android:id="@+id/card_mark"
-    android:layout_width="@dimen/card_prompt_mark_size"
-    android:layout_height="@dimen/card_prompt_mark_size"
-    android:contentDescription="@null"
-    android:src="@drawable/ic_contactless_24dp"
-    app:tint="?attr/colorPrimary" />
-
-  <androidx.appcompat.widget.AppCompatTextView
-    android:id="@+id/card_title"
+  <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_large"
-    android:textAlignment="center"
-    android:textAppearance="?attr/textAppearanceTitleLarge"
-    android:textColor="?attr/colorOnSurface"
-    tools:text="Hold the card still" />
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/spacing_xlarge"
+    android:paddingTop="@dimen/spacing_xxlarge"
+    android:paddingBottom="@dimen/spacing_xxlarge">
 
-  <androidx.appcompat.widget.AppCompatTextView
-    android:id="@+id/card_message"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_small"
-    android:textAlignment="center"
-    android:textAppearance="?attr/textAppearanceBodyMedium"
-    android:textColor="?attr/colorOnSurfaceVariant"
-    tools:text="Keep the smartcard on your phone." />
+    <androidx.appcompat.widget.AppCompatTextView
+      android:id="@+id/card_title"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:textAlignment="center"
+      android:textAppearance="?attr/textAppearanceTitleLarge"
+      android:textColor="?attr/colorOnSurface"
+      tools:text="Hold the card still" />
 
-  <com.google.android.material.progressindicator.LinearProgressIndicator
-    android:id="@+id/card_progress"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_large"
-    android:indeterminate="true"
-    android:visibility="invisible"
-    app:indicatorColor="?attr/colorPrimary"
-    app:trackColor="?attr/colorSurfaceVariant"
-    app:trackCornerRadius="2dp"
-    app:trackThickness="4dp"
-    tools:visibility="visible" />
+    <androidx.appcompat.widget.AppCompatTextView
+      android:id="@+id/card_message"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="@dimen/spacing_small"
+      android:textAlignment="center"
+      android:textAppearance="?attr/textAppearanceTitleMedium"
+      android:textColor="?attr/colorOnSurfaceVariant"
+      tools:text="Keep the smartcard on your phone." />
 
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/card_cancel"
-    style="@style/Widget.Material3.Button.TextButton"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_gravity="end"
-    android:layout_marginTop="@dimen/spacing_small"
-    android:text="@string/dialog_cancel" />
+    <!--
+      The mark, inside the ring that says whether anything is happening. Two rings rather than one
+      switched between modes: a progress indicator refuses to change mode while it is on screen,
+      and swapping which one is visible says the same thing without the ceremony.
+    -->
+    <FrameLayout
+      android:layout_width="@dimen/card_prompt_ring_size"
+      android:layout_height="@dimen/card_prompt_ring_size"
+      android:layout_marginTop="@dimen/spacing_xlarge">
 
-</LinearLayout>
+      <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/card_ring_idle"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:indeterminate="false"
+        android:progress="100"
+        app:indicatorColor="?attr/colorPrimary"
+        app:indicatorSize="@dimen/card_prompt_ring_size"
+        app:indicatorTrackGapSize="0dp"
+        app:trackColor="@android:color/transparent"
+        app:trackThickness="@dimen/card_prompt_ring_thickness" />
+
+      <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/card_ring_busy"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:indeterminate="true"
+        android:visibility="gone"
+        app:indicatorColor="?attr/colorPrimary"
+        app:indicatorSize="@dimen/card_prompt_ring_size"
+        app:trackColor="@android:color/transparent"
+        app:trackThickness="@dimen/card_prompt_ring_thickness"
+        tools:visibility="visible" />
+
+      <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/card_mark"
+        android:layout_width="@dimen/card_prompt_mark_size"
+        android:layout_height="@dimen/card_prompt_mark_size"
+        android:layout_gravity="center"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_contactless_24dp"
+        app:tint="?attr/colorPrimary" />
+
+    </FrameLayout>
+
+  </LinearLayout>
+
+  <!-- The way out, where a sheet puts it, and only while there is something to back out of. -->
+  <androidx.appcompat.widget.AppCompatImageButton
+    android:id="@+id/card_close"
+    android:layout_width="48dp"
+    android:layout_height="48dp"
+    android:layout_gravity="top|end"
+    android:layout_margin="@dimen/spacing_small"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:contentDescription="@string/dialog_cancel"
+    android:scaleType="center"
+    android:src="@drawable/ic_close_24dp"
+    app:tint="?attr/colorOnSurfaceVariant" />
+
+</FrameLayout>

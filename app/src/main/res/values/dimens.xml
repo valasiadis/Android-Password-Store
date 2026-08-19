@@ -69,8 +69,10 @@
   <dimen name="m3_alert_dialog_action_bottom_padding" tools:ignore="UnusedResources" tools:override="true">8dp</dimen>
   <!-- What a dialog leaves free at each side of the screen. -->
   <dimen name="dialog_inset">24dp</dimen>
-  <!-- The mark at the head of the smartcard prompt: large enough to be the thing you look at. -->
-  <dimen name="card_prompt_mark_size">56dp</dimen>
+  <!-- The mark in the smartcard prompt, and the ring drawn around it. -->
+  <dimen name="card_prompt_mark_size">40dp</dimen>
+  <dimen name="card_prompt_ring_size">64dp</dimen>
+  <dimen name="card_prompt_ring_thickness">3dp</dimen>
   <!-- The mark beside the app's name on the screen that opens the app for the first time. -->
   <dimen name="onboarding_app_icon_size">80dp</dimen>
   <!-- The search field between the two buttons, as tall as they are. -->

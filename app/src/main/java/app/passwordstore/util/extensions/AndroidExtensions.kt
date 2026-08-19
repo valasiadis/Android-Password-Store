@@ -272,7 +272,16 @@ private suspend fun FragmentActivity.offerToClearStaleLock(): Boolean =
         .show()
     // The dialog cannot be dismissed by tapping away from it, so if the screen underneath goes
     // while it is up, it goes with it rather than staying behind as a leaked window.
-    continuation.invokeOnCancellation { runCatching { dialog.dismiss() } }
+    continuation.invokeOnCancellation {
+      try {
+        dialog.dismiss()
+      } catch (e: IllegalArgumentException) {
+        // Thrown when the window this dialog hung on has already gone, which is the very case
+        // this runs in. Named rather than caught wholesale: a broad catch here would also swallow
+        // the cancellation that brought us here.
+        logcat(ERROR) { e.asLog() }
+      }
+    }
   }
 
 /** The app's own dispatchers, for the few helpers here that are not part of an injected class. */

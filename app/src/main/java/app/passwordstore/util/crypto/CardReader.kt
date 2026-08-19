@@ -10,11 +10,15 @@ import android.content.Context
 import androidx.annotation.DrawableRes
 import app.passwordstore.R
 import com.github.michaelbull.result.runCatching
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.supervisorScope
+import logcat.asLog
+import logcat.logcat
 
 /**
  * Somewhere a card can turn up, kept open for the whole of one operation.
@@ -46,29 +50,53 @@ interface CardReader : AutoCloseable {
  * Whichever [readers] produces a card first wins and the others are told to stop. A reader that had
  * one in hand by then — a card tapped at the very moment another was plugged in — has nobody to
  * give it to, and closes it rather than leaving it open.
+ *
+ * A reader that gives up does not take the others with it. Each way to a card can fail for reasons
+ * entirely its own — a plugged-in reader this app cannot speak to, a card that refuses the applet —
+ * and none of them says anything about the card the user is about to hold against the phone. So a
+ * failure drops that reader out of the watch and the rest carry on; only when every one of them has
+ * given up is there nothing left to wait for, and then the last failure is the one reported.
  */
 class CompositeCardReader(private val readers: List<CardReader>) : CardReader {
 
   override val connections = readers.flatMap { it.connections }.toSet()
 
   override suspend fun awaitCard(onCardDetected: (CardConnection) -> Unit): OpenPgpCard =
-    coroutineScope {
+    // Supervised, so that one attempt failing is not a reason to cancel its siblings — which is
+    // exactly what a plain coroutineScope would do.
+    supervisorScope {
       val handedOver = AtomicBoolean(false)
-      val attempts = readers.map { reader ->
-        async {
-          val card = reader.awaitCard(onCardDetected)
-          if (handedOver.compareAndSet(false, true)) {
-            card
-          } else {
-            runCatching { card.close() }
-            awaitCancellation()
+      val watching =
+        readers
+          .map { reader ->
+            async {
+              val card = reader.awaitCard(onCardDetected)
+              if (handedOver.compareAndSet(false, true)) {
+                card
+              } else {
+                runCatching { card.close() }
+                awaitCancellation()
+              }
+            }
+          }
+          .toMutableList()
+      try {
+        var lastFailure: Throwable? = null
+        while (watching.isNotEmpty()) {
+          val finished = select { watching.forEach { attempt -> attempt.onJoin { attempt } } }
+          watching.remove(finished)
+          try {
+            return@supervisorScope finished.await()
+          } catch (e: CancellationException) {
+            throw e
+          } catch (e: Throwable) {
+            logcat { "One way to a card gave up; still watching ${watching.size}: ${e.asLog()}" }
+            lastFailure = e
           }
         }
-      }
-      try {
-        select { attempts.forEach { attempt -> attempt.onAwait { it } } }
+        throw lastFailure ?: IOException("There is no way to reach a card from this phone")
       } finally {
-        attempts.forEach { it.cancel() }
+        watching.forEach { it.cancel() }
       }
     }
 

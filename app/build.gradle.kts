@@ -101,6 +101,9 @@ dependencies {
   testImplementation(libs.testing.robolectric)
   testImplementation(libs.testing.sharedPrefsMock)
   testImplementation(libs.bundles.testDependencies)
+  testImplementation(libs.kotlinx.coroutines.test) {
+    because("watching several ways to a card at once is a race worth being able to test")
+  }
   // implementation(libs.thirdparty.leakcanary.plumber)
 }
 

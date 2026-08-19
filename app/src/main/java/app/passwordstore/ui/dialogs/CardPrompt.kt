@@ -140,9 +140,11 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
           behavior.state = BottomSheetBehavior.STATE_EXPANDED
           behavior.skipCollapsed = true
         }
-      // The unlit part of the ring: the same colour kept faint, so the circle is whole even while
-      // only part of it is travelling.
-      binding.cardRingBusy.trackColor =
+      // The unlit part of the ring: the same colour kept faint, and the same width, so the circle
+      // is whole in both states — a complete ring while the card is awaited, and a track with the
+      // bright part travelling round it while the card is worked. Given to both indicators, since
+      // the two of them stand in for one ring.
+      val track =
         ColorUtils.setAlphaComponent(
           MaterialColors.getColor(
             binding.cardRingBusy,
@@ -151,6 +153,8 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
           ),
           TRACK_ALPHA,
         )
+      binding.cardRingBusy.trackColor = track
+      binding.cardRingIdle.trackColor = track
       // The middle of the mark, cut out of it into the ring.
       binding.cardMarkClip.clipToOutline = true
       binding.cardMarkClip.outlineProvider =

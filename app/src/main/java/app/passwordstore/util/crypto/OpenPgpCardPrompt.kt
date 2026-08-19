@@ -13,7 +13,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.databinding.DialogPasswordEntryBinding
 import app.passwordstore.ui.crypto.BasePGPActivity
@@ -784,7 +783,10 @@ class OpenPgpCardPrompt(
    * is entitled to leave a key in.
    */
   fun releaseReaderWhenCardRemoved(card: OpenPgpCard?, reader: CardReader) {
-    activity.lifecycleScope.launch {
+    // On this prompt's own scope rather than the screen's: what it does last is let the reader go,
+    // and a screen that has finished in the meantime would take the watch down with it and leave
+    // reader mode on behind everything.
+    cardScope.launch(dispatcherProvider.main()) {
       // A tick wants reading before it goes. Anything else — a cancellation above all — is over,
       // and a sheet that lingers after it reads as the app still doing something.
       if (finishing.get()) delay(CardPrompt.SUCCESS_MS)
@@ -829,12 +831,19 @@ class OpenPgpCardPrompt(
       val lifted =
         withContext(dispatcherProvider.io()) { awaitAbsence(card, CardPrompt.SUCCESS_MS) }
       closePrompt()
-      // If it has not, the wait carries on with nothing on the screen at all. Telling somebody to
-      // lift a card they are already lifting is worth nobody's attention, and the only reason to
-      // wait is one the user has no part in: reader mode is what keeps the platform from throwing
-      // the card's own URL on screen, and it ends with the screen that holds it.
+      // If it has not, the wait carries on for a moment with nothing on the screen at all. Telling
+      // somebody to lift a card they are already lifting is worth nobody's attention, and the only
+      // reason to wait is one the user has no part in: reader mode is what keeps the platform from
+      // throwing the card's own URL on screen, and it ends with the screen that holds it.
+      //
+      // Only for a moment, though. This runs on the thread that asked — for an SSH authentication,
+      // the one carrying the whole git operation — and a card left lying on the phone would
+      // otherwise hold that up for a minute with nothing to show for it. Now that nobody is asked
+      // to lift their card, a card left there is the ordinary case rather than the odd one. Past
+      // this point the worst that happens is the platform putting the card's URL on screen, which
+      // is a nuisance; stalling a push until the user notices is a hang.
       if (!lifted) {
-        withContext(dispatcherProvider.io()) { awaitAbsence(card, READER_MODE_REMOVAL_TIMEOUT_MS) }
+        withContext(dispatcherProvider.io()) { awaitAbsence(card, READER_HOLD_MS) }
       }
     } finally {
       closePrompt()
@@ -846,17 +855,21 @@ class OpenPgpCardPrompt(
   /**
    * Waits for [card] to leave the field, for at most [timeoutMs]. Returns whether it went.
    *
-   * Two consecutive misses are what counts as gone: a single one can be a transceive glitch on a
-   * card that is still sitting there. Only the "still present" case is paced with the interval, so
-   * a card that has left is noticed within about two probe timeouts.
+   * Asks the wire rather than the card. Addressing a card to find out whether it is still there
+   * means a full exchange every time round, on a card that by then has nothing left to say — and on
+   * the thread that is waiting, which for an SSH authentication is the one carrying the whole git
+   * operation. The wire's own answer is free, and the platform keeps it fresh.
+   *
+   * Two consecutive misses are what counts as gone, since a single one can be a glitch on a card
+   * that is still sitting there.
    */
   private suspend fun awaitAbsence(card: OpenPgpCard, timeoutMs: Long): Boolean {
     val deadline = System.currentTimeMillis() + timeoutMs
     var consecutiveMisses = 0
     while (consecutiveMisses < 2 && System.currentTimeMillis() < deadline) {
-      if (card.isPresent()) {
+      if (card.isConnected) {
         consecutiveMisses = 0
-        delay(READER_MODE_POLL_INTERVAL_MS)
+        delay(LIVENESS_POLL_INTERVAL_MS)
       } else {
         consecutiveMisses++
       }
@@ -869,8 +882,9 @@ class OpenPgpCardPrompt(
     const val MIN_PIN_LENGTH = 6
 
     private const val READER_MODE_RELEASE_TIMEOUT_MS = 30_000L
-    // Longer cap for the interactive "remove your card" wait, which depends on the user reacting.
-    private const val READER_MODE_REMOVAL_TIMEOUT_MS = 60_000L
+    // How long an operation whose screen is about to close will hold on, unseen, for the card to
+    // be lifted before giving up and letting go of the reader.
+    private const val READER_HOLD_MS = 4_000L
     private const val READER_MODE_POLL_INTERVAL_MS = 300L
     // How often the wire is asked whether it still has a card while an exchange is running. Two
     // consecutive misses end it, so a card that goes is noticed inside a third of a second.

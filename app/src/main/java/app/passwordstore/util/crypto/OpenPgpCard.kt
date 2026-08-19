@@ -103,6 +103,10 @@ class OpenPgpCard(
     // rejected over and over while the card's counter never moves.
     val pinBytes = kdfParameters()?.let { kdf -> deriveKdfPin(rawPin, kdf) } ?: rawPin
     try {
+      // Caught here rather than left to wrap the length byte and put a command on the wire that
+      // means something other than what was intended. A KDF card is never in this position: what
+      // it is handed is a digest of a fixed size.
+      if (pinBytes.size > MAX_PIN_BYTES) throw PinTooLongForCardException(MAX_PIN_BYTES)
       transceive(
         byteArrayOf(0x00, 0x20, 0x00, reference.toByte(), pinBytes.size.toByte()) + pinBytes
       )
@@ -342,6 +346,17 @@ class OpenPgpCard(
 
     /** More than any answer an OpenPGP card has to give, and far less than anything that hurts. */
     private const val MAX_RESPONSE_LENGTH = 1 shl 16
+
+    /**
+     * The longest PIN that fits in a short APDU's data field.
+     *
+     * The user cannot type one this long at the card prompt, but a PIN can also arrive seeded from
+     * the biometric store — where a key that was once a software key keeps its old passphrase, and
+     * a passphrase has no such bound. Encoded into the length byte it would wrap, and what went to
+     * the card would be a command it could only refuse for reasons that had nothing to do with the
+     * secret.
+     */
+    private const val MAX_PIN_BYTES = MAX_APDU_NC
 
     // Opening the OpenPGP application is one command and one answer; a card that has not answered
     // in this long is a card that has gone.
@@ -583,6 +598,17 @@ open class SmartcardPinVerificationException(sw1: Int, sw2: Int) :
  * re-enter a PIN of acceptable length.
  */
 class SmartcardPinFormatException(sw1: Int, sw2: Int) : SmartcardPinVerificationException(sw1, sw2)
+
+/**
+ * A PIN too long to fit in the command that would have carried it, turned down here rather than on
+ * the card.
+ *
+ * Recoverable in exactly the way [SmartcardPinFormatException] is — the card never saw it, so no
+ * attempt was spent and the user can simply enter something shorter — but it carries no status
+ * word, because there was no answer: nothing was ever sent.
+ */
+class PinTooLongForCardException(maxBytes: Int) :
+  IOException("The PIN is longer than the $maxBytes bytes a card can be handed")
 
 data class OpenPgpCardInfo(val fingerprints: List<ByteArray>, val url: String?)
 

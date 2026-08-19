@@ -39,6 +39,17 @@ interface CardTransport : AutoCloseable {
    */
   fun transceive(command: ByteArray, timeoutMs: Int = DEFAULT_TIMEOUT_MS): ByteArray
 
+  /**
+   * How long the slowest thing a card is asked to do may take on this wire.
+   *
+   * A card held against the phone is held by a hand, and nobody holds one still for half a minute:
+   * a card that has not answered long before then has been taken away, and waiting out the rest of
+   * a generous deadline is time spent saying nothing true. A card in the socket is not going
+   * anywhere, and may be waiting for a finger, so it gets the longer end of it.
+   */
+  val defaultTimeoutMs: Int
+    get() = DEFAULT_TIMEOUT_MS
+
   /** The largest command APDU that fits in a single exchange, which is what bounds chaining. */
   val maxTransceiveLength: Int
 

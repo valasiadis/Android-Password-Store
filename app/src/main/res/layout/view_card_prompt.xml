@@ -50,24 +50,15 @@
 
       <!--
         The mark with the wait drawn into it rather than around it, which is how the Yubico
-        Authenticator does it: the ring is not a second circle outside the icon, it stands in for
-        the icon's own outer ring. Three layers make that work — the whole mark faded, the middle
-        of it clipped back out at full strength, and the ring running between the two. Turning
-        while the card is being worked, closed while it has yet to arrive.
+        Authenticator does it: the ring is not a second circle outside the icon, it stands where
+        the icon's own outer circle was. The middle of the mark is cut out of it into the ring,
+        and the ring is the whole of the circle — turning while the card is being worked, closed
+        and still while it has yet to arrive.
       -->
       <FrameLayout
         android:id="@+id/card_mark_framed"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-
-        <androidx.appcompat.widget.AppCompatImageView
-          android:id="@+id/card_mark_ghost"
-          android:layout_width="match_parent"
-          android:layout_height="match_parent"
-          android:alpha="0.4"
-          android:contentDescription="@null"
-          android:src="@drawable/ic_contactless_24dp"
-          app:tint="?attr/colorPrimary" />
 
         <FrameLayout
           android:id="@+id/card_mark_clip"
@@ -88,7 +79,8 @@
 
         <!--
           Two indicators swapped rather than one changed: a progress indicator refuses to change
-          mode while it is on screen.
+          mode while it is on screen. The turning one keeps its track, so the circle stays whole
+          while the bright part of it goes round.
         -->
         <com.google.android.material.progressindicator.CircularProgressIndicator
           android:id="@+id/card_ring_idle"
@@ -112,7 +104,7 @@
           android:visibility="gone"
           app:indicatorColor="?attr/colorPrimary"
           app:indicatorSize="@dimen/card_prompt_ring_size"
-          app:trackColor="@android:color/transparent"
+          app:indicatorTrackGapSize="0dp"
           app:trackThickness="@dimen/card_prompt_ring_thickness"
           tools:visibility="visible" />
 

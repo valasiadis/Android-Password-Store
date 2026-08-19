@@ -35,6 +35,7 @@ import app.passwordstore.util.crypto.OpenPgpCardInfo
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import app.passwordstore.util.crypto.cardHoldMessage
 import app.passwordstore.util.crypto.cardMark
+import app.passwordstore.util.crypto.cardMarkIsCropped
 import app.passwordstore.util.crypto.cardPresentMessage
 import app.passwordstore.util.crypto.openCardReaders
 import com.github.michaelbull.result.Result
@@ -141,6 +142,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
         title = getString(R.string.openpgp_card_setup_title),
         message = cardPresentMessage(this, reader.connections),
         working = false,
+        cropped = cardMarkIsCropped(reader.connections),
       )
     var canceled = false
     lateinit var prompt: CardPrompt
@@ -170,6 +172,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
                           title = getString(R.string.openpgp_card_hold_title),
                           message = cardHoldMessage(this@PGPKeyImportActivity, connection),
                           working = true,
+                          cropped = cardMarkIsCropped(connection),
                         )
                       )
                     }

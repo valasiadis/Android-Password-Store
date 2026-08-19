@@ -490,6 +490,7 @@
   <string name="openpgp_card_touch_title">Touch your smartcard</string>
   <string name="openpgp_card_done_title">Done</string>
   <string name="openpgp_card_reader_unavailable">There is no way to reach a smartcard: NFC is unavailable or switched off, and this phone cannot take one plugged in.</string>
+  <string name="openpgp_card_reader_unsupported">This card reader expects to be driven at a lower level than this app can drive it. Tokens that plug straight into the phone, such as a YubiKey or a Nitrokey, work; a separate reader with a card in it may not.</string>
   <string name="openpgp_card_setup_title">Smartcard setup</string>
   <string name="openpgp_card_importing_key">Importing key…</string>
   <string name="openpgp_card_setup_detected_title">Smartcard detected</string>

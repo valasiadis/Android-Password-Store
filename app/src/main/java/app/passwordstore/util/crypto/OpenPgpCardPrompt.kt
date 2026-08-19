@@ -385,6 +385,11 @@ class OpenPgpCardPrompt(
     // The one array this loop owns — a PIN it read out of the cache itself, which nothing else
     // holds a reference to and nothing else will wipe.
     var cachedCopy: CharArray? = null
+    // How many times in a row the way to the card has failed without the card ever objecting to
+    // anything. Each of those rounds waits for a card to be presented, so a user fumbling a tap
+    // will never come near the limit; something failing the moment it is asked, over and over,
+    // will — and that is a loop, not a retry.
+    var consecutiveTransportFailures = 0
     fun dropCachedCopy() {
       cachedCopy?.wipe()
       cachedCopy = null
@@ -450,7 +455,9 @@ class OpenPgpCardPrompt(
           is Attempt.Error -> {
             val e = attempt.error
             if (e is PinNotCached) {
-              // The card is known and has no PIN here: let it go, ask, and take it again.
+              // The card is known and has no PIN here: let it go, ask, and take it again. It
+              // answered, so whatever went wrong before that is behind us.
+              consecutiveTransportFailures = 0
               releaseCard(attempt.card)
               pin?.wipe()
               pin = null
@@ -458,6 +465,9 @@ class OpenPgpCardPrompt(
               continue
             }
             if (isSmartcardPinFailure(e)) {
+              // The card was reached and had an opinion about the PIN, so any run of failures on
+              // the way to it is over.
+              consecutiveTransportFailures = 0
               // A rejected PIN must never be kept in the cache. Cleared under the card that turned
               // it down, which is where it was found.
               clearCachedPin(pinCacheKey(cacheKey, presentedIdentity))
@@ -506,8 +516,12 @@ class OpenPgpCardPrompt(
               continue
             }
             // A transient hiccup on the way to the card never reaches the PIN counter: ask for the
-            // card again, in the terms of wherever it was.
-            if (isRetryableCardError(e)) {
+            // card again, in the terms of wherever it was. Only so many times, though — something
+            // that fails identically every time it is asked is not transient, and asking for ever
+            // is a loop the user can only escape by cancelling.
+            if (
+              isRetryableCardError(e) && ++consecutiveTransportFailures <= MAX_TRANSPORT_RETRIES
+            ) {
               cardMessage = cardRetryMessage(activity, attempt.card?.connection)
               releaseCard(attempt.card)
               continue
@@ -543,6 +557,11 @@ class OpenPgpCardPrompt(
    * card has either accepted the PIN or never been asked about it.
    */
   fun cardFailureMessage(error: Throwable?, connection: CardConnection? = null): String {
+    // A reader this app cannot hold up its end of the conversation with never got as far as a
+    // status word, and its own message is a sentence about exchange levels written for a log.
+    if (isUnsupportedCardReader(error)) {
+      return activity.getString(R.string.openpgp_card_reader_unsupported)
+    }
     val status = smartcardStatusWordPair(error)
     val (sw1, sw2) = status ?: return error?.message ?: activity.getString(R.string.error)
     return when {
@@ -885,7 +904,12 @@ class OpenPgpCardPrompt(
     // How long an operation whose screen is about to close will hold on, unseen, for the card to
     // be lifted before giving up and letting go of the reader.
     private const val READER_HOLD_MS = 4_000L
-    private const val READER_MODE_POLL_INTERVAL_MS = 300L
+    /**
+     * How many times in a row the way to the card may fail before the operation is reported as
+     * failed rather than asked to be tried again. See where it is counted for why there is a limit
+     * at all.
+     */
+    private const val MAX_TRANSPORT_RETRIES = 8
     // How often the wire is asked whether it still has a card while an exchange is running. Two
     // consecutive misses end it, so a card that goes is noticed inside a third of a second.
     private const val LIVENESS_POLL_INTERVAL_MS = 150L
@@ -927,6 +951,16 @@ class OpenPgpCardPrompt(
         if (message.contains("69 82", ignoreCase = true)) return true
         if (message.contains("69 83", ignoreCase = true)) return true
         if (PIN_FAILURE_REGEX.containsMatchIn(message)) return true
+        cause = cause.cause
+      }
+      return false
+    }
+
+    /** Whether [error] is a reader speaking a CCID dialect this app cannot hold up its end of. */
+    fun isUnsupportedCardReader(error: Throwable?): Boolean {
+      var cause = error
+      while (cause != null) {
+        if (cause is UnsupportedCardReaderException) return true
         cause = cause.cause
       }
       return false
@@ -983,8 +1017,10 @@ class OpenPgpCardPrompt(
      * Crucially, an [OpenPgpCardStatusException] is *not* retryable even though it extends
      * [IOException]: the card answered with a status word, so it was read just fine — that's a card
      * error to report (or, if it's a PIN rejection, to re-prompt for), never a "couldn't read the
-     * card". Only a plain transport [IOException] (no card status word anywhere in the chain)
-     * counts.
+     * card". Neither is an [UnsupportedCardReaderException]: the reader is what it is, and asking
+     * for the card again finds the same reader, fails the same way, and asks again — which is not a
+     * retry but a loop. Only a plain transport [IOException] (no card status word and no refused
+     * reader anywhere in the chain) counts.
      */
     fun isRetryableCardError(error: Throwable?): Boolean {
       var cause = error
@@ -992,6 +1028,7 @@ class OpenPgpCardPrompt(
       while (cause != null) {
         // The card responded — whatever the status word, this was not a failed read.
         if (cause is OpenPgpCardStatusException) return false
+        if (cause is UnsupportedCardReaderException) return false
         if (cause is IOException) transportFailure = true
         cause = cause.cause
       }

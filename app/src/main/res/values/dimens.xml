@@ -75,7 +75,9 @@
   -->
   <dimen name="card_prompt_mark_size">64dp</dimen>
   <dimen name="card_prompt_mark_core">40dp</dimen>
-  <dimen name="card_prompt_ring_size">52dp</dimen>
+  <!-- A mark that is not a circle is drawn to fit inside the ring rather than cropped by it. -->
+  <dimen name="card_prompt_mark_fit">30dp</dimen>
+  <dimen name="card_prompt_ring_size">56dp</dimen>
   <dimen name="card_prompt_ring_thickness">3dp</dimen>
   <!-- The mark beside the app's name on the screen that opens the app for the first time. -->
   <dimen name="onboarding_app_icon_size">80dp</dimen>

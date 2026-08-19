@@ -137,6 +137,16 @@ fun cardMark(connection: CardConnection): Int =
   }
 
 /**
+ * Whether the mark for a wire is a circle, and so can have the ring stand where its own outer
+ * circle was. The contactless mark is; the USB mark is a plug on a stalk, which has to be drawn
+ * inside the ring rather than cropped by it.
+ */
+fun cardMarkIsCropped(connection: CardConnection): Boolean = connection == CardConnection.NFC
+
+fun cardMarkIsCropped(connections: Set<CardConnection>): Boolean =
+  connections.singleOrNull() != CardConnection.USB
+
+/**
  * What to tell the user while a plugged-in card holds its answer back waiting to be touched. Only
  * ever said of a card in the socket: see where this is hooked up for why a card on the back of the
  * phone is not spoken for.

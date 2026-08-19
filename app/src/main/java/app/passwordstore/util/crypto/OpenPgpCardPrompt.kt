@@ -236,6 +236,7 @@ class OpenPgpCardPrompt(
             title = activity.getString(R.string.openpgp_card_hold_title),
             message = cardHoldMessage(activity, connection),
             working = true,
+            cropped = cardMarkIsCropped(connection),
           )
         )
     }
@@ -574,6 +575,7 @@ class OpenPgpCardPrompt(
         title = activity.getString(titleRes),
         message = message,
         working = false,
+        cropped = cardMarkIsCropped(connections),
       )
     val existing = cardPrompt.get()
     if (existing != null && existing.isShowing) {
@@ -767,8 +769,9 @@ class OpenPgpCardPrompt(
    */
   fun releaseReaderWhenCardRemoved(card: OpenPgpCard?, reader: CardReader) {
     activity.lifecycleScope.launch {
-      // Long enough for the tick to be read, and then the sheet has said all it has to say.
-      delay(CardPrompt.SUCCESS_MS)
+      // A tick wants reading before it goes. Anything else — a cancellation above all — is over,
+      // and a sheet that lingers after it reads as the app still doing something.
+      if (finishing.get()) delay(CardPrompt.SUCCESS_MS)
       closePrompt()
       if (card != null && card.connection == CardConnection.NFC) {
         withContext(dispatcherProvider.io()) {
@@ -801,34 +804,22 @@ class OpenPgpCardPrompt(
    * key would be asking for a ritual that serves nothing.
    */
   suspend fun awaitCardRemoval(card: OpenPgpCard, reader: CardReader) {
-    if (card.connection != CardConnection.NFC) {
-      delay(CardPrompt.SUCCESS_MS)
-      closePrompt()
-      withContext(dispatcherProvider.io()) { runCatching { card.close() } }
-      reader.close()
-      return
-    }
     try {
-      // Most people lift the card the moment the operation is over, and being told to do what they
-      // are already doing is worse than being told nothing. So the card is given the length of the
-      // tick to go on its own, and only a card still sitting there afterwards is asked about.
-      if (withContext(dispatcherProvider.io()) { awaitAbsence(card, CardPrompt.SUCCESS_MS) }) return
-      withContext(dispatcherProvider.main()) {
-        cardPrompt
-          .get()
-          ?.show(
-            CardPrompt.State(
-              mark = cardMark(CardConnection.NFC),
-              title = activity.getString(R.string.openpgp_nfc_remove_card_title),
-              message = activity.getString(R.string.openpgp_nfc_remove_card_message),
-              working = false,
-              // There is nothing to cancel: the operation is done, and this is only about the
-              // moment between it finishing and the card leaving the field.
-              cancellable = false,
-            )
-          )
+      if (card.connection != CardConnection.NFC) {
+        delay(CardPrompt.SUCCESS_MS)
+        return
       }
-      withContext(dispatcherProvider.io()) { awaitAbsence(card, READER_MODE_REMOVAL_TIMEOUT_MS) }
+      // The tick has its moment, and the card usually goes within it.
+      val lifted =
+        withContext(dispatcherProvider.io()) { awaitAbsence(card, CardPrompt.SUCCESS_MS) }
+      closePrompt()
+      // If it has not, the wait carries on with nothing on the screen at all. Telling somebody to
+      // lift a card they are already lifting is worth nobody's attention, and the only reason to
+      // wait is one the user has no part in: reader mode is what keeps the platform from throwing
+      // the card's own URL on screen, and it ends with the screen that holds it.
+      if (!lifted) {
+        withContext(dispatcherProvider.io()) { awaitAbsence(card, READER_MODE_REMOVAL_TIMEOUT_MS) }
+      }
     } finally {
       closePrompt()
       runCatching { card.close() }

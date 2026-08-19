@@ -5,12 +5,16 @@
 package app.passwordstore.ui.dialogs
 
 import android.content.Context
+import android.graphics.Color
 import android.graphics.Outline
 import android.view.View
 import android.view.ViewOutlineProvider
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.appcompat.R as AppCompatR
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentActivity
 import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
@@ -18,6 +22,7 @@ import app.passwordstore.R
 import app.passwordstore.databinding.ViewCardPromptBinding
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.color.MaterialColors
 
 /**
  * What the app puts on the screen while a card is in its hands.
@@ -50,6 +55,12 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
      * nor waiting on the card, and wear no ring at all.
      */
     val framed: Boolean = true,
+    /**
+     * Whether the mark is drawn oversized so that the ring stands where its own outer circle was.
+     * True of the contactless mark, which is a circle; false of a mark that has to fit inside the
+     * ring rather than be cropped by it.
+     */
+    val cropped: Boolean = true,
     val cancellable: Boolean = true,
   )
 
@@ -59,13 +70,21 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
     if (shown == null || !shown.isShowing) return
     TransitionManager.beginDelayedTransition(binding.root, AutoTransition().setDuration(CHANGE_MS))
     binding.cardTitle.text = state.title
+    // Kept in the layout even when it says nothing, so that the sheet is the same height
+    // throughout and one state turns into the next rather than the whole thing resizing under it.
     binding.cardMessage.text = state.message
-    binding.cardMessage.isVisible = state.message.isNotEmpty()
     binding.cardMarkFramed.isVisible = state.framed
     binding.cardMarkPlain.isVisible = !state.framed
     if (state.framed) {
       binding.cardMark.setImageResource(state.mark)
-      binding.cardMarkGhost.setImageResource(state.mark)
+      val size =
+        binding.root.resources.getDimensionPixelSize(
+          if (state.cropped) R.dimen.card_prompt_mark_size else R.dimen.card_prompt_mark_fit
+        )
+      binding.cardMark.updateLayoutParams {
+        width = size
+        height = size
+      }
       binding.cardRingBusy.isVisible = state.working
       binding.cardRingIdle.isVisible = !state.working
     } else {
@@ -88,7 +107,9 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
     private const val CHANGE_MS = 180L
 
     /** How long the tick stays up: long enough to be read before whatever comes next. */
-    const val SUCCESS_MS = 550L
+    const val SUCCESS_MS = 1_200L
+
+    private const val TRACK_ALPHA = 0x40
 
     /**
      * The operation is done. Said by the sheet already up, which then goes or says the next thing.
@@ -119,7 +140,18 @@ class CardPrompt private constructor(private val binding: ViewCardPromptBinding)
           behavior.state = BottomSheetBehavior.STATE_EXPANDED
           behavior.skipCollapsed = true
         }
-      // The middle of the mark, cut back out of the faded whole at full strength.
+      // The unlit part of the ring: the same colour kept faint, so the circle is whole even while
+      // only part of it is travelling.
+      binding.cardRingBusy.trackColor =
+        ColorUtils.setAlphaComponent(
+          MaterialColors.getColor(
+            binding.cardRingBusy,
+            AppCompatR.attr.colorPrimary,
+            Color.TRANSPARENT,
+          ),
+          TRACK_ALPHA,
+        )
+      // The middle of the mark, cut out of it into the ring.
       binding.cardMarkClip.clipToOutline = true
       binding.cardMarkClip.outlineProvider =
         object : ViewOutlineProvider() {

@@ -522,8 +522,6 @@
   <string name="openpgp_card_decrypt_title">Decrypt entry</string>
   <string name="openpgp_card_sign_title">Sign commit</string>
   <string name="openpgp_card_ssh_title">SSH authentication</string>
-  <string name="openpgp_nfc_remove_card_title">Remove your card</string>
-  <string name="openpgp_nfc_remove_card_message">Authentication succeeded. Lift your OpenPGP card off the phone to continue.</string>
   <string name="openpgp_card_decrypt_failed_title">OpenPGP card decryption failed</string>
   <string name="pgp_key_import_skipped_existing">Key already exists (replacement skipped)</string>
   <plurals name="pgp_key_import_success_title">

@@ -7,6 +7,7 @@ package app.passwordstore.util.crypto
 
 import android.app.Activity
 import android.content.Context
+import androidx.annotation.DrawableRes
 import app.passwordstore.R
 import com.github.michaelbull.result.runCatching
 import java.util.concurrent.atomic.AtomicBoolean
@@ -115,6 +116,25 @@ fun cardHoldMessage(context: Context, connection: CardConnection): String =
       CardConnection.USB -> R.string.openpgp_card_hold_usb
     }
   )
+
+/**
+ * The mark shown while a card is being waited for, which is a picture of where to put it.
+ *
+ * With both watched at once it is the contactless mark: presenting a card is what the great
+ * majority will be doing, and the words below it say the other way is open too.
+ */
+@DrawableRes
+fun cardMark(connections: Set<CardConnection>): Int =
+  if (connections.singleOrNull() == CardConnection.USB) R.drawable.ic_usb_24dp
+  else R.drawable.ic_contactless_24dp
+
+/** The mark for the card that has actually answered. */
+@DrawableRes
+fun cardMark(connection: CardConnection): Int =
+  when (connection) {
+    CardConnection.NFC -> R.drawable.ic_contactless_24dp
+    CardConnection.USB -> R.drawable.ic_usb_24dp
+  }
 
 /**
  * What to tell the user while a plugged-in card holds its answer back waiting to be touched. Only

@@ -12,6 +12,7 @@ import android.nfc.tech.IsoDep
 import android.os.Bundle
 import com.github.michaelbull.result.runCatching
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.channels.Channel
 import logcat.LogPriority.WARN
 import logcat.asLog
@@ -51,6 +52,10 @@ private constructor(private val activity: Activity, private val adapter: NfcAdap
   override val connections = setOf(CardConnection.NFC)
 
   init {
+    // Reader mode is switched off and on again rather than simply on, which restarts the platform's
+    // discovery loop. A card already lying on the phone when an operation begins is then found
+    // straight away instead of having to be lifted and presented again.
+    runCatching { adapter.disableReaderMode(activity) }
     adapter.enableReaderMode(
       activity,
       callback,
@@ -58,8 +63,11 @@ private constructor(private val activity: Activity, private val adapter: NfcAdap
         NfcAdapter.FLAG_READER_NFC_B or
         NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
         NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS,
-      Bundle().apply { putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 500) },
+      Bundle().apply {
+        putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, PRESENCE_CHECK_DELAY_MS)
+      },
     )
+    active.set(this)
   }
 
   /**
@@ -91,7 +99,11 @@ private constructor(private val activity: Activity, private val adapter: NfcAdap
   override fun close() {
     if (closed.compareAndSet(false, true)) {
       tags.close()
-      runCatching { adapter.disableReaderMode(activity) }
+      // Only the reader that is still the live one switches reader mode off. An operation's watch
+      // for the card being lifted outlives the operation, and can finish after the next one has
+      // already opened its own reader — at which point switching off is switching off somebody
+      // else's, and the next card presented is never seen at all.
+      if (active.compareAndSet(this, null)) runCatching { adapter.disableReaderMode(activity) }
     }
   }
 
@@ -103,7 +115,24 @@ private constructor(private val activity: Activity, private val adapter: NfcAdap
       return NfcCardReader(activity, adapter)
     }
 
+    /**
+     * How long the platform waits before checking whether the card it is talking to is still there.
+     * It is also how long it takes to notice that one has gone — and until it has noticed, it will
+     * not report a new one, so this is what decides how quickly a card is picked up on being
+     * presented, or lifted mid-operation. The stock value is long enough to feel like the reader is
+     * asleep; this is what the Yubico Authenticator uses.
+     */
+    private const val PRESENCE_CHECK_DELAY_MS = 50
+
+    /**
+     * The reader whose mode is currently enabled. Reader mode belongs to the activity rather than
+     * to whoever asked for it, so switching it off is not something a reader may do on the strength
+     * of being finished — only on being the one still holding it.
+     */
+    private val active = AtomicReference<NfcCardReader?>(null)
+
     fun disableReaderMode(activity: Activity) {
+      active.set(null)
       val adapter = NfcAdapter.getDefaultAdapter(activity) ?: return
       try {
         adapter.disableReaderMode(activity)

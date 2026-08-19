@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.databinding.DialogPasswordEntryBinding
 import app.passwordstore.ui.crypto.BasePGPActivity
+import app.passwordstore.ui.dialogs.CardPrompt
 import app.passwordstore.ui.dialogs.outlined
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.hideKeyboard
@@ -60,7 +61,9 @@ class OpenPgpCardPrompt(
   private val dispatcherProvider: DispatcherProvider,
 ) {
 
-  private val cardDialog = AtomicReference<AlertDialog?>(null)
+  private val cardPrompt = AtomicReference<CardPrompt?>(null)
+  /** Set while the prompt is showing its tick, so nothing takes it down before it is seen. */
+  private val finishing = AtomicBoolean(false)
   private val cardDialogCancel = AtomicReference<CompletableDeferred<Unit>?>(null)
 
   /**
@@ -113,7 +116,7 @@ class OpenPgpCardPrompt(
   ): Attempt<T> {
     val cancel = CompletableDeferred<Unit>()
     cardDialogCancel.set(cancel)
-    withContext(dispatcherProvider.main()) { showOrUpdateDialog(message) }
+    withContext(dispatcherProvider.main()) { showOrUpdateDialog(message, reader.connections) }
     // The card in hand, so that cancelling has something to close.
     val connected = AtomicReference<OpenPgpCard?>(null)
     // Whether the outcome is the caller's. Set by whichever of the two gets there first, so the
@@ -192,23 +195,39 @@ class OpenPgpCardPrompt(
     return Attempt.Cancelled
   }
 
-  /** The card has answered: say where it is and to leave it there. */
+  /** The card has answered: say where it is, to leave it there, and that something is happening. */
   private fun announceCardDetected(connection: CardConnection) {
     activity.runOnUiThread {
-      cardDialog.get()?.let { dialog ->
-        dialog.setTitle(R.string.openpgp_card_hold_title)
-        dialog.setMessage(cardHoldMessage(activity, connection))
-      }
+      cardPrompt
+        .get()
+        ?.show(
+          CardPrompt.State(
+            mark = cardMark(connection),
+            title = activity.getString(R.string.openpgp_card_hold_title),
+            message = cardHoldMessage(activity, connection),
+            waiting = false,
+            working = true,
+          )
+        )
     }
   }
 
   /** The card is holding its answer back until a finger arrives: say so, rather than "working". */
   private fun announceTouchRequired() {
     activity.runOnUiThread {
-      cardDialog.get()?.let { dialog ->
-        dialog.setTitle(R.string.openpgp_card_touch_title)
-        dialog.setMessage(cardTouchMessage(activity))
-      }
+      cardPrompt
+        .get()
+        ?.show(
+          CardPrompt.State(
+            mark = R.drawable.ic_touch_app_24dp,
+            title = activity.getString(R.string.openpgp_card_touch_title),
+            message = cardTouchMessage(activity),
+            // The pulse is the invitation: this is the one state that is waiting on the user rather
+            // than on the card.
+            waiting = true,
+            working = true,
+          )
+        )
     }
   }
 
@@ -372,7 +391,7 @@ class OpenPgpCardPrompt(
             }
         ) {
           is Attempt.Success -> {
-            dismissDialog()
+            dismissWithSuccess()
             // Written back only for a PIN typed here, and only now that the whole operation has
             // succeeded — under the card that did it, asked again of the card in hand rather than
             // trusted from before the exchange. A seeded or cached PIN is already kept wherever it
@@ -515,37 +534,47 @@ class OpenPgpCardPrompt(
       activity.getString(R.string.openpgp_card_wrong_pin)
     }
 
-  /** Creates the card dialog, or just re-labels it if it is already showing. Main thread. */
-  private fun showOrUpdateDialog(message: String) {
+  /**
+   * Puts the prompt up asking for a card, or tells the one already up to ask again. Main thread.
+   */
+  private fun showOrUpdateDialog(message: String, connections: Set<CardConnection>) {
     // Collapse the soft keyboard left over from PIN entry so it doesn't cover the card prompt or
-    // the
-    // status bar, and keep the card dialog from resurrecting it.
+    // the status bar, and keep the prompt from resurrecting it.
     activity.hideKeyboard()
-    val existing = cardDialog.get()
+    val asking =
+      CardPrompt.State(
+        mark = cardMark(connections),
+        title = activity.getString(titleRes),
+        message = message,
+        waiting = true,
+        working = false,
+      )
+    val existing = cardPrompt.get()
     if (existing != null && existing.isShowing) {
-      existing.setTitle(titleRes)
-      existing.setMessage(message)
+      existing.show(asking)
       return
     }
-    val dialog =
-      MaterialAlertDialogBuilder(activity)
-        .outlined(activity)
-        .setTitle(titleRes)
-        .setMessage(message)
-        .setNegativeButton(R.string.dialog_cancel) { _, _ ->
-          cardDialogCancel.get()?.complete(Unit)
-        }
-        .setOnCancelListener { cardDialogCancel.get()?.complete(Unit) }
-        .setCancelable(true)
-        .show()
-    dialog.setCanceledOnTouchOutside(true)
-    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
-    cardDialog.set(dialog)
+    cardPrompt.set(CardPrompt.show(activity, asking) { cardDialogCancel.get()?.complete(Unit) })
   }
 
   suspend fun dismissDialog() {
-    val dialog = cardDialog.getAndSet(null) ?: return
-    withContext(dispatcherProvider.main()) { dialog.dismiss() }
+    // A prompt on its way out with a tick showing is not taken down early; it takes itself down.
+    if (finishing.get()) return
+    val prompt = cardPrompt.getAndSet(null) ?: return
+    withContext(dispatcherProvider.main()) { prompt.dismiss() }
+  }
+
+  /**
+   * Marks the operation done, leaves the tick up for a moment and then takes the prompt away, all
+   * without holding up the caller: what comes next is the thing the card was asked for, and that
+   * should not wait on an animation.
+   */
+  private suspend fun dismissWithSuccess() {
+    val prompt = cardPrompt.getAndSet(null) ?: return
+    finishing.set(true)
+    withContext(dispatcherProvider.main()) {
+      prompt.dismissWithSuccess { finishing.set(false) }
+    }
   }
 
   class SecretEntry(val secret: CharArray, val cache: Boolean)
@@ -705,19 +734,7 @@ class OpenPgpCardPrompt(
       if (card != null && card.connection == CardConnection.NFC) {
         withContext(dispatcherProvider.io()) {
           try {
-            val deadline = System.currentTimeMillis() + READER_MODE_RELEASE_TIMEOUT_MS
-            // Actively probe the card; two consecutive misses mean it has left the field (a single
-            // miss can be a transient transceive glitch while it is still present). Only pace the
-            // "still present" case with the interval so removal is detected in ~2 probe timeouts.
-            var consecutiveMisses = 0
-            while (consecutiveMisses < 2 && System.currentTimeMillis() < deadline) {
-              if (card.isPresent()) {
-                consecutiveMisses = 0
-                delay(READER_MODE_POLL_INTERVAL_MS)
-              } else {
-                consecutiveMisses++
-              }
-            }
+            awaitAbsence(card, READER_MODE_RELEASE_TIMEOUT_MS)
           } finally {
             runCatching { card.close() }
           }
@@ -750,34 +767,60 @@ class OpenPgpCardPrompt(
       reader.close()
       return
     }
-    val dialog =
-      withContext(dispatcherProvider.main()) {
-        if (activity.isFinishing || activity.isDestroyed) return@withContext null
-        MaterialAlertDialogBuilder(activity)
-          .outlined(activity)
-          .setTitle(R.string.openpgp_nfc_remove_card_title)
-          .setMessage(R.string.openpgp_nfc_remove_card_message)
-          .setCancelable(false)
-          .show()
-      }
     try {
-      withContext(dispatcherProvider.io()) {
-        val deadline = System.currentTimeMillis() + READER_MODE_REMOVAL_TIMEOUT_MS
-        var consecutiveMisses = 0
-        while (consecutiveMisses < 2 && System.currentTimeMillis() < deadline) {
-          if (card.isPresent()) {
-            consecutiveMisses = 0
-            delay(READER_MODE_POLL_INTERVAL_MS)
-          } else {
-            consecutiveMisses++
-          }
+      // Most people lift the card the moment the operation is over, and being told to do what they
+      // are already doing is worse than being told nothing. So the card is given a moment to go on
+      // its own, and only a card still sitting there afterwards is asked about.
+      if (withContext(dispatcherProvider.io()) { awaitAbsence(card, REMOVAL_GRACE_MS) }) return
+      val prompt =
+        withContext(dispatcherProvider.main()) {
+          if (activity.isFinishing || activity.isDestroyed) return@withContext null
+          CardPrompt.show(
+            activity,
+            CardPrompt.State(
+              mark = cardMark(CardConnection.NFC),
+              title = activity.getString(R.string.openpgp_nfc_remove_card_title),
+              message = activity.getString(R.string.openpgp_nfc_remove_card_message),
+              waiting = true,
+              working = false,
+              // There is nothing to cancel: the operation is done, and this is only about the
+              // moment between it finishing and the card leaving the field.
+              cancellable = false,
+            ),
+          ) {}
         }
+      try {
+        withContext(dispatcherProvider.io()) {
+          awaitAbsence(card, READER_MODE_REMOVAL_TIMEOUT_MS)
+        }
+      } finally {
+        withContext(dispatcherProvider.main()) { runCatching { prompt?.dismiss() } }
       }
     } finally {
       runCatching { card.close() }
-      withContext(dispatcherProvider.main()) { runCatching { dialog?.dismiss() } }
       reader.close()
     }
+  }
+
+  /**
+   * Waits for [card] to leave the field, for at most [timeoutMs]. Returns whether it went.
+   *
+   * Two consecutive misses are what counts as gone: a single one can be a transceive glitch on a
+   * card that is still sitting there. Only the "still present" case is paced with the interval, so
+   * a card that has left is noticed within about two probe timeouts.
+   */
+  private suspend fun awaitAbsence(card: OpenPgpCard, timeoutMs: Long): Boolean {
+    val deadline = System.currentTimeMillis() + timeoutMs
+    var consecutiveMisses = 0
+    while (consecutiveMisses < 2 && System.currentTimeMillis() < deadline) {
+      if (card.isPresent()) {
+        consecutiveMisses = 0
+        delay(READER_MODE_POLL_INTERVAL_MS)
+      } else {
+        consecutiveMisses++
+      }
+    }
+    return consecutiveMisses >= 2
   }
 
   companion object {
@@ -788,6 +831,8 @@ class OpenPgpCardPrompt(
     // Longer cap for the interactive "remove your card" wait, which depends on the user reacting.
     private const val READER_MODE_REMOVAL_TIMEOUT_MS = 60_000L
     private const val READER_MODE_POLL_INTERVAL_MS = 300L
+    // How long a card is given to leave on its own before the user is asked to lift it.
+    private const val REMOVAL_GRACE_MS = 900L
     private val PIN_FAILURE_REGEX = Regex("""63 c[0-9a-f]""", RegexOption.IGNORE_CASE)
 
     /**

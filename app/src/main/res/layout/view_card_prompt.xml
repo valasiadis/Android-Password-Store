@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  What the app says while a card is in its hands: where to put it, to hold it there, to touch it,
+  to lift it off. One mark and one line at a time, with a bar underneath for the stretch where the
+  card must not be moved, so that waiting looks like waiting rather than like nothing happening.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:id="@+id/card_prompt"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:gravity="center_horizontal"
+  android:orientation="vertical"
+  android:paddingHorizontal="@dimen/spacing_xlarge"
+  android:paddingTop="@dimen/spacing_xlarge"
+  android:paddingBottom="@dimen/spacing_large">
+
+  <androidx.appcompat.widget.AppCompatImageView
+    android:id="@+id/card_mark"
+    android:layout_width="@dimen/card_prompt_mark_size"
+    android:layout_height="@dimen/card_prompt_mark_size"
+    android:contentDescription="@null"
+    android:src="@drawable/ic_contactless_24dp"
+    app:tint="?attr/colorPrimary" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/card_title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_large"
+    android:textAlignment="center"
+    android:textAppearance="?attr/textAppearanceTitleLarge"
+    android:textColor="?attr/colorOnSurface"
+    tools:text="Hold the card still" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/card_message"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_small"
+    android:textAlignment="center"
+    android:textAppearance="?attr/textAppearanceBodyMedium"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    tools:text="Keep the smartcard on your phone." />
+
+  <com.google.android.material.progressindicator.LinearProgressIndicator
+    android:id="@+id/card_progress"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_large"
+    android:indeterminate="true"
+    android:visibility="invisible"
+    app:indicatorColor="?attr/colorPrimary"
+    app:trackColor="?attr/colorSurfaceVariant"
+    app:trackCornerRadius="2dp"
+    app:trackThickness="4dp"
+    tools:visibility="visible" />
+
+  <com.google.android.material.button.MaterialButton
+    android:id="@+id/card_cancel"
+    style="@style/Widget.Material3.Button.TextButton"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="end"
+    android:layout_marginTop="@dimen/spacing_small"
+    android:text="@string/dialog_cancel" />
+
+</LinearLayout>

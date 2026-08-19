@@ -24,6 +24,7 @@ import app.passwordstore.crypto.displayName
 import app.passwordstore.crypto.errors.KeyAlreadyExistsException
 import app.passwordstore.crypto.errors.UnusableKeyException
 import app.passwordstore.data.crypto.CryptoRepository
+import app.passwordstore.ui.dialogs.CardPrompt
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.TextInputDialog
@@ -33,6 +34,7 @@ import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.crypto.OpenPgpCardInfo
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import app.passwordstore.util.crypto.cardHoldMessage
+import app.passwordstore.util.crypto.cardMark
 import app.passwordstore.util.crypto.cardPresentMessage
 import app.passwordstore.util.crypto.openCardReaders
 import com.github.michaelbull.result.Result
@@ -132,44 +134,44 @@ class PGPKeyImportActivity : AppCompatActivity() {
       return
     }
     cardReader = reader
-    val progressDialog =
-      MaterialAlertDialogBuilder(this)
-        .setTitle(R.string.openpgp_card_setup_title)
-        .setMessage(cardPresentMessage(this, reader.connections))
-        .setNegativeButton(R.string.dialog_cancel, null)
-        .setCancelable(true)
-        .show()
+    fun presenting() =
+      CardPrompt.State(
+        mark = cardMark(reader.connections),
+        title = getString(R.string.openpgp_card_setup_title),
+        message = cardPresentMessage(this, reader.connections),
+        waiting = true,
+        working = false,
+      )
     var canceled = false
-    fun cancelCardDialog() {
+    lateinit var prompt: CardPrompt
+    fun cancelCardPrompt() {
       if (canceled) return
       canceled = true
       cardWait?.cancel()
       closeCardReader()
-      progressDialog.dismiss()
+      prompt.dismiss()
       setResult(RESULT_CANCELED)
       finish()
     }
-    progressDialog.setCanceledOnTouchOutside(true)
-    progressDialog.setOnCancelListener { cancelCardDialog() }
-    progressDialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
-      cancelCardDialog()
-    }
+    prompt = CardPrompt.show(this, presenting()) { cancelCardPrompt() }
     cardWait =
       lifecycleScope.launch(dispatcherProvider.main()) {
         while (!canceled) {
-          progressDialog.setTitle(R.string.openpgp_card_setup_title)
-          progressDialog.setMessage(
-            cardPresentMessage(this@PGPKeyImportActivity, reader.connections)
-          )
+          prompt.show(presenting())
           val cardInfo =
             try {
               val card =
                 withContext(dispatcherProvider.io()) {
                   reader.awaitCard { connection ->
                     runOnUiThread {
-                      progressDialog.setTitle(R.string.openpgp_card_hold_title)
-                      progressDialog.setMessage(
-                        cardHoldMessage(this@PGPKeyImportActivity, connection)
+                      prompt.show(
+                        CardPrompt.State(
+                          mark = cardMark(connection),
+                          title = getString(R.string.openpgp_card_hold_title),
+                          message = cardHoldMessage(this@PGPKeyImportActivity, connection),
+                          waiting = false,
+                          working = true,
+                        )
                       )
                     }
                   }
@@ -183,11 +185,12 @@ class PGPKeyImportActivity : AppCompatActivity() {
               logcat(ERROR) { e.asLog() }
               // A card that slipped mid-read is simply asked for again; anything else is reported.
               if (OpenPgpCard.isTransceiveFailure(e)) continue
-              progressDialog.dismiss()
+              prompt.dismiss()
               showCardErrorDialog(e.message ?: getString(R.string.pgp_key_import_failed))
               return@launch
             }
-          progressDialog.dismiss()
+          // The tick is left to fade on its own while the key this card names is looked for.
+          prompt.dismissWithSuccess()
           setupSmartcardKey(cardInfo)
           return@launch
         }

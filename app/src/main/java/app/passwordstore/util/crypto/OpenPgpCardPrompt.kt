@@ -35,6 +35,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -128,6 +129,7 @@ class OpenPgpCardPrompt(
           try {
             val card = reader.awaitCard { connection -> announceCardDetected(connection) }
             connected.set(card)
+            val watch = watchForCardLeaving(card)
             // Only a card in the socket is known to be waiting for a finger. A card held against
             // the phone may have the same flag set and still not wait: the tap can be what
             // satisfies it, and then the operation simply runs — with the prompt telling the user
@@ -146,6 +148,8 @@ class OpenPgpCardPrompt(
               // Leave the card open; the caller closes it (retry) or holds reader mode until it is
               // removed (terminal failure).
               Attempt.Error(e, card)
+            } finally {
+              watch.cancel()
             }
           } catch (e: CancellationException) {
             throw e
@@ -173,6 +177,32 @@ class OpenPgpCardPrompt(
       throw e
     }
   }
+
+  /**
+   * Watches, for as long as an exchange is running, for the card being taken away mid-way.
+   *
+   * A card lifted while it is being worked leaves the exchange waiting on an answer that will never
+   * come, and nothing else notices until it times out — the best part of a minute during which the
+   * prompt still says the card has been found, presenting it again does nothing, because nobody is
+   * listening for a card any more, and the whole operation is simply stuck.
+   *
+   * So the wire is asked whether it still has a card, which costs nothing and reaches past the
+   * exchange in flight, and the card is closed the moment it says no. That ends the exchange where
+   * it stands, and the prompt goes back to asking for a card — which is the thing the user has in
+   * their hand.
+   */
+  private fun watchForCardLeaving(card: OpenPgpCard): Job =
+    cardScope.launch(dispatcherProvider.io()) {
+      // Only over NFC, where a card can be taken away without anything else being noticed.
+      if (card.connection != CardConnection.NFC) return@launch
+      var consecutiveMisses = 0
+      while (consecutiveMisses < 2) {
+        delay(LIVENESS_POLL_INTERVAL_MS)
+        if (card.isConnected) consecutiveMisses = 0 else consecutiveMisses++
+      }
+      logcat { "The card left in the middle of an operation; ending it rather than waiting it out" }
+      runCatching { card.close() }
+    }
 
   /**
    * Gives up on an exchange that is still running, and says so.
@@ -831,8 +861,9 @@ class OpenPgpCardPrompt(
     // Longer cap for the interactive "remove your card" wait, which depends on the user reacting.
     private const val READER_MODE_REMOVAL_TIMEOUT_MS = 60_000L
     private const val READER_MODE_POLL_INTERVAL_MS = 300L
-    // How long a card is given to leave on its own before the user is asked to lift it.
-    private const val REMOVAL_GRACE_MS = 900L
+    // How often the wire is asked whether it still has a card while an exchange is running. Two
+    // consecutive misses end it, so a card that goes is noticed within half a second.
+    private const val LIVENESS_POLL_INTERVAL_MS = 250L
     private val PIN_FAILURE_REGEX = Regex("""63 c[0-9a-f]""", RegexOption.IGNORE_CASE)
 
     /**

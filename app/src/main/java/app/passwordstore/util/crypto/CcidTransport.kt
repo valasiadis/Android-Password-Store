@@ -41,6 +41,10 @@ private constructor(
 
   override val connection = CardConnection.USB
 
+  // A plugged-in card does not wander off mid-operation; when the cable does go, the transfer
+  // itself fails at once rather than waiting out a timeout.
+  override val isConnected = true
+
   /**
    * How much of an APDU fits in one message. Bounded by the short-APDU maximum as well as by the
    * reader, since a reader that offers more than that is still being handed short APDUs.

@@ -12,6 +12,8 @@ import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
 import com.github.michaelbull.result.runCatching
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import logcat.logcat
 
 /**
@@ -52,8 +54,23 @@ private constructor(
   override val maxTransceiveLength: Int
     get() = (maxMessageLength - CCID_HEADER_LENGTH).coerceIn(MIN_APDU_LENGTH, MAX_SHORT_APDU_LENGTH)
 
-  /** Wraps around at a byte, which is all the field is; only equality with the request matters. */
-  private var sequence = 0
+  /**
+   * Wraps around at a byte, which is all the field is; only equality with the request matters.
+   *
+   * Atomic because [close] can be called from another thread while an exchange is in flight — that
+   * is how a cancelled operation ends one — and a sequence number two threads both think they own
+   * is a sequence number that cannot tell a stale answer from the real one.
+   */
+  private val sequence = AtomicInteger(0)
+
+  /**
+   * Whether a thread is currently mid-exchange on these endpoints.
+   *
+   * [close] consults it: an orderly power-down is one more conversation with the reader, and
+   * starting one while another thread is halfway through its own means two writers on one endpoint
+   * and two readers on the other, each liable to take the other's answer.
+   */
+  private val exchanging = AtomicBoolean(false)
 
   override fun transceive(command: ByteArray, timeoutMs: Int): ByteArray =
     exchange(MESSAGE_XFR_BLOCK, command, parameter = 0, timeoutMs = timeoutMs).data
@@ -98,30 +115,37 @@ private constructor(
     parameter: Int,
     timeoutMs: Int,
   ): CcidResponse {
-    sequence = (sequence + 1) and 0xff
-    val expectedSequence = sequence
+    val expectedSequence = sequence.incrementAndGet() and 0xff
     val deadline = System.currentTimeMillis() + timeoutMs
-    write(ccidMessage(messageType, expectedSequence, payload, parameter), remainingUntil(deadline))
-    while (true) {
-      val response = read(deadline)
-      if (response.sequence != expectedSequence) {
-        // An answer to something we have already given up on; the one we are waiting for follows.
-        logcat {
-          "Ignoring stale CCID response ${response.sequence} (waiting for $expectedSequence)"
+    exchanging.set(true)
+    try {
+      write(
+        ccidMessage(messageType, expectedSequence, payload, parameter),
+        remainingUntil(deadline),
+      )
+      while (true) {
+        val response = read(deadline)
+        if (response.sequence != expectedSequence) {
+          // An answer to something we have already given up on; the one we are waiting for follows.
+          logcat {
+            "Ignoring stale CCID response ${response.sequence} (waiting for $expectedSequence)"
+          }
+          continue
         }
-        continue
+        if (response.isTimeExtensionRequest) continue
+        if (response.failed) {
+          throw IOException(
+            "The card reader refused the command (status %02x, error %02x)"
+              .format(
+                response.status,
+                response.error,
+              )
+          )
+        }
+        return response
       }
-      if (response.isTimeExtensionRequest) continue
-      if (response.failed) {
-        throw IOException(
-          "The card reader refused the command (status %02x, error %02x)"
-            .format(
-              response.status,
-              response.error,
-            )
-        )
-      }
-      return response
+    } finally {
+      exchanging.set(false)
     }
   }
 
@@ -175,7 +199,16 @@ private constructor(
     // The card is powered down rather than merely let go of, so that a PIN verified for this
     // operation does not stay verified on a card that goes on being powered by the phone. Over NFC
     // this is what lifting the card off does, and there the user cannot forget to do it.
-    runCatching { exchange(MESSAGE_ICC_POWER_OFF, byteArrayOf(), 0, POWER_OFF_TIMEOUT_MS) }
+    //
+    // Only when these endpoints are quiet, though. Closing is also how a cancelled operation is
+    // stopped, and then another thread is sitting inside a transfer of its own — waiting on a card
+    // that is waiting for a finger. Talking over it would have the two of them taking each other's
+    // packets, and the power-down waiting out its own timeout for an answer already read by
+    // somebody else. Dropping the connection is what ends that wait, and a card left powered is a
+    // card the user is about to unplug anyway.
+    if (!exchanging.get()) {
+      runCatching { exchange(MESSAGE_ICC_POWER_OFF, byteArrayOf(), 0, POWER_OFF_TIMEOUT_MS) }
+    }
     runCatching { deviceConnection.releaseInterface(usbInterface) }
     runCatching { deviceConnection.close() }
     onClose()

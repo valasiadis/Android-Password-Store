@@ -264,7 +264,7 @@ class OpenPgpCardPrompt(
           CardPrompt.State(
             mark = R.drawable.ic_touch_app_24dp,
             title = activity.getString(R.string.openpgp_card_touch_title),
-            message = cardTouchMessage(activity),
+            message = "",
             working = true,
             framed = false,
           )

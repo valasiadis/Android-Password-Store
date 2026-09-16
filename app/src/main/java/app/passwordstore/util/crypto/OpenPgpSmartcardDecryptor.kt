@@ -29,8 +29,8 @@ import org.bouncycastle.openpgp.PGPUtil
 import org.bouncycastle.openpgp.operator.AbstractPublicKeyDataDecryptorFactory
 import org.bouncycastle.openpgp.operator.PGPDataDecryptor
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory
+import org.bouncycastle.openpgp.operator.bc.BcSessionKeyDataDecryptorFactory
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator
-import org.bouncycastle.openpgp.operator.jcajce.JceSessionKeyDataDecryptorFactoryBuilder
 import org.bouncycastle.util.io.Streams
 
 /**
@@ -107,6 +107,34 @@ internal fun verifyIntegrity(data: PGPEncryptedData) {
   }
 }
 
+/**
+ * Writes the payload of [data] — which the card has already unlocked by recovering [sessionKey] —
+ * into [outputStream], and does not return until the message has answered for itself.
+ *
+ * The content cipher is built through BouncyCastle's own lightweight API rather than through the
+ * JCE. Asking the platform for one lands on Android's providers, and Android's cut-down
+ * BouncyCastle has no OCB: a message GnuPG wrote as tag 20 died there with "cannot create cipher:
+ * No provider found for AES/OCB/NoPadding", after the card had already deciphered the session key.
+ * The bundled BouncyCastle carries OCB itself, needs no provider registered, and is what the rest
+ * of this file — and the app's PGPainless path — already decrypts through.
+ *
+ * @throws PGPException if the message was altered after it was written.
+ */
+internal fun readPlaintext(
+  data: PGPPublicKeyEncryptedData,
+  sessionKey: PGPSessionKey,
+  outputStream: OutputStream,
+) {
+  data.getDataStream(BcSessionKeyDataDecryptorFactory(sessionKey)).use { cleartext ->
+    pipeLiteralData(cleartext, outputStream)
+    // The literal packet ends before the ciphertext does, and an AEAD message's last chunk is only
+    // answered for once the stream has been read out — so read the rest of it here, while it is
+    // open, and let a chunk that does not answer throw before the plaintext is used.
+    Streams.drain(cleartext)
+  }
+  verifyIntegrity(data)
+}
+
 class OpenPgpSmartcardDecryptor @Inject constructor() {
 
   fun decrypt(
@@ -167,16 +195,7 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
 
     // Streaming decryption necessarily writes the plaintext before it can be vouched for;
     // [outputStream] is an in-memory buffer the caller must (and does) discard when this throws.
-    encryptedData.getDataStream(JceSessionKeyDataDecryptorFactoryBuilder().build(sessionKey)).use {
-      cleartext ->
-      pipeLiteralData(cleartext, outputStream)
-      // The literal packet ends before the ciphertext does, and an AEAD message's last chunk is
-      // only answered for once the stream has been read out — so read the rest of it here, while
-      // it is open, and let a chunk that does not answer throw before the plaintext is used.
-      Streams.drain(cleartext)
-    }
-
-    verifyIntegrity(encryptedData)
+    readPlaintext(encryptedData, sessionKey, outputStream)
   }
 
   private fun Throwable.isCardAuthenticationFailure(): Boolean =

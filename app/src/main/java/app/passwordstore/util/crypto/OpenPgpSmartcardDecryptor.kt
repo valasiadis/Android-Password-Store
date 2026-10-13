@@ -177,6 +177,9 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
         } catch (e: Throwable) {
           if (OpenPgpCard.isTransceiveFailure(e)) throw e
           if (e.isCardAuthenticationFailure()) throw e
+          // Addressed to the card's own key, so every other candidate is for the same key and would
+          // fail the same way; anything said after this would blame the message instead.
+          if (e is UnsupportedCardKeyException && candidate in explicitMatches) throw e
           if (firstFailure == null) firstFailure = e as? Exception
           null
         }
@@ -222,6 +225,17 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
     return matchingKeyIds
   }
 
+  /**
+   * The message is for the card, but the card's decryption key is of a kind this app cannot yet
+   * hand to a card to decrypt with. Only RSA can be: an ECDH key needs the card to agree on a
+   * shared secret, from which the session key is then unwrapped here, and that is not written yet.
+   */
+  private class UnsupportedCardKeyException(keyAlgorithm: Int) :
+    PGPException(
+      "This OpenPGP card's decryption key is ${algorithmName(keyAlgorithm)}; decrypting with a " +
+        "card is only supported for RSA keys so far"
+    )
+
   private class OpenPgpCardDecryptorFactory(private val card: OpenPgpCard) :
     AbstractPublicKeyDataDecryptorFactory() {
 
@@ -236,7 +250,7 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
         keyAlgorithm != PublicKeyAlgorithmTags.RSA_ENCRYPT &&
           keyAlgorithm != PublicKeyAlgorithmTags.RSA_GENERAL
       ) {
-        throw PGPException("NFC OpenPGP decryption currently supports RSA card subkeys only")
+        throw UnsupportedCardKeyException(keyAlgorithm)
       }
       val mpi = secKeyData.firstOrNull() ?: throw PGPException("Missing encrypted session key")
       if (mpi.size <= 2) throw PGPException("Malformed RSA session key")
@@ -262,6 +276,16 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
   }
 
   private companion object {
+    private fun algorithmName(keyAlgorithm: Int): String =
+      when (keyAlgorithm) {
+        PublicKeyAlgorithmTags.ECDH -> "ECDH"
+        PublicKeyAlgorithmTags.X25519 -> "X25519"
+        PublicKeyAlgorithmTags.X448 -> "X448"
+        PublicKeyAlgorithmTags.ELGAMAL_ENCRYPT,
+        PublicKeyAlgorithmTags.ELGAMAL_GENERAL -> "ElGamal"
+        else -> "of OpenPGP algorithm $keyAlgorithm"
+      }
+
     // Upper bound on the number of PKESK packets we will try to decrypt on the card per message.
     private const val MAX_DECRYPT_CANDIDATES = 16
   }

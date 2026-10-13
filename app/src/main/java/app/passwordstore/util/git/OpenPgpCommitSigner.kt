@@ -263,7 +263,7 @@ class OpenPgpCommitSigner(
         prompt.showError(
           R.string.error,
           prompt.cardFailureMessage(e, failedConnection).ifBlank {
-            activity.getString(R.string.password_decryption_unknown_error)
+            activity.getString(R.string.git_unknown_error)
           },
         )
       }

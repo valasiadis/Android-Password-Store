@@ -362,11 +362,28 @@ class OpenPgpCommitSigner(
         .flatMap { it.publicKeys.asSequence() }
     }
 
+  /**
+   * The key on the card that commits are signed with.
+   *
+   * Only RSA can be signed with on a card so far. A card holding an EdDSA or ECDSA signing key does
+   * have a key matching it, so the user is told its key type is the trouble — not that nothing
+   * matches the card, which sends them off to re-import a key that was never missing.
+   */
   private fun findCardSigningKey(key: PGPKey, cardFingerprints: List<ByteArray>): PGPPublicKey {
-    return publicKeys(key).firstOrNull { publicKey ->
-      publicKey.algorithm in RSA_SIGNING_ALGORITHMS &&
-        cardFingerprints.any { it.contentEquals(publicKey.fingerprint) }
-    } ?: throw PGPException("No RSA signing key matching this OpenPGP card was found")
+    val onCard =
+      publicKeys(key)
+        .filter { publicKey -> cardFingerprints.any { it.contentEquals(publicKey.fingerprint) } }
+        .toList()
+    val rsa = onCard.firstOrNull { it.algorithm in RSA_SIGNING_ALGORITHMS }
+    if (rsa != null) return rsa
+    val unsupported = onCard.firstOrNull { it.algorithm in OTHER_SIGNING_ALGORITHMS }
+    if (unsupported != null) {
+      throw PGPException(
+        "This OpenPGP card's signing key is ${signingAlgorithmName(unsupported.algorithm)}; " +
+          "signing commits with a card is only supported for RSA keys so far"
+      )
+    }
+    throw PGPException("No signing key matching this OpenPGP card was found")
   }
 
   private fun buildDetachedSignature(
@@ -392,7 +409,7 @@ class OpenPgpCommitSigner(
 
     override fun build(signatureType: Int, privateKey: PGPPrivateKey): PGPContentSigner {
       if (publicKey.algorithm !in RSA_SIGNING_ALGORITHMS) {
-        throw PGPException("NFC OpenPGP commit signing currently supports RSA card keys only")
+        throw PGPException("OpenPGP card commit signing currently supports RSA card keys only")
       }
       val digestCalculator = BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA256)
       return object : PGPContentSigner {
@@ -430,5 +447,20 @@ class OpenPgpCommitSigner(
     @Suppress("DEPRECATION")
     private val RSA_SIGNING_ALGORITHMS =
       setOf(PublicKeyAlgorithmTags.RSA_GENERAL, PublicKeyAlgorithmTags.RSA_SIGN)
+
+    private val OTHER_SIGNING_ALGORITHMS =
+      setOf(
+        PublicKeyAlgorithmTags.EDDSA_LEGACY,
+        PublicKeyAlgorithmTags.Ed25519,
+        PublicKeyAlgorithmTags.Ed448,
+        PublicKeyAlgorithmTags.ECDSA,
+      )
+
+    private fun signingAlgorithmName(algorithm: Int): String =
+      when (algorithm) {
+        PublicKeyAlgorithmTags.ECDSA -> "ECDSA"
+        PublicKeyAlgorithmTags.Ed448 -> "Ed448"
+        else -> "EdDSA"
+      }
   }
 }

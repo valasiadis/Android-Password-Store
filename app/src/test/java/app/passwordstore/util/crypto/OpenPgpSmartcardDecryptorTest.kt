@@ -13,8 +13,10 @@ import java.io.ByteArrayOutputStream
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import org.bouncycastle.bcpg.PublicKeyAlgorithmTags
 import org.bouncycastle.openpgp.PGPException
 
 /**
@@ -88,5 +90,55 @@ class OpenPgpSmartcardDecryptorTest {
     // Turned down before anything is sent to decrypt with: the card was asked for its PIN and its
     // KDF settings, and for nothing that would cost a touch.
     assertTrue(transport.commands.none { it[1] == 0x2A.toByte() })
+  }
+
+  /**
+   * Collects what a PSO: DECIPHER hands the card, across however many chained commands it takes.
+   */
+  private class DecipherTransport : CardTransport {
+    var deciphered = byteArrayOf()
+
+    override val maxTransceiveLength = 261
+    override val connection = CardConnection.USB
+    override val isConnected = true
+
+    override fun transceive(command: ByteArray, timeoutMs: Int): ByteArray {
+      val ok = byteArrayOf(0x90.toByte(), 0x00)
+      if (command[1] == 0x2A.toByte() && command[2] == 0x80.toByte()) {
+        val length = command[4].toInt() and 0xff
+        deciphered += command.copyOfRange(5, 5 + length)
+        // The last command of a chain is the one without the chaining bit, and is answered.
+        if (command[0].toInt() and 0x10 == 0) return byteArrayOf(0x02, 0x01) + ok
+      }
+      return ok
+    }
+
+    override fun close() = Unit
+  }
+
+  /** The encrypted session key as OpenPGP writes it: a bit count, then the number itself. */
+  private fun mpi(value: ByteArray): ByteArray {
+    val bits = value.size * 8 - Integer.numberOfLeadingZeros(value[0].toInt() and 0xff) + 24
+    return byteArrayOf((bits shr 8).toByte(), bits.toByte()) + value
+  }
+
+  @Test
+  fun `a session key that starts with a zero byte reaches the card at the key's full length`() {
+    val transport = DecipherTransport()
+    // 255 bytes: a 2048-bit value whose top byte happened to be zero, written without it.
+    val value = ByteArray(255) { 0x5A }
+    OpenPgpSmartcardDecryptor.OpenPgpCardDecryptorFactory(OpenPgpCard(transport), 2048)
+      .recoverSessionData(PublicKeyAlgorithmTags.RSA_GENERAL, arrayOf(mpi(value)), 3)
+    // The padding indicator byte first, then the value padded back to 256 bytes.
+    assertContentEquals(byteArrayOf(0x00, 0x00) + value, transport.deciphered)
+  }
+
+  @Test
+  fun `a session key already as long as the key is sent unchanged`() {
+    val transport = DecipherTransport()
+    val value = ByteArray(256) { 0x5A }
+    OpenPgpSmartcardDecryptor.OpenPgpCardDecryptorFactory(OpenPgpCard(transport), 2048)
+      .recoverSessionData(PublicKeyAlgorithmTags.RSA_GENERAL, arrayOf(mpi(value)), 3)
+    assertContentEquals(byteArrayOf(0x00) + value, transport.deciphered)
   }
 }

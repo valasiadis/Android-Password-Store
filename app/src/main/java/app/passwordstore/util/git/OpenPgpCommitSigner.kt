@@ -402,7 +402,7 @@ class OpenPgpCommitSigner(
 
   // The PIN is verified explicitly (see signWithSmartcard) before this builder runs, so it only has
   // to compute the signature.
-  private class CardContentSignerBuilder(
+  internal class CardContentSignerBuilder(
     private val publicKey: PGPPublicKey,
     private val card: OpenPgpCard,
   ) : PGPContentSignerBuilder {
@@ -412,6 +412,11 @@ class OpenPgpCommitSigner(
         throw PGPException("OpenPGP card commit signing currently supports RSA card keys only")
       }
       val digestCalculator = BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA256)
+      // Reading the calculator's digest finishes the hash and starts a new one, and BouncyCastle
+      // asks for it twice: for the signature, then for the two bytes of it kept beside the
+      // signature. Read twice, the second answer is the hash of nothing — a prefix that matches no
+      // signed commit — so it is read once, after everything has been written.
+      val digest by lazy { digestCalculator.digest }
       return object : PGPContentSigner {
         override fun getOutputStream(): OutputStream = digestCalculator.outputStream
 
@@ -419,7 +424,7 @@ class OpenPgpCommitSigner(
           val digestInfo =
             DigestInfo(
                 AlgorithmIdentifier(NISTObjectIdentifiers.id_sha256, DERNull.INSTANCE),
-                digestCalculator.digest,
+                digest,
               )
               .encoded
           return card.computeDigitalSignature(
@@ -428,7 +433,7 @@ class OpenPgpCommitSigner(
           )
         }
 
-        override fun getDigest(): ByteArray = digestCalculator.digest
+        override fun getDigest(): ByteArray = digest.copyOf()
 
         override fun getType(): Int = signatureType
 

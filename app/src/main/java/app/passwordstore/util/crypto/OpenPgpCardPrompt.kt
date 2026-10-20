@@ -41,6 +41,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import logcat.asLog
 import logcat.logcat
 
@@ -881,23 +882,9 @@ class OpenPgpCardPrompt(
    * means a full exchange every time round, on a card that by then has nothing left to say — and on
    * the thread that is waiting, which for an SSH authentication is the one carrying the whole git
    * operation. The wire's own answer is free, and the platform keeps it fresh.
-   *
-   * Two consecutive misses are what counts as gone, since a single one can be a glitch on a card
-   * that is still sitting there.
    */
-  private suspend fun awaitAbsence(card: OpenPgpCard, timeoutMs: Long): Boolean {
-    val deadline = System.currentTimeMillis() + timeoutMs
-    var consecutiveMisses = 0
-    while (consecutiveMisses < 2 && System.currentTimeMillis() < deadline) {
-      if (card.isConnected) {
-        consecutiveMisses = 0
-        delay(LIVENESS_POLL_INTERVAL_MS)
-      } else {
-        consecutiveMisses++
-      }
-    }
-    return consecutiveMisses >= 2
-  }
+  private suspend fun awaitAbsence(card: OpenPgpCard, timeoutMs: Long): Boolean =
+    awaitCardAbsence({ card.isConnected }, timeoutMs, LIVENESS_POLL_INTERVAL_MS)
 
   companion object {
     /** The minimum PW1 (user/signing) PIN length mandated by the OpenPGP Card specification. */
@@ -1065,3 +1052,28 @@ class OpenPgpCardPrompt(
  * user via a dialog, so callers should not additionally surface it (e.g. as a snackbar).
  */
 class SmartcardOperationHandledException(message: String? = null) : Exception(message)
+
+/**
+ * Waits, for at most [timeoutMs], until [isConnected] has said no twice running, [pollIntervalMs]
+ * apart. Returns whether it did.
+ *
+ * Two misses are what counts as gone, since a single one can be a glitch on a card that is still
+ * sitting there — and only two misses with time between them: asked again at once, the wire gives
+ * the same answer it has just given, and the glitch is counted twice. A card taken for gone while
+ * it is still on the phone has reader mode let go under it, and the platform then puts the card's
+ * own URL on screen, which is what waiting for it to leave is there to prevent.
+ */
+internal suspend fun awaitCardAbsence(
+  isConnected: () -> Boolean,
+  timeoutMs: Long,
+  pollIntervalMs: Long,
+): Boolean =
+  withTimeoutOrNull(timeoutMs) {
+    var consecutiveMisses = 0
+    while (true) {
+      if (isConnected()) consecutiveMisses = 0 else consecutiveMisses++
+      if (consecutiveMisses >= 2) break
+      delay(pollIntervalMs)
+    }
+    true
+  } ?: false

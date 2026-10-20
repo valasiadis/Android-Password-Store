@@ -168,11 +168,16 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
     val candidates = (explicitMatches + anonymousMatches).distinct().take(MAX_DECRYPT_CANDIDATES)
     if (candidates.isEmpty()) throw PGPException("Message is not encrypted to this OpenPGP card")
 
-    val decryptorFactory = OpenPgpCardDecryptorFactory(card)
     var firstFailure: Exception? = null
     val (encryptedData, sessionKey) =
       candidates.firstNotNullOfOrNull { candidate ->
         try {
+          // A packet that names no recipient names no key either, so its size is not known here
+          // and the card is handed the value as it came.
+          val recipient =
+            if (candidate in explicitMatches) cert.getKey(candidate.keyIdentifier) else null
+          val decryptorFactory =
+            OpenPgpCardDecryptorFactory(card, recipient?.pgpPublicKey?.bitStrength)
           candidate to candidate.getSessionKey(decryptorFactory)
         } catch (e: Throwable) {
           if (OpenPgpCard.isTransceiveFailure(e)) throw e
@@ -236,8 +241,18 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
         "card is only supported for RSA keys so far"
     )
 
-  private class OpenPgpCardDecryptorFactory(private val card: OpenPgpCard) :
-    AbstractPublicKeyDataDecryptorFactory() {
+  /**
+   * Hands the card the session key encrypted to it, and gives back what the card makes of it.
+   *
+   * [modulusBits] is the size of the card's RSA key, where it is known. OpenPGP writes the
+   * encrypted value as a number, without the zero bytes it may start with — about one message in
+   * 256 has one — while the card wants exactly as many bytes as its key is long, as GnuPG gives it.
+   * Sent short, the card refuses the message or decrypts something else.
+   */
+  internal class OpenPgpCardDecryptorFactory(
+    private val card: OpenPgpCard,
+    private val modulusBits: Int?,
+  ) : AbstractPublicKeyDataDecryptorFactory() {
 
     private val contentDecryptorFactory = BcPublicKeyDataDecryptorFactory(null)
 
@@ -254,7 +269,9 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
       }
       val mpi = secKeyData.firstOrNull() ?: throw PGPException("Missing encrypted session key")
       if (mpi.size <= 2) throw PGPException("Malformed RSA session key")
-      return card.decipher(mpi.copyOfRange(2, mpi.size))
+      val value = mpi.copyOfRange(2, mpi.size)
+      val modulusLength = modulusBits?.let { (it + 7) / 8 } ?: value.size
+      return card.decipher(ByteArray((modulusLength - value.size).coerceAtLeast(0)) + value)
     }
 
     override fun createDataDecryptor(

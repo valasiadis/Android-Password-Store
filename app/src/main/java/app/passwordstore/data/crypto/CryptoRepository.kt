@@ -17,6 +17,7 @@ import app.passwordstore.crypto.PGPainlessCryptoHandler
 import app.passwordstore.injection.prefs.SettingsPreferences
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.OpenPgpCard
+import app.passwordstore.util.crypto.OpenPgpCardStatusException
 import app.passwordstore.util.crypto.OpenPgpSmartcardDecryptor
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import app.passwordstore.util.settings.PreferenceKeys
@@ -31,6 +32,7 @@ import com.github.michaelbull.result.mapError
 import com.github.michaelbull.result.runCatching
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.io.InputStream
 import javax.inject.Inject
 import logcat.asLog
@@ -229,7 +231,10 @@ constructor(
     message: ByteArrayOutputStream,
     card: OpenPgpCard,
   ) =
-    identities.mapUntil({ it.second.isOk }) { id ->
+    // Each key tried hands the card the PIN again, so once the card has answered — a wrong PIN
+    // above all, which costs one of its few retries every time it is sent — or stopped answering,
+    // trying the next key only says the same thing to it again, or to a card no longer there.
+    identities.mapUntil({ it.second.isOk || it.second.getError().cameFromCard() }) { id ->
       encryptedMessage.reset()
       message.reset()
       val result = runCatching {
@@ -243,6 +248,11 @@ constructor(
       result.getError()?.let { logcat { it.asLog() } }
       Pair(id.toString(), result)
     }
+
+  /** Whether the card itself answered with [this], or could not be reached to answer at all. */
+  private fun Throwable?.cameFromCard(): Boolean =
+    this != null &&
+      (this is OpenPgpCardStatusException || this is IOException || cause.cameFromCard())
 
   fun encrypt(
     identities: List<PGPIdentifier>,

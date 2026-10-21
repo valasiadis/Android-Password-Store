@@ -32,12 +32,15 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
+import java.math.BigInteger
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.runBlocking
 import logcat.asLog
 import logcat.logcat
+import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.DERNull
+import org.bouncycastle.asn1.DERSequence
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.DigestInfo
@@ -365,22 +368,29 @@ class OpenPgpCommitSigner(
   /**
    * The key on the card that commits are signed with.
    *
-   * Only RSA can be signed with on a card so far. A card holding an EdDSA or ECDSA signing key does
-   * have a key matching it, so the user is told its key type is the trouble — not that nothing
-   * matches the card, which sends them off to re-import a key that was never missing.
+   * A card holds three keys, and the fingerprints it gives are of all three — so on a card set up
+   * with Curve25519 keys, the signing key and the authentication key are both EdDSA, and both
+   * match. A commit signed by the card's signing key but labelled with the authentication key fails
+   * to verify, so the key is the one the certificate says signs data; only a certificate that says
+   * nothing either way is taken at its first key of a kind that signs.
    */
   private fun findCardSigningKey(key: PGPKey, cardFingerprints: List<ByteArray>): PGPPublicKey {
-    val onCard =
-      publicKeys(key)
-        .filter { publicKey -> cardFingerprints.any { it.contentEquals(publicKey.fingerprint) } }
-        .toList()
-    val rsa = onCard.firstOrNull { it.algorithm in RSA_SIGNING_ALGORITHMS }
-    if (rsa != null) return rsa
-    val unsupported = onCard.firstOrNull { it.algorithm in OTHER_SIGNING_ALGORITHMS }
-    if (unsupported != null) {
+    fun PGPPublicKey.isOnCard() = cardFingerprints.any { it.contentEquals(fingerprint) }
+    val onCard = publicKeys(key).filter { it.isOnCard() }.toList()
+    val flaggedForSigning =
+      KeyUtils.tryParseCertificateOrKey(key)
+        ?.signingKeys
+        .orEmpty()
+        .map { it.pgpPublicKey }
+        .filter { it.isOnCard() }
+    val signing =
+      flaggedForSigning.firstOrNull { it.algorithm in CARD_SIGNING_ALGORITHMS }
+        ?: onCard.firstOrNull { it.algorithm in CARD_SIGNING_ALGORITHMS }
+    if (signing != null) return signing
+    val unsupported = (flaggedForSigning + onCard).firstOrNull()
+    if (unsupported != null && unsupported.algorithm == PublicKeyAlgorithmTags.Ed448) {
       throw PGPException(
-        "This OpenPGP card's signing key is ${signingAlgorithmName(unsupported.algorithm)}; " +
-          "signing commits with a card is only supported for RSA keys so far"
+        "This OpenPGP card's signing key is Ed448, which commits cannot be signed with on a card"
       )
     }
     throw PGPException("No signing key matching this OpenPGP card was found")
@@ -408,8 +418,10 @@ class OpenPgpCommitSigner(
   ) : PGPContentSignerBuilder {
 
     override fun build(signatureType: Int, privateKey: PGPPrivateKey): PGPContentSigner {
-      if (publicKey.algorithm !in RSA_SIGNING_ALGORITHMS) {
-        throw PGPException("OpenPGP card commit signing currently supports RSA card keys only")
+      if (publicKey.algorithm !in CARD_SIGNING_ALGORITHMS) {
+        throw PGPException(
+          "OpenPGP card commit signing supports RSA, EdDSA and ECDSA card keys only"
+        )
       }
       val digestCalculator = BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA256)
       // Reading the calculator's digest finishes the hash and starts a new one, and BouncyCastle
@@ -420,18 +432,43 @@ class OpenPgpCommitSigner(
       return object : PGPContentSigner {
         override fun getOutputStream(): OutputStream = digestCalculator.outputStream
 
-        override fun getSignature(): ByteArray {
-          val digestInfo =
-            DigestInfo(
-                AlgorithmIdentifier(NISTObjectIdentifiers.id_sha256, DERNull.INSTANCE),
-                digest,
+        override fun getSignature(): ByteArray =
+          when (publicKey.algorithm) {
+            // EdDSA signs the hash as it is, and the card gives back R and S, 32 bytes each, which
+            // is what BouncyCastle splits into the signature's two values.
+            PublicKeyAlgorithmTags.EDDSA_LEGACY,
+            PublicKeyAlgorithmTags.Ed25519 ->
+              card.computeDigitalSignature(digest, expectedLength = EDDSA_SIGNATURE_LENGTH)
+            // ECDSA signs the hash as it is too, but the card gives R and S side by side while
+            // BouncyCastle reads them as the DER sequence a software signer makes.
+            PublicKeyAlgorithmTags.ECDSA -> {
+              val raw = card.computeDigitalSignature(digest, expectedLength = 0)
+              if (raw.isEmpty() || raw.size % 2 != 0) {
+                throw PGPException("The card's ECDSA signature is malformed")
+              }
+              val half = raw.size / 2
+              DERSequence(
+                  arrayOf(
+                    ASN1Integer(BigInteger(1, raw.copyOfRange(0, half))),
+                    ASN1Integer(BigInteger(1, raw.copyOfRange(half, raw.size))),
+                  )
+                )
+                .encoded
+            }
+            // RSA is handed the DigestInfo, which the card pads and signs.
+            else -> {
+              val digestInfo =
+                DigestInfo(
+                    AlgorithmIdentifier(NISTObjectIdentifiers.id_sha256, DERNull.INSTANCE),
+                    digest,
+                  )
+                  .encoded
+              card.computeDigitalSignature(
+                digestInfo,
+                expectedLength = (publicKey.bitStrength + 7) / 8,
               )
-              .encoded
-          return card.computeDigitalSignature(
-            digestInfo,
-            expectedLength = (publicKey.bitStrength + 7) / 8,
-          )
-        }
+            }
+          }
 
         override fun getDigest(): ByteArray = digest.copyOf()
 
@@ -453,19 +490,16 @@ class OpenPgpCommitSigner(
     private val RSA_SIGNING_ALGORITHMS =
       setOf(PublicKeyAlgorithmTags.RSA_GENERAL, PublicKeyAlgorithmTags.RSA_SIGN)
 
-    private val OTHER_SIGNING_ALGORITHMS =
-      setOf(
-        PublicKeyAlgorithmTags.EDDSA_LEGACY,
-        PublicKeyAlgorithmTags.Ed25519,
-        PublicKeyAlgorithmTags.Ed448,
-        PublicKeyAlgorithmTags.ECDSA,
-      )
+    /** What a card can sign a commit with: RSA, and EdDSA and ECDSA over the curves cards hold. */
+    private val CARD_SIGNING_ALGORITHMS =
+      RSA_SIGNING_ALGORITHMS +
+        setOf(
+          PublicKeyAlgorithmTags.EDDSA_LEGACY,
+          PublicKeyAlgorithmTags.Ed25519,
+          PublicKeyAlgorithmTags.ECDSA,
+        )
 
-    private fun signingAlgorithmName(algorithm: Int): String =
-      when (algorithm) {
-        PublicKeyAlgorithmTags.ECDSA -> "ECDSA"
-        PublicKeyAlgorithmTags.Ed448 -> "Ed448"
-        else -> "EdDSA"
-      }
+    /** An Ed25519 signature: R and S, 32 bytes each. */
+    private const val EDDSA_SIGNATURE_LENGTH = 64
   }
 }

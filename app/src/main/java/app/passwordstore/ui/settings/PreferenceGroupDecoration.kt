@@ -41,8 +41,8 @@ import de.Maxr1998.modernpreferences.PreferencesAdapter
  */
 class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration() {
 
-  private val outerRadius = context.resources.getDimension(R.dimen.corner_radius_large)
-  private val innerRadius = context.resources.getDimension(R.dimen.corner_radius_small)
+  private val outerRadius = context.resources.getDimension(R.dimen.list_outer_corner_radius)
+  private val innerRadius = context.resources.getDimension(R.dimen.list_inner_corner_radius)
   // The same height and gap as the rows of the password list, so the two read as one design.
   private val entrySpacing = context.resources.getDimensionPixelSize(R.dimen.list_item_gap)
   private val entryHeight = context.resources.getDimensionPixelSize(R.dimen.password_row_height)

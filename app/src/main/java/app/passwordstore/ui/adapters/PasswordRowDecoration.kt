@@ -17,7 +17,6 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.recyclerview.widget.RecyclerView
 import app.passwordstore.R
 import app.passwordstore.util.extensions.redecorateOnChanges
-import com.google.android.material.R as MaterialR
 import com.google.android.material.color.MaterialColors
 import java.util.WeakHashMap
 
@@ -33,10 +32,9 @@ import java.util.WeakHashMap
  */
 class PasswordRowDecoration(context: Context) : RecyclerView.ItemDecoration() {
 
-  private val outerRadius = context.resources.getDimension(R.dimen.corner_radius_medium)
-  private val innerRadius = context.resources.getDimension(R.dimen.corner_radius_small)
+  private val outerRadius = context.resources.getDimension(R.dimen.list_outer_corner_radius)
+  private val innerRadius = context.resources.getDimension(R.dimen.list_inner_corner_radius)
   private val rowSpacing = context.resources.getDimensionPixelSize(R.dimen.list_item_gap)
-  private val outlineWidth = context.resources.getDimensionPixelSize(R.dimen.list_item_outline)
   private val containers = mutableMapOf<PlaceInList, RippleDrawable>()
   private val applied = WeakHashMap<View, PlaceInList>()
 
@@ -93,10 +91,6 @@ class PasswordRowDecoration(context: Context) : RecyclerView.ItemDecoration() {
         // A colour state list rather than a colour, so selecting a row changes the fill of this
         // one shape rather than laying a tint over it.
         color = AppCompatResources.getColorStateList(view.context, R.color.password_row_container)
-        setStroke(
-          outlineWidth,
-          MaterialColors.getColor(view, MaterialR.attr.colorOutlineVariant, Color.TRANSPARENT),
-        )
       }
     val mask =
       GradientDrawable().apply {

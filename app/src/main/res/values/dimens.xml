@@ -32,6 +32,12 @@
   <dimen name="corner_radius_medium">12dp</dimen>
   <dimen name="corner_radius_small">4dp</dimen>
   <dimen name="corner_radius_large">16dp</dimen>
+  <!--
+    The corners of a list that reads as one block, as the system settings draw theirs: rounded
+    fully where the block starts and ends, and only slightly where its rows meet.
+  -->
+  <dimen name="list_outer_corner_radius">20dp</dimen>
+  <dimen name="list_inner_corner_radius">4dp</dimen>
 
   <!--
     List item metrics. Rows carry their own filled, rounded container and are
@@ -59,8 +65,6 @@
     enough to tell one row from the next at a glance.
   -->
   <dimen name="list_item_gap">2dp</dimen>
-  <!-- The hairline drawn around a row's container. -->
-  <dimen name="list_item_outline">1dp</dimen>
   <!--
     Clearance below scrolling lists so the last row can scroll clear of the FAB
     instead of sitting underneath it. Paired with clipToPadding="false".

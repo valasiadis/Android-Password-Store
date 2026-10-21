@@ -6,7 +6,6 @@ package app.passwordstore.ui.settings
 
 import android.content.Context
 import android.content.res.ColorStateList
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
@@ -17,12 +16,12 @@ import android.view.ViewGroup.MarginLayoutParams
 import android.widget.ImageView
 import androidx.appcompat.R as AppCompatR
 import androidx.core.content.res.use
-import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePaddingRelative
 import androidx.recyclerview.widget.RecyclerView
 import app.passwordstore.R
+import app.passwordstore.util.extensions.redecorateOnChanges
 import com.google.android.material.R as MaterialR
 import com.google.android.material.color.MaterialColors
 import de.Maxr1998.modernpreferences.PreferencesAdapter
@@ -54,7 +53,6 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
     }
   private val containers = mutableMapOf<PlaceInGroup, RippleDrawable>()
   private val applied = java.util.WeakHashMap<View, PlaceInGroup>()
-  private var refreshPending = false
 
   /**
    * Adds this decoration to [recyclerView] and takes over its entries' background, padding and icon
@@ -67,6 +65,7 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
    */
   fun attachTo(recyclerView: RecyclerView) {
     recyclerView.addItemDecoration(this)
+    recyclerView.redecorateOnChanges()
     recyclerView.addOnChildAttachStateChangeListener(
       object : RecyclerView.OnChildAttachStateChangeListener {
         override fun onChildViewAttachedToWindow(view: View) {
@@ -112,32 +111,6 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
       applied[view] = place
     }
     outRect.bottom = if (place.endsGroup) groupSpacing else entrySpacing
-  }
-
-  /**
-   * Catches an entry whose place has changed while its offsets were left alone.
-   *
-   * The list only asks for an entry's offsets again when that entry itself changed, and a
-   * preference that appears at the end of a group changes nobody else: the entry that used to end
-   * the group keeps its rounded bottom and the wider gap below it, and the group ends twice. So the
-   * entries on screen are checked each time the list is drawn, and if one no longer fits, every
-   * entry is asked for its offsets again.
-   */
-  override fun onDraw(canvas: Canvas, parent: RecyclerView, state: RecyclerView.State) {
-    if (refreshPending) return
-    val stale =
-      parent.children.any { view ->
-        val position = parent.getChildAdapterPosition(view)
-        position != RecyclerView.NO_POSITION && applied[view] != placeInGroup(parent, position)
-      }
-    if (stale) {
-      // Not from here: a draw is no time to ask for a layout.
-      refreshPending = true
-      parent.post {
-        refreshPending = false
-        if (!parent.isComputingLayout) parent.invalidateItemDecorations()
-      }
-    }
   }
 
   /**

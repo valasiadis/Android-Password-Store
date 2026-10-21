@@ -203,6 +203,21 @@ class OpenPgpCard(
     return transceiveData(0x88, 0x00, 0x00, input, expectedLength = 0)
   }
 
+  /**
+   * Which key is in which of the card's three slots, by fingerprint, read off the card that is
+   * here. Needs no PIN, and costs no exchange after the first: it is part of the application data
+   * read once per session.
+   */
+  fun readKeySlots(): CardKeySlots {
+    val value = findTlv(applicationData(), 0xC5) ?: return CardKeySlots(null, null, null)
+    fun slot(index: Int): ByteArray? =
+      value
+        .takeIf { it.size >= (index + 1) * FINGERPRINT_LENGTH }
+        ?.copyOfRange(index * FINGERPRINT_LENGTH, (index + 1) * FINGERPRINT_LENGTH)
+        ?.takeIf { fingerprint -> fingerprint.any { it != 0.toByte() } }
+    return CardKeySlots(signature = slot(0), decryption = slot(1), authentication = slot(2))
+  }
+
   fun readCardInfo(): OpenPgpCardInfo {
     val fingerprints = findTlv(applicationData(), 0xC5)?.let(::parseFingerprints).orEmpty()
     val url = runCatching { transceive(GET_URL).toString(Charsets.UTF_8).trim() }.get()
@@ -475,10 +490,12 @@ class OpenPgpCard(
       }
     }
 
+    private const val FINGERPRINT_LENGTH = 20
+
     private fun parseFingerprints(value: ByteArray): List<ByteArray> =
       value
         .asSequence()
-        .chunked(20)
+        .chunked(FINGERPRINT_LENGTH)
         .map { it.toByteArray() }
         .filter { fingerprint -> fingerprint.any { it != 0.toByte() } }
         .toList()
@@ -641,6 +658,18 @@ class PinTooLongForCardException(maxBytes: Int) :
   IOException("The PIN is longer than the $maxBytes bytes a card can be handed")
 
 data class OpenPgpCardInfo(val fingerprints: List<ByteArray>, val url: String?)
+
+/**
+ * The fingerprints of the keys in a card's three slots, in the order the card keeps them, with null
+ * for a slot that holds nothing. Kept apart because the order is the only thing that says which key
+ * does what: on a card set up with Curve25519, the signing key and the authentication key are both
+ * EdDSA, and nothing else tells them apart.
+ */
+class CardKeySlots(
+  val signature: ByteArray?,
+  val decryption: ByteArray?,
+  val authentication: ByteArray?,
+)
 
 /**
  * What a card's KDF-DO (`00F9`) says about turning a PIN into the value the card wants to be given

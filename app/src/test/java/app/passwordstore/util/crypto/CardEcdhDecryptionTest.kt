@@ -14,12 +14,15 @@ import java.security.SecureRandom
 import java.util.Date
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 import org.bouncycastle.asn1.sec.SECObjectIdentifiers
 import org.bouncycastle.bcpg.HashAlgorithmTags
 import org.bouncycastle.bcpg.PublicKeyAlgorithmTags
+import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags
 import org.bouncycastle.bcpg.sig.KeyFlags
 import org.bouncycastle.crypto.agreement.X25519Agreement
 import org.bouncycastle.crypto.generators.ECKeyPairGenerator
@@ -29,17 +32,22 @@ import org.bouncycastle.crypto.params.ECNamedDomainParameters
 import org.bouncycastle.crypto.params.ECPrivateKeyParameters
 import org.bouncycastle.crypto.params.X25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters
+import org.bouncycastle.openpgp.PGPEncryptedDataGenerator
 import org.bouncycastle.openpgp.PGPException
 import org.bouncycastle.openpgp.PGPKeyRingGenerator
+import org.bouncycastle.openpgp.PGPLiteralData
+import org.bouncycastle.openpgp.PGPLiteralDataGenerator
 import org.bouncycastle.openpgp.PGPSecretKeyRingCollection
 import org.bouncycastle.openpgp.PGPSignature
 import org.bouncycastle.openpgp.PGPSignatureSubpacketGenerator
 import org.bouncycastle.openpgp.PGPUtil
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator
 import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder
+import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder
 import org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider
 import org.bouncycastle.openpgp.operator.bc.BcPGPKeyConverter
 import org.bouncycastle.openpgp.operator.bc.BcPGPKeyPair
+import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator
 
 /**
  * Decrypting with a card whose key is ECDH, end to end: a message encrypted to a real key, read
@@ -59,8 +67,13 @@ class CardEcdhDecryptionTest {
    * agreement for Curve25519, and as the whole shared point for a NIST curve, which is what a card
    * may give and GnuPG takes the x coordinate of.
    */
-  private class EcdhCard(private val privateKey: AsymmetricKeyParameter) : CardTransport {
+  private class EcdhCard(
+    private val privateKey: AsymmetricKeyParameter,
+    /** What the card says is in its decryption slot, or null for a card that says nothing. */
+    private val decryptionSlot: ByteArray? = null,
+  ) : CardTransport {
     val pointsSent = mutableListOf<ByteArray>()
+    var pinsSent = 0
 
     override val maxTransceiveLength = 261
     override val connection = CardConnection.USB
@@ -68,14 +81,26 @@ class CardEcdhDecryptionTest {
 
     override fun transceive(command: ByteArray, timeoutMs: Int): ByteArray {
       val ok = byteArrayOf(0x90.toByte(), 0x00)
+      if (command[1] == 0xCA.toByte() && command[3] == 0x6E.toByte()) {
+        return applicationData() + ok
+      }
+      if (command[1] == 0x20.toByte() && command.size > 4) pinsSent++
       if (command[1] != 0x2A.toByte() || command[2] != 0x80.toByte()) return ok
       val data = command.copyOfRange(5, 5 + (command[4].toInt() and 0xff))
-      // A6 { 7F49 { 86 point } }
-      val cipher = value(data, tagLength = 1)
-      val publicKey = value(cipher, tagLength = 2)
-      val point = value(publicKey, tagLength = 1)
+      // A6 { 7F49 { 86 point } }, each tag checked: a card answers 6A 80 to anything else.
+      val cipher = value(data, byteArrayOf(0xA6.toByte()))
+      val publicKey = value(cipher, byteArrayOf(0x7F, 0x49))
+      val point = value(publicKey, byteArrayOf(0x86.toByte()))
       pointsSent += point
       return agree(point) + ok
+    }
+
+    /** 6E { 73 { C5 signature || decryption || authentication } }, with only decryption set. */
+    private fun applicationData(): ByteArray {
+      val slot = decryptionSlot ?: return byteArrayOf()
+      val fingerprints = byteArrayOf(0xC5.toByte(), 60) + ByteArray(20) + slot + ByteArray(20)
+      val discretionary = byteArrayOf(0x73, fingerprints.size.toByte()) + fingerprints
+      return byteArrayOf(0x6E, discretionary.size.toByte()) + discretionary
     }
 
     private fun agree(point: ByteArray): ByteArray =
@@ -91,9 +116,10 @@ class CardEcdhDecryptionTest {
         else -> error("not an ECDH key: $key")
       }
 
-    /** The value of the TLV at the start of [tlv], with a tag of [tagLength] bytes. */
-    private fun value(tlv: ByteArray, tagLength: Int): ByteArray {
-      var offset = tagLength
+    /** The value of the TLV at the start of [tlv], whose tag must be [tag]. */
+    private fun value(tlv: ByteArray, tag: ByteArray): ByteArray {
+      assertContentEquals(tag, tlv.copyOf(tag.size), "the card was sent the wrong tag")
+      var offset = tag.size
       val first = tlv[offset++].toInt() and 0xff
       val length =
         when (first) {
@@ -101,6 +127,7 @@ class CardEcdhDecryptionTest {
           0x82 -> ((tlv[offset++].toInt() and 0xff) shl 8) or (tlv[offset++].toInt() and 0xff)
           else -> first
         }
+      assertEquals(tlv.size, offset + length, "the length does not cover the value")
       return tlv.copyOfRange(offset, offset + length)
     }
 
@@ -140,15 +167,16 @@ class CardEcdhDecryptionTest {
     return CardKey(key, secretKey.publicKey.fingerprint, private)
   }
 
-  /** ECDSA to sign and ECDH to encrypt to, both on NIST P-256, as a card can also hold. */
-  private fun p256Key(): CardKey {
+  /**
+   * ECDSA to sign and ECDH to encrypt to, both on NIST P-256, as a card can also hold — with
+   * [subkeys] ECDH subkeys, of which the last is the one on the card.
+   */
+  private fun p256Key(subkeys: Int = 1): CardKey {
     val domain = ECNamedDomainParameters.lookup(SECObjectIdentifiers.secp256r1)
     val generator =
       ECKeyPairGenerator().apply { init(ECKeyGenerationParameters(domain, SecureRandom())) }
     val now = Date()
     val primary = BcPGPKeyPair(PublicKeyAlgorithmTags.ECDSA, generator.generateKeyPair(), now)
-    val subPair = generator.generateKeyPair()
-    val sub = BcPGPKeyPair(PublicKeyAlgorithmTags.ECDH, subPair, now)
     val primaryFlags =
       PGPSignatureSubpacketGenerator()
         .apply { setKeyFlags(false, KeyFlags.CERTIFY_OTHER or KeyFlags.SIGN_DATA) }
@@ -157,20 +185,51 @@ class CardEcdhDecryptionTest {
       PGPSignatureSubpacketGenerator()
         .apply { setKeyFlags(false, KeyFlags.ENCRYPT_COMMS or KeyFlags.ENCRYPT_STORAGE) }
         .generate()
-    val ring =
+    val ringGenerator =
       PGPKeyRingGenerator(
-          PGPSignature.POSITIVE_CERTIFICATION,
-          primary,
-          "Bob <bob@example.com>",
-          BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA1),
-          primaryFlags,
-          null,
-          BcPGPContentSignerBuilder(PublicKeyAlgorithmTags.ECDSA, HashAlgorithmTags.SHA256),
-          null,
+        PGPSignature.POSITIVE_CERTIFICATION,
+        primary,
+        "Bob <bob@example.com>",
+        BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA1),
+        primaryFlags,
+        null,
+        BcPGPContentSignerBuilder(PublicKeyAlgorithmTags.ECDSA, HashAlgorithmTags.SHA256),
+        null,
+      )
+    val subPairs = List(subkeys) { generator.generateKeyPair() }
+    val subs = subPairs.map { BcPGPKeyPair(PublicKeyAlgorithmTags.ECDH, it, now) }
+    subs.forEach { ringGenerator.addSubKey(it, subFlags, null) }
+    val ring = ringGenerator.generateSecretKeyRing()
+    return CardKey(PGPKey(ring.encoded), subs.last().publicKey.fingerprint, subPairs.last().private)
+  }
+
+  /** A message to [cardKey]'s card key that does not say who it is for: a wildcard key ID. */
+  private fun encryptToHiddenRecipient(cardKey: CardKey, plaintext: String): ByteArray {
+    val publicKey =
+      PGPSecretKeyRingCollection(
+          PGPUtil.getDecoderStream(cardKey.key.contents.inputStream()),
+          BcKeyFingerprintCalculator(),
         )
-        .apply { addSubKey(sub, subFlags, null) }
-        .generateSecretKeyRing()
-    return CardKey(PGPKey(ring.encoded), sub.publicKey.fingerprint, subPair.private)
+        .keyRings
+        .asSequence()
+        .flatMap { it.publicKeys.asSequence() }
+        .single { it.fingerprint.contentEquals(cardKey.fingerprint) }
+    val generator =
+      PGPEncryptedDataGenerator(
+        BcPGPDataEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256)
+          .setWithIntegrityPacket(true)
+          .setSecureRandom(SecureRandom())
+      )
+    generator.addMethod(
+      BcPublicKeyKeyEncryptionMethodGenerator(publicKey).setUseWildcardKeyID(true)
+    )
+    val out = ByteArrayOutputStream()
+    generator.open(out, ByteArray(BUFFER_SIZE)).use { encrypted ->
+      PGPLiteralDataGenerator()
+        .open(encrypted, PGPLiteralData.UTF8, "", Date(), ByteArray(BUFFER_SIZE))
+        .use { it.write(plaintext.toByteArray()) }
+    }
+    return out.toByteArray()
   }
 
   private fun encryptTo(key: PGPKey, plaintext: String): ByteArray {
@@ -187,7 +246,12 @@ class CardEcdhDecryptionTest {
     return ciphertext.toByteArray()
   }
 
-  private fun decryptOnCard(cardKey: CardKey, card: EcdhCard, ciphertext: ByteArray): String {
+  private fun decryptOnCard(
+    cardKey: CardKey,
+    card: EcdhCard,
+    ciphertext: ByteArray,
+    storedFingerprints: List<ByteArray> = listOf(cardKey.fingerprint),
+  ): String {
     val plaintext = ByteArrayOutputStream()
     OpenPgpSmartcardDecryptor()
       .decrypt(
@@ -196,7 +260,7 @@ class CardEcdhDecryptionTest {
         ciphertext.inputStream(),
         plaintext,
         OpenPgpCard(card),
-        listOf(cardKey.fingerprint),
+        storedFingerprints,
       )
     return plaintext.toString(Charsets.UTF_8)
   }
@@ -222,10 +286,50 @@ class CardEcdhDecryptionTest {
   @Test
   fun `a card holding some other key cannot unwrap the session key`() {
     val cardKey = curve25519Key()
+    // A card that says nothing about its slots, so it is only found out at the unwrap.
     val otherCard = EcdhCard(curve25519Key().private)
-    assertFailsWith<PGPException> {
-      decryptOnCard(cardKey, otherCard, encryptTo(cardKey.key, "hunter2"))
-    }
+    val error =
+      assertFailsWith<PGPException> {
+        decryptOnCard(cardKey, otherCard, encryptTo(cardKey.key, "hunter2"))
+      }
+    assertContains(error.cause?.message.orEmpty(), "could not be unwrapped")
+  }
+
+  @Test
+  fun `a card that says it holds some other key is turned away before its PIN is sent`() {
+    val cardKey = curve25519Key()
+    val other = curve25519Key()
+    val otherCard = EcdhCard(other.private, decryptionSlot = other.fingerprint)
+    val error =
+      assertFailsWith<PGPException> {
+        decryptOnCard(cardKey, otherCard, encryptTo(cardKey.key, "hunter2"))
+      }
+    assertContains(error.message.orEmpty(), "does not hold this key's decryption key")
+    assertEquals(0, otherCard.pinsSent)
+    assertTrue(otherCard.pointsSent.isEmpty())
+  }
+
+  @Test
+  fun `a message naming nobody is read against the key the card says it holds`() {
+    // Two ECDH subkeys, the card holding the second: nothing in the message or the key says which
+    // to read it against, and the first is the wrong one. The card's own slot does.
+    val cardKey = p256Key(subkeys = 2)
+    val card = EcdhCard(cardKey.private, decryptionSlot = cardKey.fingerprint)
+    val ciphertext = encryptToHiddenRecipient(cardKey, "hunter2")
+    assertEquals(
+      "hunter2",
+      decryptOnCard(cardKey, card, ciphertext, storedFingerprints = emptyList()),
+    )
+  }
+
+  @Test
+  fun `a message naming nobody decrypts on a card that says nothing about its slots`() {
+    val cardKey = curve25519Key()
+    val card = EcdhCard(cardKey.private)
+    assertEquals(
+      "hunter2",
+      decryptOnCard(cardKey, card, encryptToHiddenRecipient(cardKey, "hunter2")),
+    )
   }
 
   @Test
@@ -242,5 +346,9 @@ class CardEcdhDecryptionTest {
     val x = ByteArray(32) { 7 }
     assertContentEquals(x, CardEcdh.sharedSecret(point, x))
     assertContentEquals(x, CardEcdh.sharedSecret(point, byteArrayOf(0x04) + x + ByteArray(32)))
+  }
+
+  private companion object {
+    const val BUFFER_SIZE = 1 shl 12
   }
 }

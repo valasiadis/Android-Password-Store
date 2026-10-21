@@ -20,6 +20,7 @@ import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.crypto.OpenPgpCardStatusException
 import app.passwordstore.util.crypto.OpenPgpSmartcardDecryptor
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
+import app.passwordstore.util.crypto.SmartcardPinVerificationException
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.filterOk
 import com.github.michaelbull.result.get
@@ -231,10 +232,11 @@ constructor(
     message: ByteArrayOutputStream,
     card: OpenPgpCard,
   ) =
-    // Each key tried hands the card the PIN again, so once the card has answered — a wrong PIN
-    // above all, which costs one of its few retries every time it is sent — or stopped answering,
-    // trying the next key only says the same thing to it again, or to a card no longer there.
-    identities.mapUntil({ it.second.isOk || it.second.getError().cameFromCard() }) { id ->
+    // Each key tried hands the card the PIN again, so once the card has turned the PIN down — which
+    // costs one of its few retries every time it is sent — or stopped answering, trying the next
+    // key only says the same thing to it again, or to a card no longer there. Any other refusal is
+    // about the key just tried, and the next may well be the card's.
+    identities.mapUntil({ it.second.isOk || it.second.getError().endsCardSession() }) { id ->
       encryptedMessage.reset()
       message.reset()
       val result = runCatching {
@@ -249,10 +251,20 @@ constructor(
       Pair(id.toString(), result)
     }
 
-  /** Whether the card itself answered with [this], or could not be reached to answer at all. */
-  private fun Throwable?.cameFromCard(): Boolean =
-    this != null &&
-      (this is OpenPgpCardStatusException || this is IOException || cause.cameFromCard())
+  /**
+   * Whether [this] means no further key is worth putting to the card: it refused or blocked the
+   * PIN, the PIN could not even be sent, or the way to the card failed. A card that answers with
+   * some other status word has refused one ciphertext — very likely one written to another key —
+   * and says nothing about the next.
+   */
+  private fun Throwable?.endsCardSession(): Boolean =
+    when {
+      this == null -> false
+      this is SmartcardPinVerificationException -> true
+      this is OpenPgpCardStatusException -> isAuthenticationFailure
+      this is IOException -> true
+      else -> cause.endsCardSession()
+    }
 
   fun encrypt(
     identities: List<PGPIdentifier>,

@@ -35,8 +35,11 @@ class SmartcardDecryptionPinTest {
 
   @get:Rule val keyDir = TemporaryFolder()
 
-  /** Counts PIN VERIFYs, and answers them as the card says. */
-  private class CountingTransport(private val verifyAnswer: () -> ByteArray) : CardTransport {
+  /** Counts PIN VERIFYs, and answers them, and anything asked to decrypt, as the card says. */
+  private class CountingTransport(
+    private val decipherAnswer: () -> ByteArray = { byteArrayOf(0x90.toByte(), 0x00) },
+    private val verifyAnswer: () -> ByteArray,
+  ) : CardTransport {
     var pinsSent = 0
 
     override val maxTransceiveLength = 261
@@ -49,6 +52,7 @@ class SmartcardDecryptionPinTest {
         pinsSent++
         return verifyAnswer()
       }
+      if (command[1] == 0x2A.toByte() && command[2] == 0x80.toByte()) return decipherAnswer()
       return byteArrayOf(0x90.toByte(), 0x00)
     }
 
@@ -115,6 +119,19 @@ class SmartcardDecryptionPinTest {
     // secret: the first key fails over what the card gave back rather than over the card refusing
     // anything, so the second key must still be reached rather than given up on at the first.
     val transport = CountingTransport { byteArrayOf(0x90.toByte(), 0x00) }
+    decrypt(transport)
+    assertEquals(2, transport.pinsSent)
+  }
+
+  @Test
+  fun `a card that refuses one key's ciphertext still has the next key put to it`() {
+    // The PIN is right, but the first key tried is not the card's, and the card turns down what was
+    // written to it — 6A 80, wrong data. That is about the key, not the card: the entry's other key
+    // may be this card's, as with a card and its backup, so it must still be tried.
+    val transport =
+      CountingTransport(decipherAnswer = { byteArrayOf(0x6A, 0x80.toByte()) }) {
+        byteArrayOf(0x90.toByte(), 0x00)
+      }
     decrypt(transport)
     assertEquals(2, transport.pinsSent)
   }

@@ -77,9 +77,11 @@
   <dimen name="card_prompt_mark_core">40dp</dimen>
   <!-- A mark that is not a circle is drawn to fit inside the ring rather than cropped by it. -->
   <dimen name="card_prompt_mark_fit">30dp</dimen>
-  <dimen name="card_prompt_ring_size">56dp</dimen>
-  <!-- The ring's own diameter: the indicator's, less the one track thickness it draws inside. -->
-  <dimen name="card_prompt_ring_inner">53dp</dimen>
+  <!--
+    The ring's outer diameter, which is where the mark's own outer circle ends. Both halves of the
+    ring draw their stroke inside this size, so the still one and the turning one are one circle.
+  -->
+  <dimen name="card_prompt_ring_size">53dp</dimen>
   <dimen name="card_prompt_ring_thickness">3dp</dimen>
   <!-- The mark beside the app's name on the screen that opens the app for the first time. -->
   <dimen name="onboarding_app_icon_size">80dp</dimen>

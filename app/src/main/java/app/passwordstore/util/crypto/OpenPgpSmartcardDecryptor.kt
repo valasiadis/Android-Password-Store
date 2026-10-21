@@ -282,13 +282,13 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
 
   /**
    * The message is for the card, but the card's decryption key is of a kind this app cannot yet
-   * hand to a card to decrypt with. RSA and ECDH can be; the X25519 and X448 keys of RFC 9580 work
-   * differently again, and no card in common use holds one.
+   * hand to a card to decrypt with. RSA, ECDH and X25519 can be; X448 works as X25519 does, but no
+   * card in common use holds one.
    */
   private class UnsupportedCardKeyException(keyAlgorithm: Int) :
     PGPException(
       "This OpenPGP card's decryption key is ${algorithmName(keyAlgorithm)}; decrypting with a " +
-        "card is only supported for RSA and ECDH keys so far"
+        "card is only supported for RSA, ECDH and X25519 keys so far"
     )
 
   /**
@@ -316,10 +316,17 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
         PublicKeyAlgorithmTags.RSA_ENCRYPT,
         PublicKeyAlgorithmTags.RSA_GENERAL -> recoverRsaSessionData(enc, recipient?.bitStrength)
         PublicKeyAlgorithmTags.ECDH ->
-          CardEcdh.recoverSessionData(
+          CardEcdh.recoverEcdhSessionData(
             card,
             recipient ?: throw PGPException("The card's ECDH key is not part of this key"),
             enc,
+          )
+        PublicKeyAlgorithmTags.X25519 ->
+          CardEcdh.recoverX25519SessionData(
+            card,
+            recipient ?: throw PGPException("The card's X25519 key is not part of this key"),
+            enc,
+            pkeskVersion,
           )
         else -> throw UnsupportedCardKeyException(keyAlgorithm)
       }

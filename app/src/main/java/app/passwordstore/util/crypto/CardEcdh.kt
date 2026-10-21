@@ -10,10 +10,14 @@ import org.bouncycastle.asn1.edec.EdECObjectIdentifiers
 import org.bouncycastle.asn1.x9.ECNamedCurveTable
 import org.bouncycastle.bcpg.ECDHPublicBCPGKey
 import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags
+import org.bouncycastle.bcpg.X25519PublicBCPGKey
 import org.bouncycastle.crypto.InvalidCipherTextException
+import org.bouncycastle.crypto.digests.SHA256Digest
 import org.bouncycastle.crypto.engines.AESEngine
 import org.bouncycastle.crypto.engines.CamelliaEngine
 import org.bouncycastle.crypto.engines.RFC3394WrapEngine
+import org.bouncycastle.crypto.generators.HKDFBytesGenerator
+import org.bouncycastle.crypto.params.HKDFParameters
 import org.bouncycastle.crypto.params.KeyParameter
 import org.bouncycastle.openpgp.PGPException
 import org.bouncycastle.openpgp.PGPPublicKey
@@ -30,6 +34,11 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider
  * message carries the public half of the sender's pair and the wrapped session key. The card agrees
  * the same secret from its side — that is all it does — and the rest happens here, the same way
  * BouncyCastle does it for a key held in software, which is what GnuPG does with a card too.
+ *
+ * Two kinds of key work this way. ECDH (RFC 6637), on Curve25519 or a NIST or Brainpool curve,
+ * derives its wrapping key with a hash over the secret and the recipient's parameters, and pads
+ * what it wraps. X25519 (RFC 9580) derives it with HKDF over both public keys and the secret, and
+ * wraps the bare session key. The card does the same for both.
  *
  * Everything in the message that can be checked without the card is checked first: asking the card
  * costs a PIN and perhaps a touch, and a message that could never be opened should not spend one.
@@ -95,6 +104,50 @@ internal object CardEcdh {
   }
 
   /**
+   * The session key for [enc], the one value an X25519 PKESK of version [pkeskVersion] carries,
+   * encrypted to [recipient], whose private half is on [card]. Just the key: the algorithm, which a
+   * version 3 packet keeps in the clear, is added by the caller as for any other key type.
+   */
+  fun recoverX25519SessionData(
+    card: OpenPgpCard,
+    recipient: PGPPublicKey,
+    enc: ByteArray,
+    pkeskVersion: Int,
+  ): ByteArray {
+    val recipientKey =
+      (recipient.publicKeyPacket.key as? X25519PublicBCPGKey)?.key
+        ?: throw PGPException("The card's decryption key is not an X25519 key")
+    // The sender's public key, 32 bytes as they are; a length byte; the algorithm in the clear for
+    // a
+    // version 3 packet; and the wrapped session key.
+    val keySize = X25519PublicBCPGKey.LENGTH
+    if (enc.size < keySize + 1) throw PGPException("Malformed X25519 session key")
+    val ephemeral = enc.copyOf(keySize)
+    val size = enc[keySize].toInt() and 0xff
+    if (enc.size != keySize + 1 + size) throw PGPException("Malformed X25519 session key")
+    val algorithmBytes = if (pkeskVersion == V3_PKESK) 1 else 0
+    if (size <= algorithmBytes) throw PGPException("Malformed X25519 session key")
+    val wrapped = enc.copyOfRange(keySize + 1 + algorithmBytes, enc.size)
+    requireWrapped(wrapped)
+
+    return withSecret(card, ephemeral) { secret ->
+      // RFC 9580 section 5.1.6: HKDF-SHA256 over both public keys and the secret, for AES-128.
+      val kek = ByteArray(16)
+      val ikm = ephemeral + recipientKey + secret
+      try {
+        HKDFBytesGenerator(SHA256Digest()).run {
+          init(HKDFParameters(ikm, null, X25519_INFO))
+          generateBytes(kek, 0, kek.size)
+        }
+        unwrap(RFC3394WrapEngine(AESEngine.newInstance()), kek, wrapped)
+      } finally {
+        kek.fill(0)
+        ikm.fill(0)
+      }
+    }
+  }
+
+  /**
    * Has [card] agree a secret with [point], hands it to [use], and wipes it — and whatever the card
    * answered with, of which it may be only part — however [use] ends.
    */
@@ -129,7 +182,8 @@ internal object CardEcdh {
   /**
    * The point as the card wants it. A Curve25519 point is written in OpenPGP's ECDH after a `40`
    * byte that says it is a native point rather than an `04 || x || y` one, and the card wants the
-   * 32 bytes without it, as GnuPG hands them over. A NIST or Brainpool point goes as it is.
+   * 32 bytes without it, as GnuPG hands them over. A NIST or Brainpool point, and an X25519 key,
+   * which has no such byte, go as they are.
    */
   internal fun cardPoint(point: ByteArray): ByteArray =
     if (point.size == NATIVE_POINT_LENGTH && point[0] == NATIVE_PREFIX) {
@@ -208,8 +262,10 @@ internal object CardEcdh {
       else -> throw PGPException("Unsupported ECDH key wrapping algorithm $symmetricAlgorithm")
     }
 
+  private const val V3_PKESK = 3
   private const val X25519_LENGTH = 32
   private const val NATIVE_POINT_LENGTH = X25519_LENGTH + 1
   private const val NATIVE_PREFIX: Byte = 0x40
   private const val UNCOMPRESSED_PREFIX: Byte = 0x04
+  private val X25519_INFO = "OpenPGP X25519".toByteArray()
 }

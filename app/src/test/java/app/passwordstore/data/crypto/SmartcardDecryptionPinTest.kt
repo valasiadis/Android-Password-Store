@@ -111,10 +111,9 @@ class SmartcardDecryptionPinTest {
 
   @Test
   fun `a key that fails without the card refusing anything lets the next one be tried`() {
-    // The card takes the PIN. Both keys are ECDH, which is turned down here before the card is
-    // asked
-    // to decrypt — a failure about the key rather than an answer from the card — so the second key
-    // must still be reached rather than given up on at the first.
+    // The card takes the PIN and answers everything with an empty success, which is no shared
+    // secret: the first key fails over what the card gave back rather than over the card refusing
+    // anything, so the second key must still be reached rather than given up on at the first.
     val transport = CountingTransport { byteArrayOf(0x90.toByte(), 0x00) }
     decrypt(transport)
     assertEquals(2, transport.pinsSent)

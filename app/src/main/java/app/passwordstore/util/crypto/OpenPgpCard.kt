@@ -166,6 +166,25 @@ class OpenPgpCard(
     return transceiveData(0x2A, 0x80, 0x86, payload, expectedLength = ciphertext.size)
   }
 
+  /**
+   * Has the card agree a shared secret with [ephemeralPoint], the public half of the key pair the
+   * sender made for this one message, using the card's ECDH decryption key. PSO: DECIPHER again,
+   * but handed a point rather than a ciphertext, wrapped the way the OpenPGP Card spec has it: a
+   * Cipher DO (`A6`) holding a public key (`7F49`) holding the point (`86`).
+   *
+   * What comes back is the secret itself — for a Curve25519 key its 32 bytes, for a NIST or
+   * Brainpool key the shared point or its x coordinate, as the card has it — and the session key is
+   * unwrapped from it off the card.
+   */
+  fun agreeEcdh(ephemeralPoint: ByteArray): ByteArray {
+    announceTouch(CardOperation.DECRYPT)
+    val point = berTlv(0x86, ephemeralPoint)
+    val publicKey = byteArrayOf(0x7F, 0x49) + berLength(point.size) + point
+    val cipher = byteArrayOf(0xA6.toByte()) + berLength(publicKey.size) + publicKey
+    // Le 00: up to 256 bytes, more than the longest point any card's curve gives.
+    return transceiveData(0x2A, 0x80, 0x86, cipher, expectedLength = 0)
+  }
+
   fun computeDigitalSignature(digestInfo: ByteArray, expectedLength: Int): ByteArray {
     announceTouch(CardOperation.SIGN)
     return transceiveData(0x2A, 0x9E, 0x9A, digestInfo, expectedLength)
@@ -374,6 +393,17 @@ class OpenPgpCard(
         command.size == 5 -> true
         command.size > 5 -> command.size == 5 + (command[4].toInt() and 0xff) + 1
         else -> false
+      }
+
+    private fun berTlv(tag: Int, value: ByteArray): ByteArray =
+      byteArrayOf(tag.toByte()) + berLength(value.size) + value
+
+    /** A BER length: one byte below 128, and the byte count first above it. */
+    private fun berLength(length: Int): ByteArray =
+      when {
+        length < 0x80 -> byteArrayOf(length.toByte())
+        length <= 0xFF -> byteArrayOf(0x81.toByte(), length.toByte())
+        else -> byteArrayOf(0x82.toByte(), (length shr 8).toByte(), length.toByte())
       }
 
     private fun encodeShortLe(expectedLength: Int): ByteArray =

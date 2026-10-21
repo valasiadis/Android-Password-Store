@@ -18,8 +18,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:clipToPadding="false"
-    android:paddingHorizontal="@dimen/spacing_medium"
-    android:paddingVertical="@dimen/spacing_small"
+    android:paddingHorizontal="@dimen/password_list_margin"
+    android:paddingTop="@dimen/password_list_margin_top"
+    android:paddingBottom="@dimen/spacing_small"
     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
 </LinearLayout>

@@ -43,11 +43,22 @@
   -->
   <dimen name="list_item_height">48dp</dimen>
   <!--
+    A row of the password list, half as tall again as a plain list row: the list is the screen,
+    and every row in it is something to be tapped.
+  -->
+  <dimen name="password_row_height">72dp</dimen>
+  <!--
+    What the password list keeps clear of the screen's edges, at its sides and above it. Below it
+    the list already leaves room for the buttons along the bottom.
+  -->
+  <dimen name="password_list_margin">16dp</dimen>
+  <dimen name="password_list_margin_top">10dp</dimen>
+  <!--
     What separates one row from the next. Narrow enough that a list still reads
     as one block, as the grouped entries on the settings screen do, but wide
     enough to tell one row from the next at a glance.
   -->
-  <dimen name="list_item_gap">6dp</dimen>
+  <dimen name="list_item_gap">2dp</dimen>
   <!-- The hairline drawn around a row's container. -->
   <dimen name="list_item_outline">1dp</dimen>
   <!--

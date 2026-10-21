@@ -15,7 +15,10 @@ import android.view.View
 import android.view.ViewGroup.MarginLayoutParams
 import android.widget.ImageView
 import androidx.appcompat.R as AppCompatR
+import androidx.constraintlayout.widget.Barrier
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.use
+import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePaddingRelative
@@ -40,8 +43,10 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
 
   private val outerRadius = context.resources.getDimension(R.dimen.corner_radius_large)
   private val innerRadius = context.resources.getDimension(R.dimen.corner_radius_small)
-  private val entrySpacing = context.resources.getDimensionPixelSize(R.dimen.spacing_xsmall)
-  private val groupSpacing = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
+  // The same height and gap as the rows of the password list, so the two read as one design.
+  private val entrySpacing = context.resources.getDimensionPixelSize(R.dimen.list_item_gap)
+  private val entryHeight = context.resources.getDimensionPixelSize(R.dimen.password_row_height)
+  private val groupSpacing = context.resources.getDimensionPixelSize(R.dimen.spacing_large)
   private val contentMargin = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
   private val iconRowPadding = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
   private val iconFrameWidth = context.resources.getDimensionPixelSize(R.dimen.settings_icon_frame)
@@ -137,13 +142,38 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
   }
 
   /**
-   * Pulls in the margins the library sets around an entry's title and summary. They are the whole
-   * of an entry's height, the layout having no padding of its own, and at their stock 16dp they
-   * leave a two-line entry looking half empty.
+   * Pulls in the margins the library sets around an entry's title and summary, and stands the entry
+   * at least as tall as a row of the password list.
+   *
+   * The margins are the whole of an entry's height, the layout having no padding of its own, and at
+   * their stock 16dp they leave a two-line entry looking half empty. The height is a minimum rather
+   * than a fixed one, because a summary can run to several lines and would be cut off. The title
+   * and summary are a chain between the entry's top and bottom, which a taller entry would spread
+   * apart; packed, they stay together in its middle, as a row's name and folder do.
+   *
+   * That middle is the library's to say, and it says it with a barrier at the foot of the content
+   * rather than the foot of the entry: the summary, the icon and the switch all hang from it, so a
+   * taller entry leaves them where the content ends and puts all the extra height below. They are
+   * hung from the entry itself instead.
    */
   private fun trimContentMargins(view: View) {
+    (view as? ConstraintLayout)?.let { row ->
+      row.minHeight = entryHeight
+      val barrier = row.children.firstOrNull { it is Barrier }?.id
+      if (barrier != null) {
+        row.children.forEach { child ->
+          val params = child.layoutParams as? ConstraintLayout.LayoutParams ?: return@forEach
+          if (params.bottomToBottom == barrier) {
+            params.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            child.layoutParams = params
+          }
+        }
+      }
+    }
     view.findViewById<View>(android.R.id.title)?.updateLayoutParams<MarginLayoutParams> {
       topMargin = contentMargin
+      (this as? ConstraintLayout.LayoutParams)?.verticalChainStyle =
+        ConstraintLayout.LayoutParams.CHAIN_PACKED
     }
     view.findViewById<View>(android.R.id.summary)?.updateLayoutParams<MarginLayoutParams> {
       bottomMargin = contentMargin

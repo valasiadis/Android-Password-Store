@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  The circle a row's icon stands in, as the system settings stand theirs. White here and tinted
+  where it is used, so the colour is the theme's: a colour attribute is not resolved everywhere a
+  drawable can be inflated, and a tint always is.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+  android:shape="oval">
+  <solid android:color="@android:color/white" />
+</shape>

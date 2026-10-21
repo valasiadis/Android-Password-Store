@@ -13,8 +13,10 @@ import java.security.SecureRandom
 import java.util.Date
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.bouncycastle.asn1.sec.SECObjectIdentifiers
+import org.bouncycastle.bcpg.HashAlgorithmTags
 import org.bouncycastle.bcpg.PublicKeyAlgorithmTags
 import org.bouncycastle.crypto.encodings.PKCS1Encoding
 import org.bouncycastle.crypto.engines.RSABlindedEngine
@@ -139,9 +141,33 @@ class CardContentSignerTest {
     assertTrue(signature.verifies(publicKey))
   }
 
+  @Test
+  fun `an ECDSA card key on P-384 signs a SHA-384 hash`() {
+    val domain = ECNamedDomainParameters.lookup(SECObjectIdentifiers.secp384r1)
+    val pair =
+      ECKeyPairGenerator()
+        .apply { init(ECKeyGenerationParameters(domain, SecureRandom())) }
+        .generateKeyPair()
+    val publicKey = BcPGPKeyPair(PublicKeyAlgorithmTags.ECDSA, pair, Date()).publicKey
+    val transport = SigningTransport { hash ->
+      val (r, s) =
+        ECDSASigner().run {
+          init(true, pair.private)
+          generateSignature(hash)
+        }
+      BigIntegers.asUnsignedByteArray(48, r) + BigIntegers.asUnsignedByteArray(48, s)
+    }
+    val signature = signOnCard(publicKey, transport)
+    assertEquals(HashAlgorithmTags.SHA384, signature.hashAlgorithm)
+    assertContentEquals(hash("SHA-384", signature), transport.signedInputs.single())
+    assertTrue(signature.verifies(publicKey))
+  }
+
   /** The hash [signature] was made over: the payload, then the signature's own trailer. */
-  private fun sha256(signature: PGPSignature): ByteArray =
-    MessageDigest.getInstance("SHA-256").run {
+  private fun sha256(signature: PGPSignature): ByteArray = hash("SHA-256", signature)
+
+  private fun hash(algorithm: String, signature: PGPSignature): ByteArray =
+    MessageDigest.getInstance(algorithm).run {
       update(PAYLOAD)
       update(signature.signatureTrailer)
       digest()

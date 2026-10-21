@@ -41,10 +41,12 @@ import logcat.logcat
 import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.DERNull
 import org.bouncycastle.asn1.DERSequence
+import org.bouncycastle.asn1.edec.EdECObjectIdentifiers
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.DigestInfo
 import org.bouncycastle.bcpg.ArmoredOutputStream
+import org.bouncycastle.bcpg.EdDSAPublicBCPGKey
 import org.bouncycastle.bcpg.HashAlgorithmTags
 import org.bouncycastle.bcpg.PublicKeyAlgorithmTags
 import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags
@@ -387,12 +389,13 @@ class OpenPgpCommitSigner(
   ) : PGPContentSignerBuilder {
 
     override fun build(signatureType: Int, privateKey: PGPPrivateKey): PGPContentSigner {
-      if (publicKey.algorithm !in CARD_SIGNING_ALGORITHMS) {
+      if (publicKey.algorithm !in CARD_SIGNING_ALGORITHMS || isEd448(publicKey)) {
         throw PGPException(
-          "OpenPGP card commit signing supports RSA, EdDSA and ECDSA card keys only"
+          "OpenPGP card commit signing supports RSA, Ed25519 and ECDSA card keys only"
         )
       }
-      val digestCalculator = BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA256)
+      val hashAlgorithm = hashAlgorithmFor(publicKey)
+      val digestCalculator = BcPGPDigestCalculatorProvider().get(hashAlgorithm)
       // Reading the calculator's digest finishes the hash and starts a new one, and BouncyCastle
       // asks for it twice: for the signature, then for the two bytes of it kept beside the
       // signature. Read twice, the second answer is the hash of nothing — a prefix that matches no
@@ -411,8 +414,9 @@ class OpenPgpCommitSigner(
             // ECDSA signs the hash as it is too, but the card gives R and S side by side while
             // BouncyCastle reads them as the DER sequence a software signer makes.
             PublicKeyAlgorithmTags.ECDSA -> {
-              val raw = card.computeDigitalSignature(digest, expectedLength = 0)
-              if (raw.isEmpty() || raw.size % 2 != 0) {
+              val coordinateLength = (publicKey.bitStrength + 7) / 8
+              val raw = card.computeDigitalSignature(digest, expectedLength = 2 * coordinateLength)
+              if (raw.size != 2 * coordinateLength) {
                 throw PGPException("The card's ECDSA signature is malformed")
               }
               val half = raw.size / 2
@@ -443,7 +447,7 @@ class OpenPgpCommitSigner(
 
         override fun getType(): Int = signatureType
 
-        override fun getHashAlgorithm(): Int = HashAlgorithmTags.SHA256
+        override fun getHashAlgorithm(): Int = hashAlgorithm
 
         override fun getKeyAlgorithm(): Int = publicKey.algorithm
 
@@ -518,22 +522,46 @@ class OpenPgpCommitSigner(
           .filter { key -> cardFingerprints.any { it.contentEquals(key.fingerprint) } }
       if (onCard.isEmpty())
         throw PGPException("No signing key matching this OpenPGP card was found")
-      if (onCard.none { it.algorithm in CARD_SIGNING_ALGORITHMS }) {
+      if (onCard.none { it.algorithm in CARD_SIGNING_ALGORITHMS && !isEd448(it) }) {
         requireCardCanSignWith(onCard.first())
       }
     }
 
     /** Turns away a card key whose kind a commit cannot be signed with on a card. */
     private fun requireCardCanSignWith(publicKey: PGPPublicKey) {
-      if (publicKey.algorithm !in CARD_SIGNING_ALGORITHMS) {
+      if (publicKey.algorithm !in CARD_SIGNING_ALGORITHMS || isEd448(publicKey)) {
         throw PGPException(
           "This OpenPGP card's signing key is of a kind commits cannot be signed with on a card; " +
-            "RSA, EdDSA and ECDSA keys can be"
+            "RSA, Ed25519 and ECDSA keys can be"
         )
       }
     }
 
     /** An Ed25519 signature: R and S, 32 bytes each. */
     private const val EDDSA_SIGNATURE_LENGTH = 64
+
+    /**
+     * The hash a card key signs with. RSA takes SHA-256, which is what the DigestInfo it is handed
+     * names. ECDSA takes a hash as long as its curve, as GnuPG does and RFC 6637 asks: SHA-256 for
+     * a 256-bit curve, SHA-384 for a 384-bit one, SHA-512 above. Ed25519 takes SHA-256, which is as
+     * strong as the curve.
+     */
+    private fun hashAlgorithmFor(publicKey: PGPPublicKey): Int =
+      when {
+        publicKey.algorithm != PublicKeyAlgorithmTags.ECDSA -> HashAlgorithmTags.SHA256
+        publicKey.bitStrength <= 256 -> HashAlgorithmTags.SHA256
+        publicKey.bitStrength <= 384 -> HashAlgorithmTags.SHA384
+        else -> HashAlgorithmTags.SHA512
+      }
+
+    /**
+     * Whether [publicKey] is EdDSA on Ed448 — either the algorithm RFC 9580 gives it, or the older
+     * EdDSA one, which names its curve inside the key. Signing that needs a 114-byte signature and
+     * SHAKE256-strength hashing, which no card in common use offers and this does not do.
+     */
+    private fun isEd448(publicKey: PGPPublicKey): Boolean =
+      publicKey.algorithm == PublicKeyAlgorithmTags.Ed448 ||
+        (publicKey.publicKeyPacket.key as? EdDSAPublicBCPGKey)?.curveOID ==
+          EdECObjectIdentifiers.id_Ed448
   }
 }

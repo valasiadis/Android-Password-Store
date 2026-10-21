@@ -6,6 +6,7 @@ package app.passwordstore.ui.adapters
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
@@ -14,6 +15,7 @@ import android.graphics.drawable.RippleDrawable
 import android.view.View
 import androidx.appcompat.R as AppCompatR
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.view.children
 import androidx.recyclerview.widget.RecyclerView
 import app.passwordstore.R
 import com.google.android.material.R as MaterialR
@@ -38,6 +40,7 @@ class PasswordRowDecoration(context: Context) : RecyclerView.ItemDecoration() {
   private val outlineWidth = context.resources.getDimensionPixelSize(R.dimen.list_item_outline)
   private val containers = mutableMapOf<PlaceInList, RippleDrawable>()
   private val applied = WeakHashMap<View, PlaceInList>()
+  private var refreshPending = false
 
   /** Adds this decoration to [recyclerView] and takes over its rows' background. */
   fun attachTo(recyclerView: RecyclerView) {
@@ -55,8 +58,7 @@ class PasswordRowDecoration(context: Context) : RecyclerView.ItemDecoration() {
       applied.remove(view)
       return
     }
-    val itemCount = parent.adapter?.itemCount ?: 0
-    val place = PlaceInList(startsList = position == 0, endsList = position == itemCount - 1)
+    val place = placeInList(parent, position)
     // A row's place changes without it being bound again — an entry appearing or disappearing
     // makes a new last row of its neighbour — so the shape is checked on every layout rather than
     // only when the row arrives, and redrawn when it no longer fits.
@@ -65,6 +67,36 @@ class PasswordRowDecoration(context: Context) : RecyclerView.ItemDecoration() {
       applied[view] = place
     }
     outRect.bottom = if (place.endsList) 0 else rowSpacing
+  }
+
+  /**
+   * Catches a row whose place has changed while its offsets were left alone.
+   *
+   * The list only asks for a row's offsets again when that row itself changed, and an entry added
+   * at the end changes nobody else: the row that used to be last keeps its rounded bottom and its
+   * missing gap, and the list ends up with two last rows. So the rows on screen are checked each
+   * time the list is drawn, and if one no longer fits, every row is asked for its offsets again.
+   */
+  override fun onDraw(canvas: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+    if (refreshPending) return
+    val stale =
+      parent.children.any { view ->
+        val position = parent.getChildAdapterPosition(view)
+        position != RecyclerView.NO_POSITION && applied[view] != placeInList(parent, position)
+      }
+    if (stale) {
+      // Not from here: a draw is no time to ask for a layout.
+      refreshPending = true
+      parent.post {
+        refreshPending = false
+        if (!parent.isComputingLayout) parent.invalidateItemDecorations()
+      }
+    }
+  }
+
+  private fun placeInList(parent: RecyclerView, position: Int): PlaceInList {
+    val itemCount = parent.adapter?.itemCount ?: 0
+    return PlaceInList(startsList = position == 0, endsList = position == itemCount - 1)
   }
 
   /**

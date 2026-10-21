@@ -142,6 +142,28 @@ class CardContentSignerTest {
   }
 
   @Test
+  fun `an Ed25519 card key of RFC 9580's own kind signs too`() {
+    // Algorithm 27 rather than the older EdDSA, and the one BouncyCastle asks for the digest before
+    // the signature, the other way about from the rest.
+    val pair =
+      Ed25519KeyPairGenerator()
+        .apply { init(Ed25519KeyGenerationParameters(SecureRandom())) }
+        .generateKeyPair()
+    val publicKey = BcPGPKeyPair(PublicKeyAlgorithmTags.Ed25519, pair, Date()).publicKey
+    val transport = SigningTransport { hash ->
+      Ed25519Signer().run {
+        init(true, pair.private)
+        update(hash, 0, hash.size)
+        generateSignature()
+      }
+    }
+    val signature = signOnCard(publicKey, transport)
+    assertContentEquals(sha256(signature), transport.signedInputs.single())
+    assertContentEquals(sha256(signature).copyOf(2), signature.digestPrefix)
+    assertTrue(signature.verifies(publicKey))
+  }
+
+  @Test
   fun `an ECDSA card key on P-384 signs a SHA-384 hash`() {
     val domain = ECNamedDomainParameters.lookup(SECObjectIdentifiers.secp384r1)
     val pair =

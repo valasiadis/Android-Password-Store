@@ -26,10 +26,14 @@ import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags
 import org.bouncycastle.bcpg.sig.KeyFlags
 import org.bouncycastle.crypto.agreement.X25519Agreement
 import org.bouncycastle.crypto.generators.ECKeyPairGenerator
+import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator
+import org.bouncycastle.crypto.generators.X25519KeyPairGenerator
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter
 import org.bouncycastle.crypto.params.ECKeyGenerationParameters
 import org.bouncycastle.crypto.params.ECNamedDomainParameters
 import org.bouncycastle.crypto.params.ECPrivateKeyParameters
+import org.bouncycastle.crypto.params.Ed25519KeyGenerationParameters
+import org.bouncycastle.crypto.params.X25519KeyGenerationParameters
 import org.bouncycastle.crypto.params.X25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters
 import org.bouncycastle.openpgp.PGPEncryptedDataGenerator
@@ -338,6 +342,50 @@ class CardEcdhDecryptionTest {
       "hunter2",
       decryptOnCard(cardKey, card, encryptToHiddenRecipient(cardKey, "hunter2")),
     )
+  }
+
+  /** Ed25519 to sign and X25519 to encrypt to, the key types of RFC 9580, as a card can hold. */
+  private fun x25519Key(): CardKey {
+    val now = Date()
+    val primary =
+      BcPGPKeyPair(
+        PublicKeyAlgorithmTags.Ed25519,
+        Ed25519KeyPairGenerator()
+          .apply { init(Ed25519KeyGenerationParameters(SecureRandom())) }
+          .generateKeyPair(),
+        now,
+      )
+    val subPair =
+      X25519KeyPairGenerator()
+        .apply { init(X25519KeyGenerationParameters(SecureRandom())) }
+        .generateKeyPair()
+    val sub = BcPGPKeyPair(PublicKeyAlgorithmTags.X25519, subPair, now)
+    fun flags(flags: Int) =
+      PGPSignatureSubpacketGenerator().apply { setKeyFlags(false, flags) }.generate()
+    val ring =
+      PGPKeyRingGenerator(
+          PGPSignature.POSITIVE_CERTIFICATION,
+          primary,
+          "Carol <carol@example.com>",
+          BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA1),
+          flags(KeyFlags.CERTIFY_OTHER or KeyFlags.SIGN_DATA),
+          null,
+          BcPGPContentSignerBuilder(PublicKeyAlgorithmTags.Ed25519, HashAlgorithmTags.SHA256),
+          null,
+        )
+        .apply { addSubKey(sub, flags(KeyFlags.ENCRYPT_COMMS or KeyFlags.ENCRYPT_STORAGE), null) }
+        .generateSecretKeyRing()
+    return CardKey(PGPKey(ring.encoded), sub.publicKey.fingerprint, subPair.private)
+  }
+
+  @Test
+  fun `a message for an X25519 card key of RFC 9580's kind decrypts`() {
+    val cardKey = x25519Key()
+    val card = EcdhCard(cardKey.private)
+    val ciphertext = encryptWithBouncyCastle(cardKey, "hunter2", hidden = false)
+    assertEquals("hunter2", decryptOnCard(cardKey, card, ciphertext))
+    // The sender's key as it is: 32 bytes, with no 40 to take off.
+    assertEquals(32, card.pointsSent.single().size)
   }
 
   @Test

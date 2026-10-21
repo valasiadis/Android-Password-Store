@@ -39,7 +39,7 @@ class OpenPgpSmartcardDecryptorTest {
           )
       }
     assertContains(error.message.orEmpty(), "ElGamal")
-    assertContains(error.message.orEmpty(), "only supported for RSA and ECDH")
+    assertContains(error.message.orEmpty(), "only supported for RSA, ECDH and X25519")
   }
 
   /**

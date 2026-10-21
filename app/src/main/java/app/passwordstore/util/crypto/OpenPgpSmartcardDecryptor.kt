@@ -147,8 +147,17 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
     cardFingerprints: List<ByteArray>,
   ) {
     val cert = KeyUtils.tryParseCertificateOrKey(key) ?: throw PGPException("Invalid PGP key")
-    val keyIds = keyIdsMatchingCard(cert, cardFingerprints)
-    card.verifyUserPin(pin)
+    // Which of this key's keys the card that is here decrypts with, as the card itself says — read
+    // without the PIN, so that a card holding some other key is told so before it is handed one.
+    val cardKey =
+      cardDecryptionSlot(card)?.let { fingerprint ->
+        cert.keys.map { it.pgpPublicKey }.firstOrNull { it.fingerprint.contentEquals(fingerprint) }
+          ?: throw PGPException(
+            "The OpenPGP card presented does not hold this key's decryption key"
+          )
+      }
+    val keyIds =
+      if (cardKey != null) setOf(cardKey.keyID) else keyIdsMatchingCard(cert, cardFingerprints)
 
     val decoder = PGPUtil.getDecoderStream(ciphertextStream)
     val objectFactory = PGPObjectFactory(decoder, JcaKeyFingerprintCalculator())
@@ -169,24 +178,39 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
     val candidates = (explicitMatches + anonymousMatches).distinct().take(MAX_DECRYPT_CANDIDATES)
     if (candidates.isEmpty()) throw PGPException("Message is not encrypted to this OpenPGP card")
 
-    // The card's own decryption key, for a packet that does not say which key it was written to.
-    val cardEncryptionKeys =
-      cert
-        .getAllKeyIdentifiers()
-        .filter { it.keyId in keyIds }
-        .mapNotNull { cert.getKey(it)?.pgpPublicKey }
-        .filter { it.isEncryptionKey }
+    // A packet that names nobody is read against the card's decryption key where the card said
+    // which that is. Otherwise against this key's encryption keys among those it shares with the
+    // card, the ones in use first: an algorithm alone does not tell an expired ECDH subkey from the
+    // current one, or an RSA decryption key from the RSA signing key beside it.
+    val anonymousRecipients =
+      if (cardKey != null) {
+        listOf(cardKey)
+      } else {
+        val current = cert.encryptionKeys.map { it.pgpPublicKey }.filter { it.keyID in keyIds }
+        val rest =
+          cert.keys
+            .map { it.pgpPublicKey }
+            .filter { key ->
+              key.keyID in keyIds && key.isEncryptionKey && current.none { it.keyID == key.keyID }
+            }
+        current + rest
+      }
+    // Whether a packet naming one of [keyIds] names the card's own decryption key. True where the
+    // card said which key it holds, or the key was associated with the card; not where nothing is
+    // known and [keyIds] is every key there is, software subkeys included.
+    val namedKeysAreTheCards = cardKey != null || cardFingerprints.isNotEmpty()
+
+    card.verifyUserPin(pin)
+
     var firstFailure: Exception? = null
     val (encryptedData, sessionKey) =
       candidates.firstNotNullOfOrNull { candidate ->
         try {
-          // A packet that names its recipient is read against that key; one that names nobody,
-          // against whichever of the card's keys is of its kind.
           val recipients =
             if (candidate in explicitMatches) {
               listOfNotNull(cert.getKey(candidate.keyIdentifier)?.pgpPublicKey)
             } else {
-              cardEncryptionKeys
+              anonymousRecipients
             }
           val decryptorFactory = OpenPgpCardDecryptorFactory(card, recipients)
           candidate to candidate.getSessionKey(decryptorFactory)
@@ -195,7 +219,11 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
           if (e.isCardAuthenticationFailure()) throw e
           // Addressed to the card's own key, so every other candidate is for the same key and would
           // fail the same way; anything said after this would blame the message instead.
-          if (e is UnsupportedCardKeyException && candidate in explicitMatches) throw e
+          if (
+            e is UnsupportedCardKeyException && candidate in explicitMatches && namedKeysAreTheCards
+          ) {
+            throw e
+          }
           if (firstFailure == null) firstFailure = e as? Exception
           null
         }
@@ -216,6 +244,17 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
     // [outputStream] is an in-memory buffer the caller must (and does) discard when this throws.
     readPlaintext(encryptedData, sessionKey, outputStream)
   }
+
+  /**
+   * The fingerprint in the card's decryption slot, or null where the card will not say or the slot
+   * is empty. A card that cannot be reached is not one that will not say, and that failure goes on.
+   */
+  private fun cardDecryptionSlot(card: OpenPgpCard): ByteArray? =
+    try {
+      card.readKeySlots().decryption
+    } catch (e: OpenPgpCardStatusException) {
+      null
+    }
 
   private fun Throwable.isCardAuthenticationFailure(): Boolean =
     this is OpenPgpCardStatusException && isAuthenticationFailure ||

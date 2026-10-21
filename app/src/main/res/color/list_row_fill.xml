@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  The fill of a row in a list that reads as one block — the password list and the settings — set
+  against the screen's background as the system settings set theirs. In the light, near white on a
+  grey background; see color-night for the dark.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+  <item android:color="?attr/colorSurfaceContainerLowest" />
+</selector>

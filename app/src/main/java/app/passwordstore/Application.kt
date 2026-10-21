@@ -34,6 +34,7 @@ import app.passwordstore.util.settings.GitSettings
 import app.passwordstore.util.settings.PreferenceKeys
 import app.passwordstore.util.settings.runMigrations
 import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.DynamicColorsOptions
 import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.Executors
 import javax.inject.Inject
@@ -78,7 +79,14 @@ class Application : android.app.Application(), SharedPreferences.OnSharedPrefere
     setNightMode()
     runMigrations(filesDirPath, prefs, gitSettings, persistentPassphrases)
     proxyUtils.setDefaultProxy()
-    DynamicColors.applyToActivitiesIfAvailable(this)
+    DynamicColors.applyToActivitiesIfAvailable(
+      this,
+      DynamicColorsOptions.Builder()
+        .setOnAppliedCallback { activity ->
+          activity.theme.applyStyle(R.style.ThemeOverlay_APS_ScreenBackground, true)
+        }
+        .build(),
+    )
     setupScreenOffHandler()
 
     /**

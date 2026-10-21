@@ -7,6 +7,7 @@
 
   <style name="AppThemeM3" parent="APSThemeM3">
     <item name="fontFamily">@font/manrope</item>
+    <item name="android:colorBackground">?attr/colorSurfaceContainer</item>
     <item name="android:windowLightStatusBar">@bool/light_status_bar</item>
     <item name="android:statusBarColor">?android:colorBackground</item>
     <item name="android:navigationBarColor">?android:colorBackground</item>
@@ -16,6 +17,18 @@
     <item name="bottomSheetDialogTheme">@style/APSThemeM3.BottomSheetDialog</item>
     <item name="actionOverflowMenuStyle">@style/APSThemeM3.PopupMenu</item>
     <item name="popupMenuStyle">@style/APSThemeM3.PopupMenu</item>
+  </style>
+
+  <!--
+    The screen behind the app's lists, a step darker than the rows on it in the dark and a grey
+    under near-white rows in the light, as the system settings have it. Set on AppThemeM3 for a
+    device without dynamic colours, and laid over the theme again once dynamic colours have been,
+    since they set the background back to the surface. Only the background colour: the window
+    background follows it on its own, except where a theme has made the window transparent, which
+    has to stay so.
+  -->
+  <style name="ThemeOverlay.APS.ScreenBackground" parent="">
+    <item name="android:colorBackground">?attr/colorSurfaceContainer</item>
   </style>
 
   <style name="NoBackgroundThemeM3" parent="@style/AppThemeM3">

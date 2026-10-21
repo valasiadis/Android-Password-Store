@@ -15,7 +15,7 @@
     <item name="actionBarStyle">@style/APSThemeM3.ActionBar</item>
     <item name="actionBarTheme">@style/APSThemeM3.ActionBarTheme</item>
     <item name="bottomSheetDialogTheme">@style/APSThemeM3.BottomSheetDialog</item>
-    <item name="materialAlertDialogTheme">@style/APSThemeM3.AlertDialog</item>
+    <item name="materialAlertDialogTheme">@style/APSThemeM3.MaterialAlertDialog</item>
     <item name="actionOverflowMenuStyle">@style/APSThemeM3.PopupMenu</item>
     <item name="popupMenuStyle">@style/APSThemeM3.PopupMenu</item>
   </style>
@@ -56,17 +56,31 @@
     <item name="windowNoTitle">true</item>
   </style>
 
+  <!--
+    What comes up over a screen stands a step above it. Material puts a bottom sheet on the low
+    surface container and a dialog on the high one, measured against a screen of the plain surface;
+    the screen here is the surface container (ThemeOverlay.APS.ScreenBackground), a step above that,
+    so the sheets and dialogs stand a step higher too — a sheet below the screen it rises over reads
+    as a hole in it, and a dialog one step above it barely as a dialog at all.
+  -->
   <style name="APSThemeM3.BottomSheetDialog" parent="ThemeOverlay.Material3.BottomSheetDialog">
+    <item name="bottomSheetStyle">@style/APSThemeM3.BottomSheet</item>
     <item name="android:windowIsFloating">false</item>
     <item name="android:statusBarColor">@android:color/transparent</item>
     <item name="android:navigationBarColor">@android:color/transparent</item>
   </style>
 
-  <style name="APSThemeM3.AlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-    <item name="alertDialogStyle">@style/APSThemeM3.AlertDialog.Style</item>
+  <style name="APSThemeM3.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
+    <item name="backgroundTint">?attr/colorSurfaceContainerHigh</item>
   </style>
 
-  <style name="APSThemeM3.AlertDialog.Style" parent="MaterialAlertDialog.Material3">
+  <style name="APSThemeM3.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+    <item name="alertDialogStyle">@style/APSThemeM3.MaterialAlertDialogStyle</item>
+  </style>
+
+  <style name="APSThemeM3.MaterialAlertDialogStyle" parent="MaterialAlertDialog.Material3">
+    <item name="backgroundTint">?attr/colorSurfaceContainerHighest</item>
+    <!-- Room to move up out of the keyboard's way on a short screen, rather than be cut off by it. -->
     <item name="backgroundInsetTop">0dp</item>
     <item name="backgroundInsetBottom">0dp</item>
   </style>

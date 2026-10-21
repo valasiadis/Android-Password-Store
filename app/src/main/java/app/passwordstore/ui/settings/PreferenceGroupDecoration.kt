@@ -213,9 +213,7 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
     val container =
       GradientDrawable().apply {
         cornerRadii = cornerRadiiFor(place)
-        setColor(
-          MaterialColors.getColor(view, MaterialR.attr.colorSurfaceVariant, Color.TRANSPARENT)
-        )
+        color = AppCompatResources.getColorStateList(view.context, R.color.list_row_fill)
       }
     val mask =
       GradientDrawable().apply {

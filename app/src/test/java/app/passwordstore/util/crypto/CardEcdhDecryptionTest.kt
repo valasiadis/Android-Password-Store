@@ -204,7 +204,15 @@ class CardEcdhDecryptionTest {
   }
 
   /** A message to [cardKey]'s card key that does not say who it is for: a wildcard key ID. */
-  private fun encryptToHiddenRecipient(cardKey: CardKey, plaintext: String): ByteArray {
+  private fun encryptToHiddenRecipient(cardKey: CardKey, plaintext: String): ByteArray =
+    encryptWithBouncyCastle(cardKey, plaintext, hidden = true)
+
+  /** A message to [cardKey]'s card key alone, written by BouncyCastle rather than PGPainless. */
+  private fun encryptWithBouncyCastle(
+    cardKey: CardKey,
+    plaintext: String,
+    hidden: Boolean,
+  ): ByteArray {
     val publicKey =
       PGPSecretKeyRingCollection(
           PGPUtil.getDecoderStream(cardKey.key.contents.inputStream()),
@@ -221,7 +229,7 @@ class CardEcdhDecryptionTest {
           .setSecureRandom(SecureRandom())
       )
     generator.addMethod(
-      BcPublicKeyKeyEncryptionMethodGenerator(publicKey).setUseWildcardKeyID(true)
+      BcPublicKeyKeyEncryptionMethodGenerator(publicKey).setUseWildcardKeyID(hidden)
     )
     val out = ByteArrayOutputStream()
     generator.open(out, ByteArray(BUFFER_SIZE)).use { encrypted ->
@@ -331,6 +339,50 @@ class CardEcdhDecryptionTest {
       decryptOnCard(cardKey, card, encryptToHiddenRecipient(cardKey, "hunter2")),
     )
   }
+
+  @Test
+  fun `a session key that could never unwrap is turned away before the card is asked`() {
+    val cardKey = curve25519Key()
+    val card = EcdhCard(cardKey.private)
+    val recipient = publicKey(cardKey)
+    val point = byteArrayOf(0x40) + ByteArray(32) { 9 }
+    // A point, then a "wrapped key" of five bytes, which no RFC 3394 wrap is.
+    val enc = byteArrayOf(0x01, 0x07) + point + byteArrayOf(5) + ByteArray(5)
+    assertFailsWith<PGPException> {
+      OpenPgpSmartcardDecryptor.OpenPgpCardDecryptorFactory(OpenPgpCard(card), listOf(recipient))
+        .recoverSessionData(PublicKeyAlgorithmTags.ECDH, arrayOf(enc), 3)
+    }
+    assertTrue(card.pointsSent.isEmpty())
+  }
+
+  @Test
+  fun `a point that is not on the card key's curve is turned away before the card is asked`() {
+    val cardKey = p256Key()
+    val card = EcdhCard(cardKey.private)
+    // A Curve25519 point, for a key on P-256.
+    val point = byteArrayOf(0x40) + ByteArray(32) { 9 }
+    val enc = byteArrayOf(0x01, 0x07) + point + byteArrayOf(24) + ByteArray(24)
+    val error =
+      assertFailsWith<PGPException> {
+        OpenPgpSmartcardDecryptor.OpenPgpCardDecryptorFactory(
+            OpenPgpCard(card),
+            listOf(publicKey(cardKey)),
+          )
+          .recoverSessionData(PublicKeyAlgorithmTags.ECDH, arrayOf(enc), 3)
+      }
+    assertContains(error.message.orEmpty(), "not on the card key's curve")
+    assertTrue(card.pointsSent.isEmpty())
+  }
+
+  private fun publicKey(cardKey: CardKey) =
+    PGPSecretKeyRingCollection(
+        PGPUtil.getDecoderStream(cardKey.key.contents.inputStream()),
+        BcKeyFingerprintCalculator(),
+      )
+      .keyRings
+      .asSequence()
+      .flatMap { it.publicKeys.asSequence() }
+      .single { it.fingerprint.contentEquals(cardKey.fingerprint) }
 
   @Test
   fun `a Curve25519 secret given with its 40 in front is the same secret`() {

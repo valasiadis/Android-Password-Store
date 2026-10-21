@@ -7,6 +7,7 @@ package app.passwordstore.util.extensions
 
 import android.app.Activity
 import android.os.Build
+import android.os.SystemClock
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.WindowManager
@@ -39,6 +40,9 @@ fun Activity.followsKeyboard(
   // Set while the keyboard is between its two resting places, when the insets handed to the
   // listener are the end of the animation rather than the frame being drawn.
   var moving = false
+  // When the keyboard's animation last told this window anything, to tell one still running from
+  // one that has gone quiet without ever saying it ended.
+  var lastHeardAt = 0L
   ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
     if (!moving) onMove(insets.keyboardOverlap)
     onShown(insets.isVisible(WindowInsetsCompat.Type.ime()))
@@ -48,14 +52,22 @@ fun Activity.followsKeyboard(
   // field, closed with the keyboard still up as the next dialog opens. Then this window may be told
   // an animation is starting and never that it ended, and goes on ignoring the insets that say
   // where the keyboard really is, holding everything up for a keyboard that is no longer there.
-  // Coming back to the front is when it can trust them again: whatever is running from then on
-  // reports its own frames, and what is settled is read off the insets as they stand.
-  val onFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
-    if (!hasFocus) return@OnWindowFocusChangeListener
+  // Coming back to the front is when to look: a moment later, so that an animation of this
+  // window's own that is really running has had the time to report a frame, and is left to it.
+  // One that has said nothing for that long is not running, and what is settled is read off the
+  // insets as they stand.
+  val resync = Runnable {
+    if (moving && SystemClock.uptimeMillis() - lastHeardAt < STALLED_ANIMATION_MS) {
+      return@Runnable
+    }
     moving = false
-    val insets = ViewCompat.getRootWindowInsets(root) ?: return@OnWindowFocusChangeListener
+    val insets = ViewCompat.getRootWindowInsets(root) ?: return@Runnable
     onMove(insets.keyboardOverlap)
     onShown(insets.isVisible(WindowInsetsCompat.Type.ime()))
+  }
+  val onFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
+    root.removeCallbacks(resync)
+    if (hasFocus) root.postDelayed(resync, STALLED_ANIMATION_MS)
   }
   // Held only while the view is on screen: the window outlives a fragment's view, and a listener
   // left with it would go on moving views that are gone.
@@ -67,6 +79,7 @@ fun Activity.followsKeyboard(
 
       override fun onViewDetachedFromWindow(view: View) {
         view.viewTreeObserver.removeOnWindowFocusChangeListener(onFocus)
+        view.removeCallbacks(resync)
       }
     }
   )
@@ -76,14 +89,20 @@ fun Activity.followsKeyboard(
     object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
 
       override fun onPrepare(animation: WindowInsetsAnimationCompat) {
-        if (animation.isKeyboard) moving = true
+        if (animation.isKeyboard) {
+          moving = true
+          lastHeardAt = SystemClock.uptimeMillis()
+        }
       }
 
       override fun onProgress(
         insets: WindowInsetsCompat,
         runningAnimations: List<WindowInsetsAnimationCompat>,
       ): WindowInsetsCompat {
-        if (runningAnimations.any { it.isKeyboard }) onMove(insets.keyboardOverlap)
+        if (runningAnimations.any { it.isKeyboard }) {
+          lastHeardAt = SystemClock.uptimeMillis()
+          onMove(insets.keyboardOverlap)
+        }
         return insets
       }
 
@@ -93,6 +112,12 @@ fun Activity.followsKeyboard(
     },
   )
 }
+
+/**
+ * How long a keyboard animation may go without a frame before it is taken to have stopped. A
+ * running one reports every frame, a few tens of milliseconds apart at the very slowest.
+ */
+private const val STALLED_ANIMATION_MS = 200L
 
 /** How far the keyboard reaches into the screen, past the room the navigation bar already had. */
 private val WindowInsetsCompat.keyboardOverlap

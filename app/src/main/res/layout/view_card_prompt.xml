@@ -84,13 +84,14 @@
           drawable rather than a second indicator, so that no state of the prompt and no moment
           between two of them can leave the mark standing without it.
 
-          Its size is the indicator's less one track thickness, which is where a circular indicator
-          draws its arc: that is what makes the two coincide exactly.
+          Both are the same size and draw their stroke inside it. The indicator's own inset is
+          taken away: left in, it scales the whole arc down to fit, and the turning part runs
+          thinner and inside the still one, which shows round its edges.
         -->
         <View
           android:id="@+id/card_ring"
-          android:layout_width="@dimen/card_prompt_ring_inner"
-          android:layout_height="@dimen/card_prompt_ring_inner"
+          android:layout_width="@dimen/card_prompt_ring_size"
+          android:layout_height="@dimen/card_prompt_ring_size"
           android:layout_gravity="center"
           android:background="@drawable/card_prompt_ring" />
 
@@ -102,6 +103,7 @@
           android:indeterminate="true"
           android:visibility="gone"
           app:indicatorColor="?attr/colorPrimary"
+          app:indicatorInset="0dp"
           app:indicatorSize="@dimen/card_prompt_ring_size"
           app:indicatorTrackGapSize="0dp"
           app:trackColor="@android:color/transparent"

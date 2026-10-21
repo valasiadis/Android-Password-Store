@@ -8,6 +8,7 @@ package app.passwordstore.util.extensions
 import android.app.Activity
 import android.os.Build
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.WindowManager
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsAnimationCompat
@@ -43,6 +44,33 @@ fun Activity.followsKeyboard(
     onShown(insets.isVisible(WindowInsetsCompat.Type.ime()))
     insets
   }
+  // The keyboard can come and go for another window while this one waits behind it — a dialog's
+  // field, closed with the keyboard still up as the next dialog opens. Then this window may be told
+  // an animation is starting and never that it ended, and goes on ignoring the insets that say
+  // where the keyboard really is, holding everything up for a keyboard that is no longer there.
+  // Coming back to the front is when it can trust them again: whatever is running from then on
+  // reports its own frames, and what is settled is read off the insets as they stand.
+  val onFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
+    if (!hasFocus) return@OnWindowFocusChangeListener
+    moving = false
+    val insets = ViewCompat.getRootWindowInsets(root) ?: return@OnWindowFocusChangeListener
+    onMove(insets.keyboardOverlap)
+    onShown(insets.isVisible(WindowInsetsCompat.Type.ime()))
+  }
+  // Held only while the view is on screen: the window outlives a fragment's view, and a listener
+  // left with it would go on moving views that are gone.
+  root.addOnAttachStateChangeListener(
+    object : View.OnAttachStateChangeListener {
+      override fun onViewAttachedToWindow(view: View) {
+        view.viewTreeObserver.addOnWindowFocusChangeListener(onFocus)
+      }
+
+      override fun onViewDetachedFromWindow(view: View) {
+        view.viewTreeObserver.removeOnWindowFocusChangeListener(onFocus)
+      }
+    }
+  )
+  if (root.isAttachedToWindow) root.viewTreeObserver.addOnWindowFocusChangeListener(onFocus)
   ViewCompat.setWindowInsetsAnimationCallback(
     root,
     object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {

@@ -10,8 +10,6 @@
     across screens.
   -->
   <dimen name="spacing_xsmall">4dp</dimen>
-  <!-- A 24dp settings icon and the gap after it, in place of the library's 56dp column. -->
-  <dimen name="settings_icon_frame">40dp</dimen>
   <dimen name="spacing_small">8dp</dimen>
   <dimen name="spacing_medium">12dp</dimen>
   <dimen name="spacing_large">16dp</dimen>
@@ -38,6 +36,13 @@
   -->
   <dimen name="list_outer_corner_radius">20dp</dimen>
   <dimen name="list_inner_corner_radius">4dp</dimen>
+  <!--
+    A row's icon, in the circle the system settings stand theirs in: the circle, the room between it
+    and the glyph, and the gap after it before the row's text.
+  -->
+  <dimen name="list_icon_circle">40dp</dimen>
+  <dimen name="list_icon_circle_padding">8dp</dimen>
+  <dimen name="list_icon_text_gap">12dp</dimen>
 
   <!--
     List item metrics. Rows carry their own filled, rounded container and are

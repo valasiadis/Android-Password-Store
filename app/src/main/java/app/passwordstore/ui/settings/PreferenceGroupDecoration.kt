@@ -15,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup.MarginLayoutParams
 import android.widget.ImageView
 import androidx.appcompat.R as AppCompatR
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.widget.Barrier
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.use
@@ -48,9 +49,13 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
   private val entryHeight = context.resources.getDimensionPixelSize(R.dimen.password_row_height)
   private val groupSpacing = context.resources.getDimensionPixelSize(R.dimen.spacing_large)
   private val contentMargin = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
-  private val iconRowPadding = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
-  private val iconFrameWidth = context.resources.getDimensionPixelSize(R.dimen.settings_icon_frame)
-  private val iconFrameGap = context.resources.getDimensionPixelSize(R.dimen.spacing_medium)
+  // An icon stands in a circle, as the password list's do: so far in from the edge, so large, and
+  // so far before the text.
+  private val iconRowPadding = context.resources.getDimensionPixelSize(R.dimen.spacing_large)
+  private val iconCircle = context.resources.getDimensionPixelSize(R.dimen.list_icon_circle)
+  private val iconCirclePadding =
+    context.resources.getDimensionPixelSize(R.dimen.list_icon_circle_padding)
+  private val iconFrameGap = context.resources.getDimensionPixelSize(R.dimen.list_icon_text_gap)
   /** What the library's own layout leads with, restored to a recycled row that has no icon. */
   private val plainRowPadding =
     context.obtainStyledAttributes(intArrayOf(android.R.attr.listPreferredItemPaddingStart)).use {
@@ -82,12 +87,7 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
           } else {
             applied.remove(view)
           }
-          val icon = view.findViewById<ImageView>(android.R.id.icon)
-          icon?.imageTintList =
-            ColorStateList.valueOf(
-              MaterialColors.getColor(view, AppCompatR.attr.colorPrimary, Color.TRANSPARENT)
-            )
-          drawIconIn(view, icon)
+          drawIconIn(view, view.findViewById(android.R.id.icon))
         }
 
         override fun onChildViewDetachedFromWindow(view: View) = Unit
@@ -123,8 +123,9 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
    *
    * The library reserves a fixed column for the icon and starts the title after it, which puts the
    * icon well inside the container and the title further in still — so a screen with icons sits
-   * noticeably further right than one without, and the two read as different lists. The column is
-   * narrowed to what a 24dp icon and a gap actually need, and the row's leading padding with it.
+   * noticeably further right than one without, and the two read as different lists. The icon is
+   * stood in a circle of the theme's primary colour, as the system settings stand theirs and the
+   * password list does, and the column is narrowed to that circle and the gap after it.
    *
    * Asked of the icon itself rather than of the screen, so a sub-screen that grows icons later is
    * treated the same without anything being told about it, and a row with none is left alone.
@@ -133,8 +134,23 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
     val frame = icon?.parent as? View
     val carriesIcon = frame != null && frame.isVisible
     if (carriesIcon) {
-      frame.updateLayoutParams { width = iconFrameWidth }
+      frame.updateLayoutParams { width = iconCircle + iconFrameGap }
       frame.updatePaddingRelative(start = 0, end = iconFrameGap)
+      icon.updateLayoutParams {
+        width = iconCircle
+        height = iconCircle
+      }
+      icon.setPadding(iconCirclePadding, iconCirclePadding, iconCirclePadding, iconCirclePadding)
+      icon.scaleType = ImageView.ScaleType.FIT_CENTER
+      icon.background = AppCompatResources.getDrawable(row.context, R.drawable.list_icon_circle)
+      icon.backgroundTintList =
+        ColorStateList.valueOf(
+          MaterialColors.getColor(row, AppCompatR.attr.colorPrimary, Color.TRANSPARENT)
+        )
+      icon.imageTintList =
+        ColorStateList.valueOf(
+          MaterialColors.getColor(row, MaterialR.attr.colorOnPrimary, Color.TRANSPARENT)
+        )
     }
     // Said either way: rows are recycled, and one that has just given up its icon would otherwise
     // keep the leading edge it only had because of it.

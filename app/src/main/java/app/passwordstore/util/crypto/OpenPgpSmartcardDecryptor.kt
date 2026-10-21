@@ -359,7 +359,6 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
   private companion object {
     private fun algorithmName(keyAlgorithm: Int): String =
       when (keyAlgorithm) {
-        PublicKeyAlgorithmTags.ECDH -> "ECDH"
         PublicKeyAlgorithmTags.X25519 -> "X25519"
         PublicKeyAlgorithmTags.X448 -> "X448"
         PublicKeyAlgorithmTags.ELGAMAL_ENCRYPT,

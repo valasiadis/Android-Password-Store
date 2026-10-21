@@ -22,6 +22,7 @@ import org.bouncycastle.openpgp.PGPLiteralData
 import org.bouncycastle.openpgp.PGPMarker
 import org.bouncycastle.openpgp.PGPObjectFactory
 import org.bouncycastle.openpgp.PGPOnePassSignatureList
+import org.bouncycastle.openpgp.PGPPublicKey
 import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData
 import org.bouncycastle.openpgp.PGPSessionKey
 import org.bouncycastle.openpgp.PGPSignatureList
@@ -168,16 +169,26 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
     val candidates = (explicitMatches + anonymousMatches).distinct().take(MAX_DECRYPT_CANDIDATES)
     if (candidates.isEmpty()) throw PGPException("Message is not encrypted to this OpenPGP card")
 
+    // The card's own decryption key, for a packet that does not say which key it was written to.
+    val cardEncryptionKeys =
+      cert
+        .getAllKeyIdentifiers()
+        .filter { it.keyId in keyIds }
+        .mapNotNull { cert.getKey(it)?.pgpPublicKey }
+        .filter { it.isEncryptionKey }
     var firstFailure: Exception? = null
     val (encryptedData, sessionKey) =
       candidates.firstNotNullOfOrNull { candidate ->
         try {
-          // A packet that names no recipient names no key either, so its size is not known here
-          // and the card is handed the value as it came.
-          val recipient =
-            if (candidate in explicitMatches) cert.getKey(candidate.keyIdentifier) else null
-          val decryptorFactory =
-            OpenPgpCardDecryptorFactory(card, recipient?.pgpPublicKey?.bitStrength)
+          // A packet that names its recipient is read against that key; one that names nobody,
+          // against whichever of the card's keys is of its kind.
+          val recipients =
+            if (candidate in explicitMatches) {
+              listOfNotNull(cert.getKey(candidate.keyIdentifier)?.pgpPublicKey)
+            } else {
+              cardEncryptionKeys
+            }
+          val decryptorFactory = OpenPgpCardDecryptorFactory(card, recipients)
           candidate to candidate.getSessionKey(decryptorFactory)
         } catch (e: Throwable) {
           if (OpenPgpCard.isTransceiveFailure(e)) throw e
@@ -232,26 +243,25 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
 
   /**
    * The message is for the card, but the card's decryption key is of a kind this app cannot yet
-   * hand to a card to decrypt with. Only RSA can be: an ECDH key needs the card to agree on a
-   * shared secret, from which the session key is then unwrapped here, and that is not written yet.
+   * hand to a card to decrypt with. RSA and ECDH can be; the X25519 and X448 keys of RFC 9580 work
+   * differently again, and no card in common use holds one.
    */
   private class UnsupportedCardKeyException(keyAlgorithm: Int) :
     PGPException(
       "This OpenPGP card's decryption key is ${algorithmName(keyAlgorithm)}; decrypting with a " +
-        "card is only supported for RSA keys so far"
+        "card is only supported for RSA and ECDH keys so far"
     )
 
   /**
    * Hands the card the session key encrypted to it, and gives back what the card makes of it.
    *
-   * [modulusBits] is the size of the card's RSA key, where it is known. OpenPGP writes the
-   * encrypted value as a number, without the zero bytes it may start with — about one message in
-   * 256 has one — while the card wants exactly as many bytes as its key is long, as GnuPG gives it.
-   * Sent short, the card refuses the message or decrypts something else.
+   * [recipients] are the keys the packet may have been written to: the one it names, or, for a
+   * packet that names nobody, the card's own. The one of the packet's kind is what the card's half
+   * is checked against.
    */
   internal class OpenPgpCardDecryptorFactory(
     private val card: OpenPgpCard,
-    private val modulusBits: Int?,
+    private val recipients: List<PGPPublicKey>,
   ) : AbstractPublicKeyDataDecryptorFactory() {
 
     private val contentDecryptorFactory = BcPublicKeyDataDecryptorFactory(null)
@@ -261,13 +271,28 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
       secKeyData: Array<ByteArray>,
       pkeskVersion: Int,
     ): ByteArray {
-      if (
-        keyAlgorithm != PublicKeyAlgorithmTags.RSA_ENCRYPT &&
-          keyAlgorithm != PublicKeyAlgorithmTags.RSA_GENERAL
-      ) {
-        throw UnsupportedCardKeyException(keyAlgorithm)
+      val recipient = recipients.firstOrNull { it.algorithm == keyAlgorithm }
+      val enc = secKeyData.firstOrNull() ?: throw PGPException("Missing encrypted session key")
+      return when (keyAlgorithm) {
+        PublicKeyAlgorithmTags.RSA_ENCRYPT,
+        PublicKeyAlgorithmTags.RSA_GENERAL -> recoverRsaSessionData(enc, recipient?.bitStrength)
+        PublicKeyAlgorithmTags.ECDH ->
+          CardEcdh.recoverSessionData(
+            card,
+            recipient ?: throw PGPException("The card's ECDH key is not part of this key"),
+            enc,
+          )
+        else -> throw UnsupportedCardKeyException(keyAlgorithm)
       }
-      val mpi = secKeyData.firstOrNull() ?: throw PGPException("Missing encrypted session key")
+    }
+
+    /**
+     * [modulusBits] is the size of the card's RSA key, where it is known. OpenPGP writes the
+     * encrypted value as a number, without the zero bytes it may start with — about one message in
+     * 256 has one — while the card wants exactly as many bytes as its key is long, as GnuPG gives
+     * it. Sent short, the card refuses the message or decrypts something else.
+     */
+    private fun recoverRsaSessionData(mpi: ByteArray, modulusBits: Int?): ByteArray {
       if (mpi.size <= 2) throw PGPException("Malformed RSA session key")
       val value = mpi.copyOfRange(2, mpi.size)
       val modulusLength = modulusBits?.let { (it + 7) / 8 } ?: value.size

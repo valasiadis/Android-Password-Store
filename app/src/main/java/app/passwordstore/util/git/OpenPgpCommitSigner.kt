@@ -19,12 +19,12 @@ import app.passwordstore.util.crypto.CardConnection
 import app.passwordstore.util.crypto.CardReader
 import app.passwordstore.util.crypto.OpenPgpCard
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
+import app.passwordstore.util.crypto.OpenPgpCardStatusException
 import app.passwordstore.util.crypto.OpenPgpSmartcardStore
 import app.passwordstore.util.crypto.SmartcardOperationHandledException
 import app.passwordstore.util.extensions.hideKeyboard
 import app.passwordstore.util.extensions.wipe
 import com.github.michaelbull.result.get
-import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.runCatching
 import com.google.android.material.R as materialR
 import com.google.android.material.color.MaterialColors
@@ -51,12 +51,12 @@ import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags
 import org.bouncycastle.openpgp.PGPException
 import org.bouncycastle.openpgp.PGPPrivateKey
 import org.bouncycastle.openpgp.PGPPublicKey
-import org.bouncycastle.openpgp.PGPPublicKeyRingCollection
 import org.bouncycastle.openpgp.PGPSecretKey
 import org.bouncycastle.openpgp.PGPSecretKeyRingCollection
 import org.bouncycastle.openpgp.PGPSignature
 import org.bouncycastle.openpgp.PGPSignatureGenerator
 import org.bouncycastle.openpgp.PGPUtil
+import org.bouncycastle.openpgp.api.OpenPGPCertificate
 import org.bouncycastle.openpgp.operator.PGPContentSigner
 import org.bouncycastle.openpgp.operator.PGPContentSignerBuilder
 import org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder
@@ -198,7 +198,11 @@ class OpenPgpCommitSigner(
       // Namespaced so the signing PIN cache is kept separate from the decryption PIN cache.
       val cacheKey = "sign:$primaryKeyId"
       val cardFingerprints = smartcardStore.getFingerprints(primaryKeyId)
-      val publicKey = findCardSigningKey(key, cardFingerprints)
+      // Checked before a card is asked for, so that a key with nothing on it that can sign is
+      // said to be one without the user being sent to fetch the card first. Which of its keys signs
+      // is settled once the card is here and can say.
+      val cert = cardKeyCertificate(key)
+      requireSomeCardSigningKey(cert, cardFingerprints)
       val activeReader =
         runBlocking { prompt.createReader() }
           ?: throw IOException(activity.getString(R.string.openpgp_card_reader_unavailable))
@@ -215,6 +219,8 @@ class OpenPgpCommitSigner(
           // The whole card exchange (applet select -> verify -> sign) runs on a single thread
           // with no hop, so a genuine wrong PIN reliably comes back as a card status word (e.g.
           // 63 Cx) rather than a transceive error caused by racing the NFC presence check.
+          // Which key signs is the card's to say: its signature slot, read before the PIN.
+          val publicKey = findCardSigningKey(cert, cardFingerprints, slot = cardSignatureSlot(card))
           card.verifySignaturePin(currentPin)
           val privateKey = PGPPrivateKey(publicKey.keyID, publicKey.publicKeyPacket, null)
           buildDetachedSignature(
@@ -345,56 +351,19 @@ class OpenPgpCommitSigner(
       ?: throw PGPException("No signing-capable OpenPGP secret key found")
   }
 
-  private fun publicKeys(key: PGPKey): Sequence<PGPPublicKey> = runCatching {
-    PGPSecretKeyRingCollection(
-        PGPUtil.getDecoderStream(key.contents.inputStream()),
-        JcaKeyFingerprintCalculator(),
-      )
-      .keyRings
-      .asSequence()
-      .flatMap { it.secretKeys.asSequence() }
-      .map { it.publicKey }
-  }
-    .getOrElse {
-      PGPPublicKeyRingCollection(
-          PGPUtil.getDecoderStream(key.contents.inputStream()),
-          JcaKeyFingerprintCalculator(),
-        )
-        .keyRings
-        .asSequence()
-        .flatMap { it.publicKeys.asSequence() }
-    }
+  private fun cardKeyCertificate(key: PGPKey): OpenPGPCertificate =
+    KeyUtils.tryParseCertificateOrKey(key) ?: throw PGPException("Invalid PGP key")
 
   /**
-   * The key on the card that commits are signed with.
-   *
-   * A card holds three keys, and the fingerprints it gives are of all three — so on a card set up
-   * with Curve25519 keys, the signing key and the authentication key are both EdDSA, and both
-   * match. A commit signed by the card's signing key but labelled with the authentication key fails
-   * to verify, so the key is the one the certificate says signs data; only a certificate that says
-   * nothing either way is taken at its first key of a kind that signs.
+   * The fingerprint in the card's signature slot, or null where the card will not say or the slot
+   * is empty. A card that cannot be reached is not one that will not say, and that failure goes on.
    */
-  private fun findCardSigningKey(key: PGPKey, cardFingerprints: List<ByteArray>): PGPPublicKey {
-    fun PGPPublicKey.isOnCard() = cardFingerprints.any { it.contentEquals(fingerprint) }
-    val onCard = publicKeys(key).filter { it.isOnCard() }.toList()
-    val flaggedForSigning =
-      KeyUtils.tryParseCertificateOrKey(key)
-        ?.signingKeys
-        .orEmpty()
-        .map { it.pgpPublicKey }
-        .filter { it.isOnCard() }
-    val signing =
-      flaggedForSigning.firstOrNull { it.algorithm in CARD_SIGNING_ALGORITHMS }
-        ?: onCard.firstOrNull { it.algorithm in CARD_SIGNING_ALGORITHMS }
-    if (signing != null) return signing
-    val unsupported = (flaggedForSigning + onCard).firstOrNull()
-    if (unsupported != null && unsupported.algorithm == PublicKeyAlgorithmTags.Ed448) {
-      throw PGPException(
-        "This OpenPGP card's signing key is Ed448, which commits cannot be signed with on a card"
-      )
+  private fun cardSignatureSlot(card: OpenPgpCard): ByteArray? =
+    try {
+      card.readKeySlots().signature
+    } catch (e: OpenPgpCardStatusException) {
+      null
     }
-    throw PGPException("No signing key matching this OpenPGP card was found")
-  }
 
   private fun buildDetachedSignature(
     publicKey: PGPPublicKey,
@@ -498,6 +467,71 @@ class OpenPgpCommitSigner(
           PublicKeyAlgorithmTags.Ed25519,
           PublicKeyAlgorithmTags.ECDSA,
         )
+
+    /**
+     * The key on the card that commits are signed with.
+     *
+     * A card holds three keys, and on one set up with Curve25519 the signing key and the
+     * authentication key are both EdDSA: a commit signed by the card's signing key but labelled
+     * with the other fails to verify, and says nothing about why. So the key is the one in the
+     * card's signature [slot], where the card says. Where it does not, it is the key among the
+     * card's that the certificate says signs data, or the only one of them that can sign at all —
+     * and if that still leaves more than one, the user is told, rather than handed a signature that
+     * will not verify.
+     */
+    internal fun findCardSigningKey(
+      cert: OpenPGPCertificate,
+      cardFingerprints: List<ByteArray>,
+      slot: ByteArray?,
+    ): PGPPublicKey {
+      val keys = cert.keys.map { it.pgpPublicKey }
+      if (slot != null) {
+        val inSlot =
+          keys.firstOrNull { it.fingerprint.contentEquals(slot) }
+            ?: throw PGPException("The OpenPGP card presented does not hold this key's signing key")
+        return inSlot.also(::requireCardCanSignWith)
+      }
+      fun PGPPublicKey.isOnCard() = cardFingerprints.any { it.contentEquals(fingerprint) }
+      val flagged = cert.signingKeys.map { it.pgpPublicKey }.filter { it.isOnCard() }
+      flagged.singleOrNull()?.let {
+        return it.also(::requireCardCanSignWith)
+      }
+      val signing = keys.filter { it.isOnCard() && it.algorithm in CARD_SIGNING_ALGORITHMS }
+      return when {
+        flagged.size > 1 || signing.size > 1 ->
+          throw PGPException(
+            "Cannot tell which of this OpenPGP card's keys signs: present the card, so it can say"
+          )
+        signing.size == 1 -> signing.single().also(::requireCardCanSignWith)
+        else -> throw PGPException("No signing key matching this OpenPGP card was found")
+      }
+    }
+
+    /** Turns away a key with nothing among its card's keys that a commit could be signed with. */
+    internal fun requireSomeCardSigningKey(
+      cert: OpenPGPCertificate,
+      cardFingerprints: List<ByteArray>,
+    ) {
+      val onCard =
+        cert.keys
+          .map { it.pgpPublicKey }
+          .filter { key -> cardFingerprints.any { it.contentEquals(key.fingerprint) } }
+      if (onCard.isEmpty())
+        throw PGPException("No signing key matching this OpenPGP card was found")
+      if (onCard.none { it.algorithm in CARD_SIGNING_ALGORITHMS }) {
+        requireCardCanSignWith(onCard.first())
+      }
+    }
+
+    /** Turns away a card key whose kind a commit cannot be signed with on a card. */
+    private fun requireCardCanSignWith(publicKey: PGPPublicKey) {
+      if (publicKey.algorithm !in CARD_SIGNING_ALGORITHMS) {
+        throw PGPException(
+          "This OpenPGP card's signing key is of a kind commits cannot be signed with on a card; " +
+            "RSA, EdDSA and ECDSA keys can be"
+        )
+      }
+    }
 
     /** An Ed25519 signature: R and S, 32 bytes each. */
     private const val EDDSA_SIGNATURE_LENGTH = 64

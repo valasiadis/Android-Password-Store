@@ -29,7 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,7 +59,6 @@ import app.passwordstore.crypto.PGPIdentifier.KeyId
 import app.passwordstore.crypto.PGPIdentifier.UserId
 import app.passwordstore.crypto.displayName
 import app.passwordstore.ui.compose.theme.APSTheme
-import app.passwordstore.ui.compose.theme.SpacingLarge
 import app.passwordstore.util.extensions.conditional
 import app.passwordstore.util.git.sshj.SshKey
 import kotlinx.collections.immutable.ImmutableList
@@ -444,7 +442,7 @@ private fun KeyItem(
               if (isSecretKey(keyId)) {
                 DropdownMenuItem(
                   text = {
-                    Text(stringResource(id = R.string.pref_pgp_key_manager_change_passphrase))
+                    MenuText(stringResource(id = R.string.pref_pgp_key_manager_change_passphrase))
                   },
                   onClick = {
                     isMenuExpanded = false
@@ -452,30 +450,24 @@ private fun KeyItem(
                   },
                 )
                 DropdownMenuItem(
-                  text = { Text(stringResource(id = R.string.pref_pgp_key_manager_export)) },
+                  text = { MenuText(stringResource(id = R.string.pref_pgp_key_manager_export)) },
                   onClick = {
                     isMenuExpanded = false
                     onExportItemClick(keyId)
                   },
                 )
-                Spacer(modifier = Modifier)
               }
               DropdownMenuItem(
-                text = { Text(stringResource(id = R.string.pref_pgp_key_manager_export_public)) },
+                text = {
+                  MenuText(stringResource(id = R.string.pref_pgp_key_manager_export_public))
+                },
                 onClick = {
                   isMenuExpanded = false
                   onExportPublicClick(keyId)
                 },
               )
-              HorizontalDivider(modifier = Modifier.padding(top = SpacingLarge))
               DropdownMenuItem(
-                text = {
-                  Text(stringResource(id = R.string.delete))
-                  /* Icon(
-                    painter = painterResource(R.drawable.ic_delete_24dp),
-                    stringResource(id = R.string.delete),
-                  ) */
-                },
+                text = { MenuText(stringResource(id = R.string.delete)) },
                 onClick = {
                   isMenuExpanded = false
                   // Asked first by the screen, as every other deletion in the app is.
@@ -487,6 +479,15 @@ private fun KeyItem(
         }
       } else null,
   )
+}
+
+/**
+ * A menu item's words, in the style the app's other popup menus give theirs: Compose would set them
+ * smaller, as a label, where the menus drawn by the platform set them as body text.
+ */
+@Composable
+private fun MenuText(text: String) {
+  Text(text = text, style = MaterialTheme.typography.bodyLarge)
 }
 
 @Preview

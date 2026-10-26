@@ -10,6 +10,7 @@
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
   android:background="?android:attr/colorBackground"
@@ -109,12 +110,61 @@
 
       </androidx.constraintlayout.widget.ConstraintLayout>
 
+      <!--
+        Where the repository is kept, asked here because it decides where it is cloned or created:
+        inside the app, where nothing else can read it, or in a shared folder other apps can reach.
+        The folder is named once it is the answer, and not before.
+      -->
+      <TextView
+        android:id="@+id/repo_visibility"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/spacing_xlarge"
+        android:text="@string/select_n_repository_visibility"
+        android:textAppearance="?attr/textAppearanceTitleSmall"
+        android:textColor="?attr/colorOnSurfaceVariant" />
+
+      <RadioGroup
+        android:id="@+id/repo_visibility_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/spacing_small"
+        android:orientation="vertical">
+
+        <com.google.android.material.radiobutton.MaterialRadioButton
+          android:id="@+id/internal_repo"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:checked="true"
+          android:text="@string/internal_repo" />
+
+        <com.google.android.material.radiobutton.MaterialRadioButton
+          android:id="@+id/shared_repo"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="@string/shared_repo" />
+
+      </RadioGroup>
+
+      <TextView
+        android:id="@+id/repo_shared_parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:visibility="invisible"
+        tools:text="Pixel › Documents › PasswordStore"
+        tools:visibility="visible" />
+
       <com.google.android.material.button.MaterialButton
         android:id="@+id/clone_remote"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="@dimen/spacing_xxlarge"
+        android:layout_marginTop="@dimen/spacing_xlarge"
         android:maxWidth="300dp"
         android:minWidth="200dp"
         android:text="@string/clone_remote_repo" />

@@ -9,7 +9,6 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,8 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -44,10 +44,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -125,18 +127,28 @@ fun KeyList(
       Text(stringResource(R.string.pgp_key_manager_no_keys_guidance))
     }
   } else {
+    // The rows read as one block, as the password list's and the settings' do: rounded fully where
+    // it starts and ends, slightly where rows meet. What each row is decides nothing about that,
+    // only where it falls, so the place is counted across all three kinds of row.
+    val inheritCount = if (offerInherit) 1 else 0
+    val rowCount = inheritCount + missingKeys.size + identifiers.size
     LazyColumn(
       modifier = modifier,
-      // Clearance for the floating actions, so the last key can scroll out from under them.
+      // The password list's margins, and clearance below for the floating actions, so the last
+      // key can scroll out from under them.
       contentPadding =
         PaddingValues(
-          top = dimensionResource(R.dimen.spacing_xsmall),
+          start = dimensionResource(R.dimen.password_list_margin),
+          end = dimensionResource(R.dimen.password_list_margin),
+          top = dimensionResource(R.dimen.password_list_margin_top),
           bottom = dimensionResource(R.dimen.list_scroll_bottom_padding),
         ),
+      verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.list_item_gap)),
     ) {
       if (offerInherit) {
         item {
           InheritItem(
+            shape = rowShape(0, rowCount),
             isSelected = inheritSelected,
             onSelected = {
               // The two answers exclude each other: a folder either has keys of its own or has
@@ -149,9 +161,10 @@ fun KeyList(
           )
         }
       }
-      items(missingKeys) { keyId ->
+      itemsIndexed(missingKeys) { index, keyId ->
         MissingKeyItem(
           keyId = keyId,
+          shape = rowShape(inheritCount + index, rowCount),
           isSelected = onKeySelected != null && keyId in selectedKeys,
           onSelectedChange =
             if (onKeySelected != null) {
@@ -167,9 +180,10 @@ fun KeyList(
             } else null,
         )
       }
-      items(identifiers) { identifier ->
+      itemsIndexed(identifiers) { index, identifier ->
         KeyItem(
           identifier = identifier,
+          shape = rowShape(inheritCount + missingKeys.size + index, rowCount),
           isSecretKey = isSecretKey,
           isStubKey = isStubKey,
           onKeyInfoClick = onKeyInfoClick,
@@ -203,6 +217,113 @@ fun KeyList(
 }
 
 /**
+ * Where a row falls in the list's block: the first rounded fully at its top, the last at its
+ * bottom, every edge where two rows meet only slightly — the corners the password list and the
+ * settings give theirs.
+ */
+@Composable
+private fun rowShape(index: Int, count: Int): Shape {
+  val outer = dimensionResource(R.dimen.list_outer_corner_radius)
+  val inner = dimensionResource(R.dimen.list_inner_corner_radius)
+  val top = if (index == 0) outer else inner
+  val bottom = if (index == count - 1) outer else inner
+  return RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom)
+}
+
+/**
+ * A row of this list, measured as a row of the password list is, from the same dimensions, so the
+ * two cannot drift apart: as tall, filled with the same colour, its icon standing in a circle of
+ * the theme's primary colour, and its name in the colour and size of an entry's.
+ *
+ * The icon doubles as the selection indicator, as it does there: while the row is selected it shows
+ * a check instead. A row that cannot serve here is [dimmed] — its content rather than its
+ * container, so it still reads as part of the block. [trailing] is a button at the row's end rather
+ * than its content, which is why it is not named so.
+ */
+@SuppressLint("ComposableLambdaParameterNaming")
+@Composable
+private fun ListRow(
+  icon: Painter,
+  title: String,
+  shape: Shape,
+  modifier: Modifier = Modifier,
+  /** How the row is touched: applied inside its shape, so the ripple is drawn in it. */
+  interaction: Modifier = Modifier,
+  iconDescription: String? = null,
+  summary: String? = null,
+  isSelected: Boolean = false,
+  dimmed: Boolean = false,
+  trailing: @Composable (() -> Unit)? = null,
+) {
+  val circle = dimensionResource(R.dimen.list_icon_circle)
+  val circlePadding = dimensionResource(R.dimen.list_icon_circle_padding)
+  val contentAlpha = if (dimmed) DISABLED_ALPHA else 1f
+  Row(
+    modifier =
+      modifier
+        .fillMaxWidth()
+        .heightIn(min = dimensionResource(R.dimen.password_row_height))
+        .clip(shape)
+        .background(
+          if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+          else colorResource(R.color.list_row_fill)
+        )
+        // Inside the clip, so the touch is drawn in the row's own shape.
+        .then(interaction)
+        .padding(
+          start = dimensionResource(R.dimen.spacing_large),
+          // A button at the end brings its own room around its glyph.
+          end =
+            if (trailing != null) dimensionResource(R.dimen.spacing_xsmall)
+            else dimensionResource(R.dimen.spacing_large),
+        ),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Box(
+      modifier =
+        Modifier.alpha(contentAlpha)
+          .size(circle)
+          .clip(CircleShape)
+          .background(MaterialTheme.colorScheme.primary),
+      contentAlignment = Alignment.Center,
+    ) {
+      Icon(
+        painter = if (isSelected) painterResource(R.drawable.ic_done_24dp) else icon,
+        contentDescription =
+          if (isSelected) stringResource(R.string.pgp_key_selected_indicator) else iconDescription,
+        tint = MaterialTheme.colorScheme.onPrimary,
+        modifier = Modifier.size(circle - circlePadding * 2),
+      )
+    }
+    Spacer(modifier = Modifier.width(dimensionResource(R.dimen.list_icon_text_gap)))
+    Column(
+      modifier =
+        Modifier.weight(1f)
+          .alpha(contentAlpha)
+          .padding(vertical = dimensionResource(R.dimen.spacing_medium))
+    ) {
+      Text(
+        text = title,
+        color = MaterialTheme.colorScheme.primary,
+        fontSize = 18.sp,
+        overflow = TextOverflow.Ellipsis,
+        maxLines = 1,
+      )
+      if (summary != null) {
+        Text(
+          text = summary,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          fontSize = 13.sp,
+          overflow = TextOverflow.Ellipsis,
+          maxLines = 1,
+        )
+      }
+    }
+    trailing?.invoke()
+  }
+}
+
+/**
  * A key the folder is set to that is not held on this device: chosen like any other, and said to be
  * absent.
  *
@@ -214,116 +335,42 @@ fun KeyList(
 @Composable
 private fun MissingKeyItem(
   keyId: KeyId,
+  shape: Shape,
   isSelected: Boolean,
   onSelectedChange: ((Boolean) -> Unit)?,
 ) {
-  val rowShape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium))
-  Row(
-    modifier =
-      Modifier.fillMaxWidth()
-        .padding(
-          horizontal = dimensionResource(R.dimen.spacing_small),
-          vertical = dimensionResource(R.dimen.spacing_xsmall),
-        )
-        .clip(rowShape)
-        .background(
-          if (isSelected) MaterialTheme.colorScheme.secondaryContainer
-          else MaterialTheme.colorScheme.surfaceVariant
-        )
-        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, rowShape)
-        .conditional(onSelectedChange != null) {
-          toggleable(value = isSelected, onValueChange = { onSelectedChange?.invoke(it) })
-        }
-        .heightIn(min = 48.dp)
-        .padding(horizontal = dimensionResource(R.dimen.activity_horizontal_margin)),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Icon(
-      painter =
-        painterResource(id = if (isSelected) R.drawable.ic_done_24dp else R.drawable.ic_key_24dp),
-      contentDescription =
-        if (isSelected) stringResource(R.string.pgp_key_selected_indicator) else null,
-      tint =
-        if (isSelected) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_ALPHA),
-      modifier = Modifier.size(24.dp),
-    )
-    Spacer(modifier = Modifier.width(SpacingLarge))
-    Text(
-      text = keyId.displayName,
-      color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_ALPHA),
-      fontSize = 18.sp,
-      overflow = TextOverflow.Ellipsis,
-      maxLines = 1,
-    )
-    Spacer(modifier = Modifier.width(SpacingLarge))
-    // Beside the name rather than beneath it: one line, as every other row here is, with the note
-    // taking whatever room the name leaves.
-    Text(
-      text = stringResource(R.string.pgp_key_missing_label),
-      modifier = Modifier.weight(1f),
-      style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_ALPHA),
-      textAlign = TextAlign.End,
-      overflow = TextOverflow.Ellipsis,
-      maxLines = 1,
-    )
-  }
+  ListRow(
+    icon = painterResource(R.drawable.ic_key_24dp),
+    title = keyId.displayName,
+    summary = stringResource(R.string.pgp_key_missing_label),
+    shape = shape,
+    isSelected = isSelected,
+    // Dimmed only while it is not chosen: once it is, it is as much the answer as any other key.
+    dimmed = !isSelected,
+    interaction =
+      Modifier.conditional(onSelectedChange != null) {
+        toggleable(value = isSelected, onValueChange = { onSelectedChange?.invoke(it) })
+      },
+  )
 }
 
 /** The choice of having no key of one's own, drawn like the keys it sits above. */
 @Composable
-private fun InheritItem(isSelected: Boolean, onSelected: () -> Unit) {
-  val rowShape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium))
-  Row(
-    modifier =
-      Modifier.fillMaxWidth()
-        .padding(
-          horizontal = dimensionResource(R.dimen.spacing_small),
-          vertical = dimensionResource(R.dimen.spacing_xsmall),
-        )
-        .clip(rowShape)
-        .background(
-          if (isSelected) MaterialTheme.colorScheme.secondaryContainer
-          else MaterialTheme.colorScheme.surfaceVariant
-        )
-        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, rowShape)
-        .clickable { onSelected() }
-        .heightIn(min = 48.dp)
-        .padding(horizontal = dimensionResource(R.dimen.activity_horizontal_margin)),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    if (isSelected) {
-      Icon(
-        painter = painterResource(id = R.drawable.ic_done_24dp),
-        contentDescription = stringResource(R.string.pgp_key_selected_indicator),
-        tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(24.dp),
-      )
-    } else {
-      Icon(
-        painter = painterResource(id = R.drawable.ic_call_merge_24px),
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(24.dp),
-      )
-    }
-    Spacer(modifier = Modifier.width(SpacingLarge))
-    Text(
-      text = stringResource(R.string.folder_encryption_key_inherited),
-      modifier = Modifier.weight(1f),
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      fontSize = 18.sp,
-      overflow = TextOverflow.Ellipsis,
-      maxLines = 1,
-    )
-  }
+private fun InheritItem(shape: Shape, isSelected: Boolean, onSelected: () -> Unit) {
+  ListRow(
+    icon = painterResource(R.drawable.ic_call_merge_24px),
+    title = stringResource(R.string.folder_encryption_key_inherited),
+    shape = shape,
+    isSelected = isSelected,
+    interaction = Modifier.clickable { onSelected() },
+  )
 }
 
 @SuppressLint("ComposeParameterOrder")
 @Composable
 private fun KeyItem(
   identifier: Pair<KeyId?, UserId?>,
+  shape: Shape,
   isSecretKey: (identifier: PGPIdentifier) -> Boolean,
   isStubKey: (identifier: PGPIdentifier) -> Boolean,
   onKeyInfoClick: (identifier: PGPIdentifier) -> Unit,
@@ -337,145 +384,108 @@ private fun KeyItem(
   onSelectedChange: ((Boolean) -> Unit)? = null,
   isKeyEnabled: (identifier: PGPIdentifier) -> Boolean = { true },
 ) {
-  var keyId = identifier.first ?: throw NullPointerException()
+  val keyId = identifier.first ?: throw NullPointerException()
   // Keys that cannot serve the current purpose (e.g. a public-only key when selecting an SSH
   // authentication key) are shown greyed out and are not selectable.
   val enabled = isKeyEnabled(keyId)
-  val rowShape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium))
-  val outlineColor = MaterialTheme.colorScheme.outlineVariant
-  Row(
-    // Laid out like a password row, from the same dimensions, so the two lists cannot drift
-    // apart: a filled, rounded container separated from its neighbours by margins on the row
-    // itself, tinted while selected.
-    modifier =
-      modifier
-        .fillMaxWidth()
-        .padding(
-          horizontal = dimensionResource(R.dimen.spacing_small),
-          vertical = dimensionResource(R.dimen.spacing_xsmall),
-        )
-        .conditional(!enabled) { alpha(DISABLED_ALPHA) }
-        .clip(rowShape)
-        .background(
-          if (isSelected) MaterialTheme.colorScheme.secondaryContainer
-          else MaterialTheme.colorScheme.surfaceVariant
-        )
-        .border(1.dp, outlineColor, rowShape)
-        .conditional(enabled && onSelectedChange != null) {
+  // What kind of key it is, in the icon and in words beneath its name, as the key's own info
+  // dialog names it.
+  val (icon, iconDescription) =
+    when {
+      isStubKey(keyId) ->
+        R.drawable.ic_hardware_key_24dp to stringResource(R.string.pgp_key_hardware_indicator)
+      isSecretKey(keyId) ->
+        R.drawable.ic_software_key_24dp to stringResource(R.string.pgp_key_software_indicator)
+      else -> R.drawable.ic_key_24dp to null
+    }
+  val kind =
+    when {
+      isStubKey(keyId) -> stringResource(R.string.pgp_key_info_type_hardware)
+      isSecretKey(keyId) -> stringResource(R.string.pgp_key_info_type_secret)
+      else -> stringResource(R.string.pgp_key_info_type_public)
+    }
+  ListRow(
+    icon = painterResource(icon),
+    iconDescription = iconDescription,
+    title = identifier.second.toString(),
+    summary = kind,
+    shape = shape,
+    modifier = modifier,
+    isSelected = isSelected,
+    dimmed = !enabled,
+    interaction =
+      Modifier.conditional(enabled && onSelectedChange != null) {
           toggleable(value = isSelected, onValueChange = { onSelectedChange?.invoke(it) })
         }
         // Outside selection mode, tapping a key opens its info dialog.
-        .conditional(onSelectedChange == null) { clickable { onKeyInfoClick(keyId) } }
-        // Tighter than a password row: a key is a single line of text with no counts or
-        // affordances stacked beside it, so it does not need that row's height. The height comes
-        // from this minimum alone, with no vertical padding, so that the key manager's overflow
-        // button — a full 48dp touch target — does not make its rows taller than the selection
-        // screen's.
-        .heightIn(min = 48.dp)
-        .padding(horizontal = dimensionResource(R.dimen.activity_horizontal_margin)),
-    horizontalArrangement = Arrangement.SpaceBetween,
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    // As in the password list, the leading icon doubles as the selection indicator: while the
-    // row is selected it shows a check instead of the key's type.
-    if (isSelected) {
-      Icon(
-        painter = painterResource(id = R.drawable.ic_done_24dp),
-        contentDescription = stringResource(R.string.pgp_key_selected_indicator),
-        tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(24.dp),
-      )
-      Spacer(modifier = Modifier.width(SpacingLarge))
-    } else if (isStubKey(keyId)) {
-      Icon(
-        painter = painterResource(id = R.drawable.ic_hardware_key_24dp),
-        contentDescription = stringResource(R.string.pgp_key_hardware_indicator),
-        tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(24.dp),
-      )
-      Spacer(modifier = Modifier.width(SpacingLarge))
-    } else if (isSecretKey(keyId)) {
-      Icon(
-        painter = painterResource(id = R.drawable.ic_software_key_24dp),
-        contentDescription = stringResource(R.string.pgp_key_software_indicator),
-        tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(24.dp),
-      )
-      Spacer(modifier = Modifier.width(SpacingLarge))
-    } else if (onSelectedChange != null) {
-      // Keeps the label aligned with the rows that do carry an icon, so a selection check
-      // appearing here does not shift the text.
-      Spacer(modifier = Modifier.width(24.dp + SpacingLarge))
-    }
-    Text(
-      text = identifier.second.toString(),
-      modifier = Modifier.weight(1f),
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      fontSize = 18.sp,
-      overflow = TextOverflow.Ellipsis,
-      maxLines = 1,
-    )
-    if (onSelectedChange == null) {
-      Box() {
-        var isMenuExpanded by remember { mutableStateOf(false) }
+        .conditional(onSelectedChange == null) { clickable { onKeyInfoClick(keyId) } },
+    trailing =
+      if (onSelectedChange == null) {
+        {
+          Box {
+            var isMenuExpanded by remember { mutableStateOf(false) }
 
-        IconButton(onClick = { isMenuExpanded = true }) {
-          Icon(
-            painter = painterResource(id = R.drawable.ic_more_vert_24dp),
-            contentDescription = "PGP key actions",
-          )
-        }
+            IconButton(onClick = { isMenuExpanded = true }) {
+              Icon(
+                painter = painterResource(id = R.drawable.ic_more_vert_24dp),
+                contentDescription = "PGP key actions",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            }
 
-        DropdownMenu(
-          expanded = isMenuExpanded,
-          onDismissRequest = { isMenuExpanded = false },
-          shape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium)),
-          containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        ) {
-          if (isSecretKey(keyId)) {
-            DropdownMenuItem(
-              text = { Text(stringResource(id = R.string.pref_pgp_key_manager_change_passphrase)) },
-              onClick = {
-                isMenuExpanded = false
-                onChangePassphraseClick(keyId)
-              },
-            )
-            DropdownMenuItem(
-              text = { Text(stringResource(id = R.string.pref_pgp_key_manager_export)) },
-              onClick = {
-                isMenuExpanded = false
-                onExportItemClick(keyId)
-              },
-            )
-            Spacer(modifier = Modifier)
+            DropdownMenu(
+              expanded = isMenuExpanded,
+              onDismissRequest = { isMenuExpanded = false },
+              shape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium)),
+              containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+              border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+              if (isSecretKey(keyId)) {
+                DropdownMenuItem(
+                  text = {
+                    Text(stringResource(id = R.string.pref_pgp_key_manager_change_passphrase))
+                  },
+                  onClick = {
+                    isMenuExpanded = false
+                    onChangePassphraseClick(keyId)
+                  },
+                )
+                DropdownMenuItem(
+                  text = { Text(stringResource(id = R.string.pref_pgp_key_manager_export)) },
+                  onClick = {
+                    isMenuExpanded = false
+                    onExportItemClick(keyId)
+                  },
+                )
+                Spacer(modifier = Modifier)
+              }
+              DropdownMenuItem(
+                text = { Text(stringResource(id = R.string.pref_pgp_key_manager_export_public)) },
+                onClick = {
+                  isMenuExpanded = false
+                  onExportPublicClick(keyId)
+                },
+              )
+              HorizontalDivider(modifier = Modifier.padding(top = SpacingLarge))
+              DropdownMenuItem(
+                text = {
+                  Text(stringResource(id = R.string.delete))
+                  /* Icon(
+                    painter = painterResource(R.drawable.ic_delete_24dp),
+                    stringResource(id = R.string.delete),
+                  ) */
+                },
+                onClick = {
+                  isMenuExpanded = false
+                  // Asked first by the screen, as every other deletion in the app is.
+                  onDeleteItemClick(keyId)
+                },
+              )
+            }
           }
-          DropdownMenuItem(
-            text = { Text(stringResource(id = R.string.pref_pgp_key_manager_export_public)) },
-            onClick = {
-              isMenuExpanded = false
-              onExportPublicClick(keyId)
-            },
-          )
-          HorizontalDivider(modifier = Modifier.padding(top = SpacingLarge))
-          DropdownMenuItem(
-            text = {
-              Text(stringResource(id = R.string.delete))
-              /* Icon(
-                painter = painterResource(R.drawable.ic_delete_24dp),
-                stringResource(id = R.string.delete),
-              ) */
-            },
-            onClick = {
-              isMenuExpanded = false
-              // Asked first by the screen, as every other deletion in the app is.
-              onDeleteItemClick(keyId)
-            },
-          )
         }
-      }
-    }
-  }
+      } else null,
+  )
 }
 
 @Preview

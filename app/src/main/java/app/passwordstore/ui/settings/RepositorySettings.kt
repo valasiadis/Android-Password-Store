@@ -225,7 +225,7 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
   override fun provideSettings(builder: PreferenceScreen.Builder) {
     builder.apply {
       pref(PreferenceKeys.GIT_SERVER_INFO) {
-        titleRes = R.string.title_activity_git_remote
+        titleRes = R.string.pref_edit_git_server_settings
         onClick {
           configureGitServer.launch(Intent(activity, GitServerConfigActivity::class.java))
           true

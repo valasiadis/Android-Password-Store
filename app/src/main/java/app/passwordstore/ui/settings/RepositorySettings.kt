@@ -319,10 +319,7 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
             message = activity.getString(R.string.dialog_delete_msg, repoDir),
             proceedLabel = activity.getString(R.string.dialog_delete),
           ) {
-            runCatching {
-              PasswordRepository.deleteRepository()
-              PasswordRepository.getRepositoryDirectory().mkdirs()
-            }
+            runCatching { PasswordRepository.deleteRepository() }
               .onErr { it.message?.let { message -> ErrorDialog.show(activity, message) } }
 
             activity.getSystemService<ShortcutManager>()?.apply {

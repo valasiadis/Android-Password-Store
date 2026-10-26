@@ -437,7 +437,8 @@ private fun KeyItem(
               expanded = isMenuExpanded,
               onDismissRequest = { isMenuExpanded = false },
               shape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium)),
-              containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+              // The surface and edge of the app's other popup menus (popup_menu_background).
+              containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
               border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
               if (isSecretKey(keyId)) {

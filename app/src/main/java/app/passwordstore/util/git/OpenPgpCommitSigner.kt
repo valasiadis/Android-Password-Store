@@ -5,8 +5,6 @@
 
 package app.passwordstore.util.git
 
-import android.widget.Button
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.R
 import app.passwordstore.crypto.KeyUtils
@@ -27,8 +25,6 @@ import app.passwordstore.util.extensions.hideKeyboard
 import app.passwordstore.util.extensions.wipe
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.R as materialR
-import com.google.android.material.color.MaterialColors
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
@@ -315,10 +311,9 @@ class OpenPgpCommitSigner(
             // tapping beside a dialog means anywhere else in the app.
             .setCancelable(false)
             .show()
+        // "Commit without signing" stands quieter than "Sign", as every dialog's second answer
+        // does, so it does not invite a tap meant for signing.
         dialog.setCanceledOnTouchOutside(false)
-        // Keep "Commit without signing" available but visually understated so it does not
-        // invite accidental taps over the primary "Sign" action.
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.let(::deemphasizeButton)
       } catch (t: Throwable) {
         error.set(t)
         latch.countDown()
@@ -327,10 +322,6 @@ class OpenPgpCommitSigner(
     latch.await()
     error.get()?.let { logcat { it.asLog() } }
     return choice.get()
-  }
-
-  private fun deemphasizeButton(button: Button) {
-    button.setTextColor(MaterialColors.getColor(button, materialR.attr.colorOnSurfaceVariant))
   }
 
   /**

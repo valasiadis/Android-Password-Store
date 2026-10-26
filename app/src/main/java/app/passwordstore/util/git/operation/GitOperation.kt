@@ -152,8 +152,9 @@ abstract class GitOperation(protected val callingActivity: FragmentActivity) {
   }
 
   private fun onMissingSshKeyFile() {
+    // Three ways to get a key, each as good as the others, and no way out among them.
     var dialog =
-      AppDialogBuilder(callingActivity)
+      AppDialogBuilder(callingActivity, R.style.APSThemeM3_MaterialAlertDialog_Choices)
         .setTitle(R.string.ssh_preferences_dialog_title)
         .setMessage(R.string.ssh_preferences_dialog_text)
         .setNeutralButton(R.string.button_label_import) { _, _ -> getSshKey(false) }

@@ -76,6 +76,25 @@
 
   <style name="APSThemeM3.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
     <item name="alertDialogStyle">@style/APSThemeM3.MaterialAlertDialogStyle</item>
+    <item name="buttonBarNegativeButtonStyle">@style/APSThemeM3.DialogButton.Quiet</item>
+  </style>
+
+  <!--
+    A dialog's cancel, its "keep", its "later": the way back out, which is not the action being
+    offered, so it does not stand in the same colour as that action. Set here once, rather than
+    by each dialog that remembered to, so a question asked in one place looks like one asked in
+    any other.
+  -->
+  <style name="APSThemeM3.DialogButton.Quiet" parent="Widget.Material3.Button.TextButton.Dialog">
+    <item name="android:textColor">@color/dialog_quiet_button_text</item>
+  </style>
+
+  <!--
+    For the rare dialog whose buttons are all answers and none of them a way out — which SSH key
+    to use, say — so none of them is made quieter than the rest.
+  -->
+  <style name="APSThemeM3.MaterialAlertDialog.Choices">
+    <item name="buttonBarNegativeButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog</item>
   </style>
 
   <style name="APSThemeM3.MaterialAlertDialogStyle" parent="MaterialAlertDialog.Material3">

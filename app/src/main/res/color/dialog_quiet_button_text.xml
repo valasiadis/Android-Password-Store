@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!-- The way out of a dialog, which does not compete with the action it offers. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+  <item
+    android:alpha="0.38"
+    android:color="?attr/colorOnSurface"
+    android:state_enabled="false" />
+  <item android:color="?attr/colorOnSurfaceVariant" />
+</selector>

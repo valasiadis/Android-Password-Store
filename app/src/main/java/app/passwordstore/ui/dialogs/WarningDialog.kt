@@ -9,7 +9,6 @@ import android.graphics.Color
 import androidx.appcompat.R as AppCompatR
 import androidx.appcompat.app.AlertDialog
 import app.passwordstore.R
-import com.google.android.material.R as MaterialR
 import com.google.android.material.color.MaterialColors
 
 /**
@@ -44,15 +43,10 @@ object WarningDialog {
     dialog.setOnShowListener {
       val view = dialog.listView ?: dialog.window?.decorView ?: return@setOnShowListener
       // Material 3 has no "warning" role; error is what it gives destructive actions, and that is
-      // what these are. Going back is not the action being offered, so it stays quiet.
+      // what these are. Going back is quiet already, as it is in every dialog.
       dialog
         .getButton(AlertDialog.BUTTON_POSITIVE)
         .setTextColor(MaterialColors.getColor(view, AppCompatR.attr.colorError, Color.TRANSPARENT))
-      dialog
-        .getButton(AlertDialog.BUTTON_NEGATIVE)
-        .setTextColor(
-          MaterialColors.getColor(view, MaterialR.attr.colorOnSurfaceVariant, Color.TRANSPARENT)
-        )
     }
     dialog.show()
   }

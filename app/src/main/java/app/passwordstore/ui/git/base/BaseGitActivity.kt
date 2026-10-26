@@ -15,6 +15,7 @@ import androidx.core.content.edit
 import app.passwordstore.R
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.injection.prefs.GitSecrets
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.git.config.GitConfigActivity
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.launchActivity
@@ -36,7 +37,6 @@ import com.github.michaelbull.result.mapError
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import java.net.InetSocketAddress
 import java.net.SocketTimeoutException
@@ -99,7 +99,7 @@ abstract class BaseGitActivity : AppCompatActivity() {
 
   /** Asks who is making these commits, and takes the user where that is answered. */
   private fun askForCommitAuthor() {
-    MaterialAlertDialogBuilder(this)
+    AppDialogBuilder(this)
       .setTitle(R.string.git_author_missing_title)
       .setMessage(R.string.git_author_missing_message)
       .setPositiveButton(R.string.git_author_missing_confirm) { _, _ ->
@@ -159,7 +159,7 @@ abstract class BaseGitActivity : AppCompatActivity() {
           .onErr { e ->
             if (e is SocketTimeoutException) {
               withContext(dispatcherProvider.main()) {
-                MaterialAlertDialogBuilder(this@BaseGitActivity)
+                AppDialogBuilder(this@BaseGitActivity)
                   .setCancelable(false)
                   .setTitle(R.string.git_local_network_unreachable_dialog_title)
                   .setMessage(
@@ -230,7 +230,7 @@ abstract class BaseGitActivity : AppCompatActivity() {
             error.getDisconnectReason() == DisconnectReason.HOST_KEY_NOT_VERIFIABLE)
       )
         withContext(dispatcherProvider.main()) {
-          MaterialAlertDialogBuilder(this@BaseGitActivity).run {
+          AppDialogBuilder(this@BaseGitActivity).run {
             setTitle(resources.getString(R.string.jgit_error_dialog_title))
             setMessage(ErrorMessages[error])
             setPositiveButton(resources.getString(R.string.dialog_ok)) { _, _ -> }

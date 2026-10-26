@@ -16,8 +16,8 @@ import androidx.fragment.app.FragmentActivity
 import app.passwordstore.R
 import app.passwordstore.databinding.DialogPasswordEntryBinding
 import app.passwordstore.ui.crypto.BasePGPActivity
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.CardPrompt
-import app.passwordstore.ui.dialogs.outlined
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.hideKeyboard
 import app.passwordstore.util.extensions.sharedPrefs
@@ -26,7 +26,6 @@ import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -695,8 +694,7 @@ class OpenPgpCardPrompt(
           binding.cacheEnabled.isChecked = cacheDefault
         }
         val dialog =
-          MaterialAlertDialogBuilder(activity)
-            .outlined(activity)
+          AppDialogBuilder(activity)
             .setTitle(titleRes)
             .setView(binding.root)
             .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -784,8 +782,7 @@ class OpenPgpCardPrompt(
   /** Shows a simple informational dialog (used for terminal card errors, e.g. a blocked PIN). */
   suspend fun showError(@StringRes titleRes: Int, message: String) {
     withContext(dispatcherProvider.main()) {
-      MaterialAlertDialogBuilder(activity)
-        .outlined(activity)
+      AppDialogBuilder(activity)
         .setTitle(titleRes)
         .setMessage(message)
         .setPositiveButton(android.R.string.ok, null)

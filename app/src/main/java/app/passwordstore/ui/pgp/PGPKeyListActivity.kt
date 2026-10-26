@@ -49,6 +49,7 @@ import app.passwordstore.ui.APSAppBar
 import app.passwordstore.ui.compose.theme.APSTheme
 import app.passwordstore.ui.compose.theme.SpacingLarge
 import app.passwordstore.ui.dialogs.AddPgpKeyBottomSheet
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.PasswordDialog
@@ -61,7 +62,6 @@ import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -390,7 +390,7 @@ class PGPKeyListActivity : AppCompatActivity() {
       fingerprint?.let { appendLine(getString(R.string.pgp_key_info_fingerprint, it)) }
       append(getString(R.string.pgp_key_info_type, type))
     }
-    MaterialAlertDialogBuilder(this)
+    AppDialogBuilder(this)
       .setTitle(R.string.pgp_key_info_title)
       .setMessage(message)
       .setPositiveButton(R.string.dialog_ok, null)
@@ -470,7 +470,7 @@ class PGPKeyListActivity : AppCompatActivity() {
     val checkBox = dialogView.findViewById<CheckBox>(R.id.checkbox)
 
     val dialog =
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setTitle(R.string.pgp_key_backupcode_title)
         .setView(dialogView)
         .setMessage(code)

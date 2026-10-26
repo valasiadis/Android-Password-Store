@@ -26,6 +26,7 @@ import app.passwordstore.databinding.DecryptLayoutBinding
 import app.passwordstore.injection.prefs.CredentialUsernames
 import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.adapters.FieldItemAdapter
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.WarningDialog
@@ -54,7 +55,6 @@ import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -384,7 +384,7 @@ class DecryptActivity : BasePGPActivity() {
   }
 
   private fun showSmartcardError(message: String) {
-    MaterialAlertDialogBuilder(this)
+    AppDialogBuilder(this)
       .setTitle(R.string.openpgp_card_decrypt_failed_title)
       .setMessage(message)
       .setPositiveButton(android.R.string.ok) { _, _ ->

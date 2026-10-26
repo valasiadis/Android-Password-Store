@@ -38,6 +38,7 @@ import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.injection.prefs.SettingsPreferences
 import app.passwordstore.ui.adapters.PasswordItemRecyclerAdapter
 import app.passwordstore.ui.adapters.PasswordRowDecoration
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.BasicBottomSheet
 import app.passwordstore.ui.dialogs.ItemCreationBottomSheet
 import app.passwordstore.ui.git.base.BaseGitActivity
@@ -63,7 +64,6 @@ import app.passwordstore.util.viewmodel.SearchableRepositoryViewModel
 import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import javax.inject.Inject
@@ -115,7 +115,7 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     binding.searchClear.setOnClickListener { clearSearch() }
     binding.fabSync.setOnClickListener {
       if (!PasswordRepository.isInitialized) {
-        MaterialAlertDialogBuilder(requireContext())
+        AppDialogBuilder(requireContext())
           .setCancelable(false)
           .setTitle(R.string.error)
           .setIcon(R.drawable.ic_crossmark_red_24dp)
@@ -526,7 +526,7 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
     val title =
       if (gpgIds.size > 1) resources.getString(R.string.pgp_id_label_plural)
       else resources.getString(R.string.pgp_id_label)
-    MaterialAlertDialogBuilder(requireContext())
+    AppDialogBuilder(requireContext())
       .setTitle(title.substringBefore(':'))
       .setMessage(gpgIds.joinToString("\n"))
       .setPositiveButton(R.string.dialog_ok) { dialog, _ -> dialog.dismiss() }

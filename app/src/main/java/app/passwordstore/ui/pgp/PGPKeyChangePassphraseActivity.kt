@@ -26,6 +26,7 @@ import app.passwordstore.crypto.displayName
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.databinding.PgpKeyChangePassphraseActivityBinding
 import app.passwordstore.ui.compose.R as composeR
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
@@ -33,7 +34,6 @@ import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.extensions.wipe
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.map
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import logcat.LogPriority.ERROR
@@ -220,7 +220,7 @@ class PGPKeyChangePassphraseActivity : AppCompatActivity() {
       keyManager.changeKeyPassphrase(identifier, subkeyIdentifier, oldPassphrase, passphrase)
 
     if (key != null) {
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setTitle(getString(R.string.pgp_key_change_passphrase_succeeded))
         .setMessage(
           if (subkeyIdentifier == null)
@@ -246,7 +246,7 @@ class PGPKeyChangePassphraseActivity : AppCompatActivity() {
         .show()
     } else {
       logcat(ERROR) { error?.asLog() ?: "unknown error" }
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setTitle(getString(R.string.pgp_key_change_passphrase_error))
         .setIcon(R.drawable.ic_crossmark_red_24dp)
         .setMessage(error?.toString() ?: "unknown error")

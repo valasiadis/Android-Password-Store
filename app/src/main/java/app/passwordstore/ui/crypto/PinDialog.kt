@@ -15,8 +15,8 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.setFragmentResult
 import app.passwordstore.R
 import app.passwordstore.databinding.DialogPinEntryBinding
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.util.extensions.unsafeLazy
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /** [DialogFragment] to request a PIN from the user and forward it along. */
 class PinDialog : DialogFragment() {
@@ -30,7 +30,7 @@ class PinDialog : DialogFragment() {
   }
 
   override fun onCreateDialog(savedInstanceState: Bundle?): AlertDialog {
-    val builder = MaterialAlertDialogBuilder(requireContext())
+    val builder = AppDialogBuilder(requireContext())
     builder.setView(binding.root)
 
     var titleText = requireArguments().getString(TITLE_TEXT_EXTRA)

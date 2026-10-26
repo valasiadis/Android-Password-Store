@@ -7,7 +7,6 @@ package app.passwordstore.ui.dialogs
 import android.app.Activity
 import androidx.annotation.StringRes
 import app.passwordstore.R
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * Says that something did not work, and waits to be acknowledged.
@@ -33,8 +32,7 @@ object ErrorDialog {
       onDismiss()
       return
     }
-    MaterialAlertDialogBuilder(activity)
-      .outlined(activity)
+    AppDialogBuilder(activity)
       .setIcon(R.drawable.ic_crossmark_red_24dp)
       .setTitle(titleRes)
       .setMessage(message)

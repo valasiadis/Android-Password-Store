@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.sshkeygen.PgpAuthKeySelectionActivity
 import app.passwordstore.ui.sshkeygen.SshKeyGenActivity
 import app.passwordstore.ui.sshkeygen.SshKeyImportActivity
@@ -30,7 +31,6 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -153,7 +153,7 @@ abstract class GitOperation(protected val callingActivity: FragmentActivity) {
 
   private fun onMissingSshKeyFile() {
     var dialog =
-      MaterialAlertDialogBuilder(callingActivity)
+      AppDialogBuilder(callingActivity)
         .setTitle(R.string.ssh_preferences_dialog_title)
         .setMessage(R.string.ssh_preferences_dialog_text)
         .setNeutralButton(R.string.button_label_import) { _, _ -> getSshKey(false) }

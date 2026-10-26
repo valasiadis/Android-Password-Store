@@ -34,6 +34,7 @@ import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.injection.prefs.PGPPassphrases
 import app.passwordstore.injection.prefs.SettingsPreferences
 import app.passwordstore.injection.prefs.UnlockPins
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.PasswordDialog
@@ -59,7 +60,6 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
 import com.google.android.material.R as MaterialR
 import com.google.android.material.color.MaterialColors
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import java.nio.CharBuffer
@@ -283,7 +283,7 @@ open class BasePGPActivity : AppCompatActivity() {
     @StringRes positiveLabel: Int = R.string.no_keys_imported_dialog_open_key_manager,
     onPositiveButtonClick: () -> Unit,
   ) =
-    MaterialAlertDialogBuilder(this@BasePGPActivity)
+    AppDialogBuilder(this@BasePGPActivity)
       .setIcon(R.drawable.ic_warning_red_24dp)
       .setTitle(title)
       .setMessage(message)
@@ -365,7 +365,7 @@ open class BasePGPActivity : AppCompatActivity() {
         // to, so the save goes ahead — but it reaches fewer readers than the folder asks for, and
         // that is a fact about who can open a password rather than a decision to be made. So it is
         // said once, on the way through, and acknowledged rather than answered.
-        MaterialAlertDialogBuilder(this@BasePGPActivity)
+        AppDialogBuilder(this@BasePGPActivity)
           .setIcon(R.drawable.ic_warning_red_24dp)
           .setTitle(R.string.folder_key_partial_dialog_title)
           .setMessage(
@@ -832,7 +832,7 @@ open class BasePGPActivity : AppCompatActivity() {
       BiometricAuthenticator.canAuthenticate(this@BasePGPActivity) &&
         AESEncryption.getCipher(KeyType.PERSISTENT_WITH_AUTHENTICATION) == null
     ) {
-      MaterialAlertDialogBuilder(this@BasePGPActivity)
+      AppDialogBuilder(this@BasePGPActivity)
         .setTitle(R.string.aes_key_invalidated_dialog_title)
         .setMessage(R.string.aes_key_invalidated_dialog_message)
         .setIcon(R.drawable.ic_warning_red_24dp)

@@ -10,6 +10,7 @@ import androidx.fragment.app.FragmentActivity
 import app.passwordstore.R
 import app.passwordstore.databinding.DialogSelectableMessageBinding
 import app.passwordstore.crypto.PGPIdentifier.KeyId
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.getString
@@ -18,7 +19,6 @@ import app.passwordstore.util.git.operation.CredentialFinder
 import app.passwordstore.util.settings.AuthMode
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -117,7 +117,7 @@ private fun makeTofuHostKeyVerifier(
                   R.string.git_server_hostkey_dialog_message,
                   hostKeyEntryNoPadding,
                 )
-              MaterialAlertDialogBuilder(callingActivity)
+              AppDialogBuilder(callingActivity)
                 .setCancelable(false)
                 .setTitle(title)
                 .setMessage(message)
@@ -204,7 +204,7 @@ private class SshjSession(
           binding.message.setText(ssh.getUserAuth().getBanner())
           binding.doNotShowAgain.isChecked = !gitSettings.showSshServerResponse
 
-          MaterialAlertDialogBuilder(callingActivity)
+          AppDialogBuilder(callingActivity)
             .setView(binding.root)
             .setCancelable(false)
             .setTitle(R.string.git_server_response_dialog_title)

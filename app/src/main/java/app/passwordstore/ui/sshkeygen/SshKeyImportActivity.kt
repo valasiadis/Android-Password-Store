@@ -11,11 +11,11 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.appcompat.app.AppCompatActivity
 import app.passwordstore.R
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.util.git.sshj.SshKey
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import logcat.LogPriority.ERROR
 import logcat.asLog
 import logcat.logcat
@@ -40,7 +40,7 @@ class SshKeyImportActivity : AppCompatActivity() {
         finish()
       }
         .onErr { e ->
-          MaterialAlertDialogBuilder(this)
+          AppDialogBuilder(this)
             .setCancelable(false)
             .setTitle(R.string.ssh_key_error_dialog_title)
             .setMessage(e.message)
@@ -52,7 +52,7 @@ class SshKeyImportActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     if (SshKey.exists && SshKey.type != SshKey.Type.ImportedPGP) {
-      MaterialAlertDialogBuilder(this).run {
+      AppDialogBuilder(this).run {
         setCancelable(false)
         setTitle(R.string.ssh_keygen_existing_title)
         setMessage(R.string.ssh_keygen_existing_message)

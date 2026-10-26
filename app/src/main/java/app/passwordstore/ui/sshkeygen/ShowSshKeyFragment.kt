@@ -9,15 +9,15 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.fragment.app.DialogFragment
 import app.passwordstore.R
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.util.git.sshj.SshKey
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class ShowSshKeyFragment : DialogFragment() {
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
     val activity = requireActivity()
     val publicKey = SshKey.sshPublicKey
-    return MaterialAlertDialogBuilder(requireActivity()).run {
+    return AppDialogBuilder(requireActivity()).run {
       setMessage(getString(R.string.ssh_keygen_message, publicKey))
       setTitle(R.string.your_public_key)
       setNegativeButton(R.string.ssh_keygen_later) { _, _ ->

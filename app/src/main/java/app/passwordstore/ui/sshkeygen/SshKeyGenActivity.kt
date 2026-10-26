@@ -14,6 +14,7 @@ import androidx.core.content.getSystemService
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.databinding.ActivitySshKeygenBinding
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.util.auth.BiometricAuthenticator
 import app.passwordstore.util.auth.BiometricAuthenticator.Result
 import app.passwordstore.util.coroutines.DispatcherProvider
@@ -23,7 +24,6 @@ import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.git.sshj.SshKey
 import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -58,7 +58,7 @@ class SshKeyGenActivity : AppCompatActivity() {
     with(binding) {
       generate.setOnClickListener {
         if (SshKey.exists && SshKey.type != SshKey.Type.ImportedPGP) {
-          MaterialAlertDialogBuilder(this@SshKeyGenActivity).run {
+          AppDialogBuilder(this@SshKeyGenActivity).run {
             setTitle(R.string.ssh_keygen_existing_title)
             setMessage(R.string.ssh_keygen_existing_message)
             setPositiveButton(R.string.ssh_keygen_existing_replace) { _, _ ->
@@ -142,7 +142,7 @@ class SshKeyGenActivity : AppCompatActivity() {
       success = { ShowSshKeyFragment().show(supportFragmentManager, "public_key") },
       failure = { e ->
         e.printStackTrace()
-        MaterialAlertDialogBuilder(this)
+        AppDialogBuilder(this)
           .setCancelable(false)
           .setTitle(R.string.error_generate_ssh_key)
           .setMessage(getString(R.string.ssh_key_error_dialog_text) + e.message)

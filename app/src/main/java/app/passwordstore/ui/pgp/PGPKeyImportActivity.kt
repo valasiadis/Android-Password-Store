@@ -24,6 +24,7 @@ import app.passwordstore.crypto.displayName
 import app.passwordstore.crypto.errors.KeyAlreadyExistsException
 import app.passwordstore.crypto.errors.UnusableKeyException
 import app.passwordstore.data.crypto.CryptoRepository
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.CardPrompt
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.ProgressOverlay
@@ -44,7 +45,6 @@ import com.github.michaelbull.result.getError
 import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -287,7 +287,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
   }
 
   private fun showCardSetupDialog(cardInfo: OpenPgpCardInfo) {
-    MaterialAlertDialogBuilder(this)
+    AppDialogBuilder(this)
       .setTitle(R.string.openpgp_card_setup_detected_title)
       .setMessage(
         if (cardInfo.url.isNullOrBlank()) R.string.openpgp_card_setup_detected_no_url_message
@@ -307,7 +307,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
   }
 
   private fun showCardErrorDialog(message: String) {
-    MaterialAlertDialogBuilder(this)
+    AppDialogBuilder(this)
       .setTitle(R.string.openpgp_card_setup_failed_title)
       .setMessage(message)
       .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -368,7 +368,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
     val error = result.getError()
     if (error is KeyAlreadyExistsException) {
       val keyId = tryGetKeyId(sourceKey)
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setTitle(getString(R.string.pgp_key_import_failed))
         .setMessage(getString(R.string.pgp_key_import_failed_replace_message, keyId?.displayName))
         .setPositiveButton(R.string.dialog_yes) { _, _ ->
@@ -508,7 +508,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
       }
 
     val builder =
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setCancelable(false)
         .setTitle(titleAndMessage.first)
         .setMessage(titleAndMessage.second)

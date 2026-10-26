@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.crypto.PGPKeyManager
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.util.git.sshj.SshKey
@@ -18,7 +19,6 @@ import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import logcat.LogPriority.ERROR
@@ -53,7 +53,7 @@ class PgpAuthKeySelectionActivity : AppCompatActivity() {
             },
             failure = { e ->
               e.printStackTrace()
-              MaterialAlertDialogBuilder(this)
+              AppDialogBuilder(this)
                 .setCancelable(false)
                 .setTitle(R.string.error)
                 .setMessage(e.message)
@@ -69,7 +69,7 @@ class PgpAuthKeySelectionActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     if (SshKey.exists && SshKey.type != SshKey.Type.ImportedPGP) {
-      MaterialAlertDialogBuilder(this).run {
+      AppDialogBuilder(this).run {
         setCancelable(false)
         setTitle(R.string.ssh_keygen_existing_title)
         setMessage(R.string.ssh_keygen_replace_with_pgp_key_message)

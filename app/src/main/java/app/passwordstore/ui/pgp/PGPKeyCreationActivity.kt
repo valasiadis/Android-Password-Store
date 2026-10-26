@@ -17,6 +17,7 @@ import app.passwordstore.crypto.PGPKey
 import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.crypto.displayName
 import app.passwordstore.databinding.PgpKeyCreationActivityBinding
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
@@ -24,7 +25,6 @@ import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.extensions.wipe
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.launch
@@ -154,7 +154,7 @@ class PGPKeyCreationActivity : AppCompatActivity() {
 
   private fun showKeyCreationOutcome(key: PGPKey?, error: Throwable?, passphrase: CharArray) {
     if (key != null) {
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setTitle(getString(R.string.pgp_key_creation_succeeded))
         .setMessage(
           getString(R.string.pgp_key_creation_succeeded_message, tryGetKeyId(key)?.displayName)
@@ -168,7 +168,7 @@ class PGPKeyCreationActivity : AppCompatActivity() {
         .show()
     } else {
       logcat(ERROR) { error?.asLog() ?: "unknown error" }
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setTitle(getString(R.string.pgp_key_creation_error))
         .setIcon(R.drawable.ic_crossmark_red_24dp)
         .setMessage(error?.toString() ?: "unknown error")

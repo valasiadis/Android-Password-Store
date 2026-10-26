@@ -5,6 +5,7 @@
 
 package app.passwordstore.ui.settings
 
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import android.content.SharedPreferences
 import android.content.Context
 import android.os.Bundle
@@ -152,7 +153,7 @@ class SettingsActivity : BaseGitActivity() {
    * cancelled, which leaves the back gesture doing nothing while one is open. Ignoring that one
    * call is the only way to reach the dialogs it creates.
    */
-  private class CancellableDialogBuilder(context: Context) : MaterialAlertDialogBuilder(context) {
+  private class CancellableDialogBuilder(context: Context) : AppDialogBuilder(context) {
     override fun setCancelable(cancelable: Boolean): MaterialAlertDialogBuilder =
       super.setCancelable(true)
   }

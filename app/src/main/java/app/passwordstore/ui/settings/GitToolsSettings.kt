@@ -8,6 +8,7 @@ package app.passwordstore.ui.settings
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.git.base.BaseGitActivity.GitOp
@@ -19,7 +20,6 @@ import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import de.Maxr1998.modernpreferences.Preference
 import de.Maxr1998.modernpreferences.PreferenceScreen
 import de.Maxr1998.modernpreferences.helpers.onClick
@@ -201,7 +201,7 @@ class GitToolsSettings(private val activity: SettingsActivity) : SettingsProvide
     }
     val current = PasswordRepository.getCurrentBranch()
     var chosen = branches.indexOf(current).coerceAtLeast(0)
-    MaterialAlertDialogBuilder(activity)
+    AppDialogBuilder(activity)
       .setTitle(R.string.git_utils_reset_remote_branch_title)
       .setSingleChoiceItems(branches.toTypedArray(), chosen) { _, which -> chosen = which }
       .setNegativeButton(R.string.dialog_cancel, null)
@@ -219,7 +219,7 @@ class GitToolsSettings(private val activity: SettingsActivity) : SettingsProvide
         .fold(
           success = {
             val branch = PasswordRepository.getCurrentBranch()
-            MaterialAlertDialogBuilder(activity)
+            AppDialogBuilder(activity)
               .setTitle(R.string.git_abort_and_push_title)
               .setMessage(
                 activity.getString(

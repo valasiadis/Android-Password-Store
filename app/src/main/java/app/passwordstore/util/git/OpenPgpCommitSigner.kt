@@ -14,6 +14,7 @@ import app.passwordstore.crypto.PGPIdentifier
 import app.passwordstore.crypto.PGPKey
 import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.data.repo.PasswordRepository
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.CardConnection
 import app.passwordstore.util.crypto.CardReader
@@ -28,7 +29,6 @@ import com.github.michaelbull.result.get
 import com.github.michaelbull.result.runCatching
 import com.google.android.material.R as materialR
 import com.google.android.material.color.MaterialColors
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
@@ -299,7 +299,7 @@ class OpenPgpCommitSigner(
     activity.runOnUiThread {
       try {
         val dialog =
-          MaterialAlertDialogBuilder(activity)
+          AppDialogBuilder(activity)
             .setTitle(R.string.git_signing_card_title)
             .setMessage(R.string.git_signing_confirm_message)
             .setPositiveButton(R.string.git_signing_confirm_positive) { _, _ ->

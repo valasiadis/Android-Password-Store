@@ -22,6 +22,7 @@ import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.injection.prefs.CredentialUsernames
 import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.crypto.BasePGPActivity
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.util.credman.CALLER_MISSING_ASSET_LINKS
 import app.passwordstore.util.credman.CALLER_RELYING_PARTY_NOT_IDENTIFIED
@@ -42,7 +43,6 @@ import com.github.michaelbull.result.getError
 import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -228,7 +228,7 @@ class PasskeyAuthenticationActivity : BasePGPActivity() {
               else -> getString(R.string.passkey_authentication_error_message, e.message)
             }
 
-          val dialog = MaterialAlertDialogBuilder(this@PasskeyAuthenticationActivity)
+          val dialog = AppDialogBuilder(this@PasskeyAuthenticationActivity)
 
           when (e.message) {
             CALLER_UNKNOWN -> {

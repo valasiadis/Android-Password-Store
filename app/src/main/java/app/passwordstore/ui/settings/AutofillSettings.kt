@@ -14,11 +14,11 @@ import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.BuildConfig
 import app.passwordstore.R
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.util.extensions.autofillManager
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.androidpasswordstore.autofillparser.BrowserAutofillSupportLevel
 import com.github.androidpasswordstore.autofillparser.getInstalledBrowsersWithAutofillSupportLevel
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import de.Maxr1998.modernpreferences.PreferenceScreen
 import de.Maxr1998.modernpreferences.helpers.editText
 import de.Maxr1998.modernpreferences.helpers.onClick
@@ -38,7 +38,7 @@ class AutofillSettings(private val activity: FragmentActivity) : SettingsProvide
     }
 
   private fun showAutofillDialog() {
-    MaterialAlertDialogBuilder(activity).run {
+    AppDialogBuilder(activity).run {
       setTitle(R.string.pref_autofill_enable_title)
       @SuppressLint("InflateParams")
       val layout = activity.layoutInflater.inflate(R.layout.oreo_autofill_instructions, null)

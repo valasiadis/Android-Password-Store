@@ -4,6 +4,7 @@
  */
 package app.passwordstore.ui.autofill
 
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -42,7 +43,6 @@ import app.passwordstore.util.viewmodel.SearchMode
 import app.passwordstore.util.viewmodel.SearchableRepositoryAdapter
 import app.passwordstore.util.viewmodel.SearchableRepositoryViewModel
 import com.github.androidpasswordstore.autofillparser.FormOrigin
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.collect
@@ -182,7 +182,7 @@ class AutofillFilterView : AppCompatActivity() {
           booleanArrayOf(AutofillPreferences.strictDomainSearch(this@AutofillFilterView)) + checked
       }
 
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setMultiChoiceItems(items, checked) { _, which, isChecked ->
           if (formOrigin is FormOrigin.Web) {
             when (which) {

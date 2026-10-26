@@ -11,7 +11,6 @@ import androidx.appcompat.app.AlertDialog
 import app.passwordstore.R
 import com.google.android.material.R as MaterialR
 import com.google.android.material.color.MaterialColors
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * Says what will go wrong, and lets the user do it anyway.
@@ -33,8 +32,7 @@ object WarningDialog {
     onProceed: () -> Unit,
   ) {
     val dialog =
-      MaterialAlertDialogBuilder(context)
-        .outlined(context)
+      AppDialogBuilder(context)
         .setIcon(R.drawable.ic_warning_red_24dp)
         .setTitle(title)
         .setMessage(message)

@@ -27,7 +27,6 @@ import app.passwordstore.util.extensions.hideKeyboard
 import app.passwordstore.util.extensions.isInsideRepository
 import app.passwordstore.util.extensions.setInlineText
 import app.passwordstore.util.extensions.unsafeLazy
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
@@ -59,7 +58,7 @@ class FolderCreationDialogFragment : DialogFragment() {
   }
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-    val builder = MaterialAlertDialogBuilder(requireContext())
+    val builder = AppDialogBuilder(requireContext())
     builder.setTitle(R.string.title_create_folder)
     builder.setView(binding.root)
     builder.setPositiveButton(getString(R.string.button_create), null)

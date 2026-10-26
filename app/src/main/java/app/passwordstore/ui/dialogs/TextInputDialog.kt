@@ -16,7 +16,6 @@ import app.passwordstore.R
 import app.passwordstore.databinding.DialogTextInputBinding
 import app.passwordstore.util.extensions.finish
 import app.passwordstore.util.extensions.unsafeLazy
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * General purpose [DialogFragment] that can be used to accept a single text input. It provides a
@@ -35,7 +34,7 @@ class TextInputDialog : DialogFragment() {
   private var isError: Boolean = false
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-    val builder = MaterialAlertDialogBuilder(requireContext())
+    val builder = AppDialogBuilder(requireContext())
     builder.setView(binding.root)
     builder.setTitle(arguments?.getString(BUNDLE_KEY_TITLE))
     arguments?.getString(BUNDLE_KEY_HINT)?.let { hint ->

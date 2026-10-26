@@ -27,7 +27,6 @@ import app.passwordstore.util.crypto.AESEncryption.KeyType
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.settings.PreferenceKeys.DICEWARE_LENGTH
 import app.passwordstore.util.settings.PreferenceKeys.DICEWARE_SEPARATOR
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.merge
@@ -43,7 +42,7 @@ class DicewarePasswordGeneratorDialogFragment : DialogFragment() {
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
     prefs = requireContext().getSharedPreferences("PasswordGenerator", Context.MODE_PRIVATE)
-    val builder = MaterialAlertDialogBuilder(requireContext())
+    val builder = AppDialogBuilder(requireContext())
 
     val binding = FragmentPwgenDicewareBinding.inflate(layoutInflater)
     builder.setView(binding.root)

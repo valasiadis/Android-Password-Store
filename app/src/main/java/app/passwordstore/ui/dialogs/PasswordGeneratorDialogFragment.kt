@@ -29,7 +29,6 @@ import app.passwordstore.ui.crypto.PasswordCreationActivity
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.nio.CharBuffer
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
@@ -40,7 +39,7 @@ class PasswordGeneratorDialogFragment : DialogFragment() {
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
     val prefs = requireContext().getSharedPreferences("PasswordGenerator", Context.MODE_PRIVATE)
-    val builder = MaterialAlertDialogBuilder(requireContext())
+    val builder = AppDialogBuilder(requireContext())
 
     val binding = FragmentPwgenBinding.inflate(layoutInflater)
     builder.setView(binding.root)

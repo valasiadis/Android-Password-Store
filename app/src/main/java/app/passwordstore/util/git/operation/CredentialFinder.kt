@@ -15,6 +15,7 @@ import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier.KeyId
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.util.auth.BiometricAuthenticator
 import app.passwordstore.util.auth.BiometricAuthenticator.Result as BiometricResult
@@ -27,7 +28,6 @@ import app.passwordstore.util.settings.AuthMode
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.get
 import com.google.android.material.checkbox.MaterialCheckBox
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import java.security.KeyPair
@@ -202,7 +202,7 @@ class CredentialFinder(
           if (SshKey.pgpLongKeyId != 0L)
             "\n${callingActivity.resources.getString(R.string.pgp_id_label)} ${repository.getEmailFromKeyId(KeyId(SshKey.pgpLongKeyId))}"
           else ""
-      MaterialAlertDialogBuilder(callingActivity)
+      AppDialogBuilder(callingActivity)
         .run {
           setTitle(R.string.passphrase_dialog_title)
           setMessage(message)

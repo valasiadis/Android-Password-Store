@@ -17,12 +17,12 @@ import androidx.biometric.BiometricManager.Authenticators
 import app.passwordstore.R
 import app.passwordstore.ui.crypto.BasePGPActivity
 import app.passwordstore.ui.crypto.DecryptActivity
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.util.auth.BiometricAuthenticator
 import app.passwordstore.util.auth.BiometricAuthenticator.Result
 import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.settings.PreferenceKeys
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 @SuppressLint("CustomSplashScreen")
 class LaunchActivity : AppCompatActivity() {
@@ -53,7 +53,7 @@ class LaunchActivity : AppCompatActivity() {
                 }
               enrollFingerprintActivity.launch(enrollFingerprintIntent)
             } else {
-              MaterialAlertDialogBuilder(this)
+              AppDialogBuilder(this)
                 .setTitle(getString(R.string.pref_biometric_auth_summary_error))
                 .setMessage(getString(R.string.check_devicelock_settings_dialog_message))
                 .setPositiveButton(getString(R.string.dialog_ok)) { _, _ -> finishAndRemoveTask() }

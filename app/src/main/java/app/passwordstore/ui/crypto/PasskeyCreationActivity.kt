@@ -40,6 +40,7 @@ import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.PasskeyCreationActivityBinding
 import app.passwordstore.injection.prefs.CredentialUsernames
 import app.passwordstore.injection.prefs.PasswordHistory
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.OtpImportDialogFragment
@@ -75,7 +76,6 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import com.github.michaelbull.result.unwrapError
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.LuminanceSource
 import com.google.zxing.RGBLuminanceSource
@@ -256,7 +256,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
               getString(R.string.otp_import_from_file),
               getString(R.string.otp_import_manual_entry),
             )
-          MaterialAlertDialogBuilder(this@PasskeyCreationActivity)
+          AppDialogBuilder(this@PasskeyCreationActivity)
             .setItems(items) { _, index ->
               when (index) {
                 0 ->
@@ -327,7 +327,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
                     getString(R.string.passkey_caller_unknown_failure, e.message ?: e.toString())
                 }
 
-              val dialog = MaterialAlertDialogBuilder(this@PasskeyCreationActivity)
+              val dialog = AppDialogBuilder(this@PasskeyCreationActivity)
 
               when (e.message) {
                 CALLER_UNKNOWN -> {
@@ -427,7 +427,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
       }
       R.id.save_password -> {
         if (PasswordRepository.isEmpty()) {
-          MaterialAlertDialogBuilder(this)
+          AppDialogBuilder(this)
             .setCancelable(false)
             .setTitle(R.string.error)
             .setIcon(R.drawable.ic_crossmark_red_24dp)
@@ -438,7 +438,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
             }
             .show()
         } else if (!editing && !BiometricAuthenticator.canAuthenticate(this, allowPin = true)) {
-          MaterialAlertDialogBuilder(this)
+          AppDialogBuilder(this)
             .setCancelable(false)
             .setTitle(R.string.error)
             .setIcon(R.drawable.ic_crossmark_red_24dp)
@@ -679,7 +679,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
                 }
 
                 val dialog =
-                  MaterialAlertDialogBuilder(this@PasskeyCreationActivity)
+                  AppDialogBuilder(this@PasskeyCreationActivity)
                     .setCancelable(false)
                     .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
                 if (!failedUserEmails.isEmpty()) {
@@ -708,7 +708,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
                   getString(R.string.password_creation_unusable_encryption_key_error_message)
                 else -> e.message ?: e.toString()
               }
-            MaterialAlertDialogBuilder(this@PasskeyCreationActivity)
+            AppDialogBuilder(this@PasskeyCreationActivity)
               .setIcon(R.drawable.ic_crossmark_red_24dp)
               .setTitle(R.string.error)
               .setMessage(errMessage)

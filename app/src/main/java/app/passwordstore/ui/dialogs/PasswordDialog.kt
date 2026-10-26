@@ -21,7 +21,6 @@ import app.passwordstore.util.extensions.finish
 import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.extensions.unsafeLazy
 import app.passwordstore.util.settings.PreferenceKeys
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /** [DialogFragment] to request a password from the user and forward it along. */
 class PasswordDialog : DialogFragment() {
@@ -34,7 +33,7 @@ class PasswordDialog : DialogFragment() {
   private var onCancelFinish: Boolean = true
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-    val builder = MaterialAlertDialogBuilder(requireContext())
+    val builder = AppDialogBuilder(requireContext())
     builder.setView(binding.root)
     builder.setTitle(R.string.ssh_keygen_passphrase)
 

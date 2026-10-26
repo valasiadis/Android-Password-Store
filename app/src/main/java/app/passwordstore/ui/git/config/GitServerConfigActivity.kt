@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitCloneBinding
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.AuthKeySourceBottomSheet
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.ProgressOverlay
@@ -36,7 +37,6 @@ import app.passwordstore.util.settings.Protocol
 import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
@@ -358,7 +358,7 @@ class GitServerConfigActivity : BaseGitActivity() {
         localDirFiles.isNotEmpty() &&
         !(localDirFiles.size == 1 && localDirFiles[0].name == ".git")
     ) {
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setTitle(R.string.dialog_delete_title)
         .setMessage(resources.getString(R.string.dialog_delete_msg, localDir.toString()))
         .setCancelable(false)
@@ -391,7 +391,7 @@ class GitServerConfigActivity : BaseGitActivity() {
           }
             .onErr { e ->
               e.printStackTrace()
-              MaterialAlertDialogBuilder(this).setMessage(e.message).show()
+              AppDialogBuilder(this).setMessage(e.message).show()
             }
           dialog.cancel()
         }
@@ -406,7 +406,7 @@ class GitServerConfigActivity : BaseGitActivity() {
       }
         .onErr { e ->
           logcat(ERROR) { e.asLog() }
-          MaterialAlertDialogBuilder(this).setMessage(e.message).show()
+          AppDialogBuilder(this).setMessage(e.message).show()
         }
       lifecycleScope.launch {
         launchGitOperation(GitOp.CLONE)

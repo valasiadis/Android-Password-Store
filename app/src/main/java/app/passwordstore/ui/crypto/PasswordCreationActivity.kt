@@ -34,6 +34,7 @@ import app.passwordstore.data.passfile.trimEnd
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.PasswordCreationActivityBinding
 import app.passwordstore.injection.prefs.PasswordHistory
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.DicewarePasswordGeneratorDialogFragment
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
@@ -61,7 +62,6 @@ import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
 import com.github.michaelbull.result.unwrapError
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.LuminanceSource
 import com.google.zxing.RGBLuminanceSource
@@ -268,7 +268,7 @@ class PasswordCreationActivity : BasePGPActivity() {
               getString(R.string.otp_import_from_file),
               getString(R.string.otp_import_manual_entry),
             )
-          MaterialAlertDialogBuilder(this@PasswordCreationActivity)
+          AppDialogBuilder(this@PasswordCreationActivity)
             .setItems(items) { _, index ->
               when (index) {
                 0 ->
@@ -434,7 +434,7 @@ class PasswordCreationActivity : BasePGPActivity() {
   /** Encrypts what has been typed, or says why there is nowhere to put it. */
   private fun save() {
     if (PasswordRepository.isEmpty()) {
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setCancelable(false)
         .setTitle(R.string.error)
         .setIcon(R.drawable.ic_crossmark_red_24dp)
@@ -819,7 +819,7 @@ class PasswordCreationActivity : BasePGPActivity() {
             leave()
             return@runCatching
           }
-          MaterialAlertDialogBuilder(this@PasswordCreationActivity)
+          AppDialogBuilder(this@PasswordCreationActivity)
             .setCancelable(false)
             .setPositiveButton(android.R.string.ok) { _, _ -> leave() }
             .setTitle(R.string.password_creation_file_encryption_partial_success_title)
@@ -838,7 +838,7 @@ class PasswordCreationActivity : BasePGPActivity() {
                   getString(R.string.password_creation_unusable_encryption_key_error_message)
                 else -> e.message ?: e.toString()
               }
-            MaterialAlertDialogBuilder(this@PasswordCreationActivity)
+            AppDialogBuilder(this@PasswordCreationActivity)
               .setIcon(R.drawable.ic_crossmark_red_24dp)
               .setTitle(getString(R.string.error))
               .setMessage(errMessage)

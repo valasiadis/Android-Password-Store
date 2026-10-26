@@ -35,6 +35,7 @@ import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.crypto.BasePGPActivity
 import app.passwordstore.ui.crypto.DecryptActivity
 import app.passwordstore.ui.crypto.PasswordCreationActivity
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.FolderCreationDialogFragment
 import app.passwordstore.ui.dialogs.Notice
@@ -67,7 +68,6 @@ import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
@@ -272,7 +272,7 @@ class PasswordStore : BaseGitActivity() {
           if (destinationFile.exists()) {
             logcat(ERROR) { "Trying to move a file that already exists." }
             withContext(dispatcherProvider.main()) {
-              MaterialAlertDialogBuilder(this@PasswordStore)
+              AppDialogBuilder(this@PasswordStore)
                 .setTitle(R.string.password_exists_title)
                 .setMessage(
                   getString(
@@ -537,7 +537,7 @@ class PasswordStore : BaseGitActivity() {
 
   private fun validateState(): Boolean {
     if (!PasswordRepository.isInitialized) {
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setCancelable(false)
         .setTitle(R.string.error)
         .setIcon(R.drawable.ic_crossmark_red_24dp)
@@ -706,7 +706,7 @@ class PasswordStore : BaseGitActivity() {
     }
 
     val dialog =
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setTitle(R.string.title_rename_folder)
         .setView(view)
         .setPositiveButton(R.string.dialog_ok) { _, _ ->
@@ -813,7 +813,7 @@ class PasswordStore : BaseGitActivity() {
     if (!source.renameTo(destinationFile)) {
       logcat(ERROR) { "Something went wrong while moving $source to $destinationFile." }
       withContext(dispatcherProvider.main()) {
-        MaterialAlertDialogBuilder(this@PasswordStore)
+        AppDialogBuilder(this@PasswordStore)
           .setTitle(R.string.password_move_error_title)
           .setMessage(getString(R.string.password_move_error_message, source, destinationFile))
           .setCancelable(true)

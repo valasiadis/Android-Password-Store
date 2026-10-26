@@ -33,6 +33,7 @@ import app.passwordstore.Application
 import app.passwordstore.BuildConfig
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
@@ -43,7 +44,6 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.getError
 import com.github.michaelbull.result.onErr
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -259,7 +259,7 @@ private suspend fun FragmentActivity.offerToClearStaleLock(): Boolean =
       return@suspendCancellableCoroutine
     }
     val dialog =
-      MaterialAlertDialogBuilder(this)
+      AppDialogBuilder(this)
         .setIcon(R.drawable.ic_warning_red_24dp)
         .setTitle(R.string.git_index_locked_title)
         .setMessage(R.string.git_index_locked_error)

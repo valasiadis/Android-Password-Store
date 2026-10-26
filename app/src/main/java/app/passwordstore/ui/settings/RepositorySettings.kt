@@ -25,6 +25,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.git.config.GitConfigActivity
@@ -42,7 +43,6 @@ import app.passwordstore.util.settings.PreferenceKeys
 import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -102,7 +102,7 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
       val workManager = WorkManager.getInstance(activity.applicationContext)
 
       val progressDialog =
-        MaterialAlertDialogBuilder(activity)
+        AppDialogBuilder(activity)
           .setTitle(R.string.prefs_export_passwords_dialog_title)
           .setMessage(R.string.prefs_export_passwords_dialog_message)
           .setCancelable(false)
@@ -142,7 +142,7 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
         DocumentFile.fromTreeUri(activity.applicationContext, uri)
           ?: return@registerForActivityResult
       if (!(sourceDirectory.findFile(".git")?.isDirectory() ?: false)) {
-        MaterialAlertDialogBuilder(activity)
+        AppDialogBuilder(activity)
           .setTitle(R.string.prefs_repo_invalid_source_dialog_title)
           .setIcon(R.drawable.ic_crossmark_red_24dp)
           .setMessage(R.string.prefs_repo_invalid_source_dialog_summary)
@@ -159,7 +159,7 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
         val workManager = WorkManager.getInstance(activity.applicationContext)
 
         val progressDialog =
-          MaterialAlertDialogBuilder(activity)
+          AppDialogBuilder(activity)
             .setTitle(R.string.prefs_import_passwords_dialog_title)
             .setMessage(R.string.prefs_export_passwords_dialog_message)
             .setCancelable(false)
@@ -298,7 +298,7 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
             storeImportAction.launch(null)
             true
           } else {
-            MaterialAlertDialogBuilder(activity)
+            AppDialogBuilder(activity)
               .setTitle(R.string.prefs_repo_not_empty_dialog_title)
               .setMessage(R.string.prefs_repo_not_empty_dialog_summary)
               .setPositiveButton(R.string.dialog_ok) { dialog, _ -> dialog.dismiss() }

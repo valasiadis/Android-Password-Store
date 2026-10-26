@@ -16,7 +16,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
@@ -24,7 +23,6 @@ import app.passwordstore.ui.compose.R
 import app.passwordstore.ui.compose.preview.DevicePreviews
 import app.passwordstore.ui.compose.preview.ThemePreviews
 import app.passwordstore.ui.compose.theme.APSTheme
-import app.passwordstore.ui.compose.theme.SpacingMedium
 
 @SuppressLint("ComposableLambdaParameterNaming") // The lint doesn't really apply to `actions`
 @Composable
@@ -47,8 +45,9 @@ public fun APSAppBar(
       }
     },
     actions = actions,
+    // Flat on the screen beneath it, with no shadow, as the app's other screens draw their bar.
     colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor),
-    modifier = modifier.shadow(SpacingMedium),
+    modifier = modifier,
   )
 }
 

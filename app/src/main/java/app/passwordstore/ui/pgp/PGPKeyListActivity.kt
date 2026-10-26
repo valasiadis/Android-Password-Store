@@ -23,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -35,8 +36,10 @@ import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
@@ -63,6 +66,7 @@ import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
+import com.google.android.material.color.MaterialColors
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -199,7 +203,11 @@ class PGPKeyListActivity : AppCompatActivity() {
 
     setContent {
       APSTheme {
+        // The window's own background, which this theme leaves transparent: the grey every other
+        // list in the app is set on, rather than the Compose scheme's plain background.
+        val screenColor = Color(MaterialColors.getColor(this, android.R.attr.colorBackground, 0))
         Scaffold(
+          containerColor = screenColor,
           topBar = {
             APSAppBar(
               title =
@@ -211,7 +219,7 @@ class PGPKeyListActivity : AppCompatActivity() {
               onNavigationIconClick = {
                 leaveWithoutApplying()
               },
-              backgroundColor = MaterialTheme.colorScheme.surface,
+              backgroundColor = screenColor,
             )
           },
           // Outside selection mode the only action is adding a key, which keeps the ordinary
@@ -223,6 +231,8 @@ class PGPKeyListActivity : AppCompatActivity() {
                 Icon(
                   painter = painterResource(R.drawable.ic_add_48dp),
                   stringResource(R.string.pref_import_pgp_key_title),
+                  // The size a View button scales this glyph to, as the password list's is.
+                  modifier = Modifier.size(FabIconSize),
                 )
               }
             }
@@ -293,6 +303,8 @@ class PGPKeyListActivity : AppCompatActivity() {
                 Icon(
                   painter = painterResource(R.drawable.ic_add_48dp),
                   stringResource(R.string.pref_import_pgp_key_title),
+                  // The size a View button scales this glyph to, as the password list's is.
+                  modifier = Modifier.size(FabIconSize),
                 )
               }
               // There is something to confirm only once the selection differs from what the
@@ -320,6 +332,7 @@ class PGPKeyListActivity : AppCompatActivity() {
               ) {
                 Icon(
                   painter = painterResource(R.drawable.ic_done_24dp),
+                  modifier = Modifier.size(FabIconSize),
                   contentDescription =
                     if (singleSelection) stringResource(R.string.gpg_key_single_select)
                     else stringResource(R.string.gpg_key_select),
@@ -570,6 +583,7 @@ class PGPKeyListActivity : AppCompatActivity() {
   }
 
   companion object {
+    private val FabIconSize = 24.dp
     const val MAX_RETRIES = 3
 
     const val EXTRA_SELECTED_KEY = "SELECTED_KEY"

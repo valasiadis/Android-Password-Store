@@ -8,8 +8,8 @@ import android.util.Base64
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.R
-import app.passwordstore.databinding.DialogSelectableMessageBinding
 import app.passwordstore.crypto.PGPIdentifier.KeyId
+import app.passwordstore.databinding.DialogSelectableMessageBinding
 import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.util.coroutines.DispatcherProvider

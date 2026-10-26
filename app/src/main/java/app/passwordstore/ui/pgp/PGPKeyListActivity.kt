@@ -193,8 +193,7 @@ class PGPKeyListActivity : AppCompatActivity() {
 
     onBackPressedDispatcher.addCallback(
       this,
-      object :
-        OnBackPressedCallback(enabled = true) {
+      object : OnBackPressedCallback(enabled = true) {
         override fun handleOnBackPressed() {
           leaveWithoutApplying()
         }

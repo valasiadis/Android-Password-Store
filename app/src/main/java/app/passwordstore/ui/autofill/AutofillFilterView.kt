@@ -4,7 +4,6 @@
  */
 package app.passwordstore.ui.autofill
 
-import app.passwordstore.ui.dialogs.AppDialogBuilder
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -30,6 +29,7 @@ import app.passwordstore.R
 import app.passwordstore.data.password.PasswordItem
 import app.passwordstore.databinding.ActivityOreoAutofillFilterBinding
 import app.passwordstore.injection.prefs.SettingsPreferences
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.util.autofill.AutofillMatcher
 import app.passwordstore.util.autofill.AutofillPreferences
 import app.passwordstore.util.coroutines.DispatcherProvider

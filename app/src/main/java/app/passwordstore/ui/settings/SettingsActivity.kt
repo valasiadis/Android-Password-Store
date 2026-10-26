@@ -5,18 +5,17 @@
 
 package app.passwordstore.ui.settings
 
-import app.passwordstore.ui.dialogs.AppDialogBuilder
-import android.content.SharedPreferences
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.os.BundleCompat
 import app.passwordstore.R
 import app.passwordstore.databinding.ActivityPreferenceRecyclerviewBinding
 import app.passwordstore.injection.prefs.SettingsPreferences
+import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.viewBinding

@@ -52,6 +52,8 @@ class PasswordDialog : DialogFragment() {
       setOnCheckedChangeListener { _, isChecked -> cacheEnabledChecked = isChecked }
     }
     builder.setPositiveButton(android.R.string.ok) { _, _ -> setPasswordAndDismiss() }
+    // A way out, as the PIN prompts have: the same as going back, which onCancel handles.
+    builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.cancel() }
     val dialog = builder.create()
     dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
     dialog.setOnShowListener {

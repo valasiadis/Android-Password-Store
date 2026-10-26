@@ -145,6 +145,7 @@ class SshKeyGenActivity : AppCompatActivity() {
         AppDialogBuilder(this)
           .setCancelable(false)
           .setTitle(R.string.error_generate_ssh_key)
+          .setIcon(R.drawable.ic_crossmark_red_24dp)
           .setMessage(getString(R.string.ssh_key_error_dialog_text) + e.message)
           .setPositiveButton(R.string.dialog_ok) { _, _ ->
             setResult(RESULT_OK)

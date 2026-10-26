@@ -231,6 +231,7 @@ abstract class BaseGitActivity : AppCompatActivity() {
       )
         withContext(dispatcherProvider.main()) {
           AppDialogBuilder(this@BaseGitActivity).run {
+            setIcon(R.drawable.ic_crossmark_red_24dp)
             setTitle(resources.getString(R.string.jgit_error_dialog_title))
             setMessage(ErrorMessages[error])
             setPositiveButton(resources.getString(R.string.dialog_ok)) { _, _ -> }

@@ -55,6 +55,7 @@ class LaunchActivity : AppCompatActivity() {
             } else {
               AppDialogBuilder(this)
                 .setTitle(getString(R.string.pref_biometric_auth_summary_error))
+                .setIcon(R.drawable.ic_crossmark_red_24dp)
                 .setMessage(getString(R.string.check_devicelock_settings_dialog_message))
                 .setPositiveButton(getString(R.string.dialog_ok)) { _, _ -> finishAndRemoveTask() }
                 .show()

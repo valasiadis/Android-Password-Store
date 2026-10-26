@@ -815,6 +815,7 @@ class PasswordStore : BaseGitActivity() {
       withContext(dispatcherProvider.main()) {
         AppDialogBuilder(this@PasswordStore)
           .setTitle(R.string.password_move_error_title)
+          .setIcon(R.drawable.ic_crossmark_red_24dp)
           .setMessage(getString(R.string.password_move_error_message, source, destinationFile))
           .setCancelable(true)
           .setPositiveButton(android.R.string.ok, null)

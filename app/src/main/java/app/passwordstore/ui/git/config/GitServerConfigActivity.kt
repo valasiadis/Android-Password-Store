@@ -18,6 +18,7 @@ import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitCloneBinding
 import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.AuthKeySourceBottomSheet
+import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.git.base.BaseGitActivity
@@ -391,7 +392,7 @@ class GitServerConfigActivity : BaseGitActivity() {
           }
             .onErr { e ->
               e.printStackTrace()
-              AppDialogBuilder(this).setMessage(e.message).show()
+              ErrorDialog.show(this, e.message.orEmpty())
             }
           dialog.cancel()
         }
@@ -406,7 +407,7 @@ class GitServerConfigActivity : BaseGitActivity() {
       }
         .onErr { e ->
           logcat(ERROR) { e.asLog() }
-          AppDialogBuilder(this).setMessage(e.message).show()
+          ErrorDialog.show(this, e.message.orEmpty())
         }
       lifecycleScope.launch {
         launchGitOperation(GitOp.CLONE)

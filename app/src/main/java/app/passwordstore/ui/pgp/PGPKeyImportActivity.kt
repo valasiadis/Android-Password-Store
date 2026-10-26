@@ -309,6 +309,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
   private fun showCardErrorDialog(message: String) {
     AppDialogBuilder(this)
       .setTitle(R.string.openpgp_card_setup_failed_title)
+      .setIcon(R.drawable.ic_crossmark_red_24dp)
       .setMessage(message)
       .setPositiveButton(android.R.string.ok) { _, _ ->
         closeCardReader()
@@ -510,6 +511,8 @@ class PGPKeyImportActivity : AppCompatActivity() {
     val builder =
       AppDialogBuilder(this)
         .setCancelable(false)
+        // Marked as a failure only when it is one: a partial import still brought keys in.
+        .apply { if (importedKeyIds.isEmpty()) setIcon(R.drawable.ic_crossmark_red_24dp) }
         .setTitle(titleAndMessage.first)
         .setMessage(titleAndMessage.second)
         .setPositiveButton(android.R.string.ok) { _, _ ->

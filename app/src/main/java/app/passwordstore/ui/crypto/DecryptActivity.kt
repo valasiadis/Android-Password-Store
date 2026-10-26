@@ -386,6 +386,7 @@ class DecryptActivity : BasePGPActivity() {
   private fun showSmartcardError(message: String) {
     AppDialogBuilder(this)
       .setTitle(R.string.openpgp_card_decrypt_failed_title)
+      .setIcon(R.drawable.ic_crossmark_red_24dp)
       .setMessage(message)
       .setPositiveButton(android.R.string.ok) { _, _ ->
         // Reader mode is disabled by the removal watcher once the card is lifted; just finish.

@@ -22,6 +22,7 @@ import org.bouncycastle.openpgp.PGPLiteralData
 import org.bouncycastle.openpgp.PGPMarker
 import org.bouncycastle.openpgp.PGPObjectFactory
 import org.bouncycastle.openpgp.PGPOnePassSignatureList
+import org.bouncycastle.openpgp.PGPPrivateKey
 import org.bouncycastle.openpgp.PGPPublicKey
 import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData
 import org.bouncycastle.openpgp.PGPSessionKey
@@ -303,7 +304,9 @@ class OpenPgpSmartcardDecryptor @Inject constructor() {
     private val recipients: List<PGPPublicKey>,
   ) : AbstractPublicKeyDataDecryptorFactory() {
 
-    private val contentDecryptorFactory = BcPublicKeyDataDecryptorFactory(null)
+    // Only its content decryptors are used, which need no key. BouncyCastle 1.86 added a second
+    // constructor that also takes one argument, so the null has to say which one it is for.
+    private val contentDecryptorFactory = BcPublicKeyDataDecryptorFactory(null as PGPPrivateKey?)
 
     override fun recoverSessionData(
       keyAlgorithm: Int,

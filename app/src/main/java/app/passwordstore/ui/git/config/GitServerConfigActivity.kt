@@ -16,11 +16,11 @@ import androidx.lifecycle.lifecycleScope
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitCloneBinding
-import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.AuthKeySourceBottomSheet
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.ProgressOverlay
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.ui.onboarding.activity.SetupStepActivity
 import app.passwordstore.ui.onboarding.activity.show
@@ -359,7 +359,7 @@ class GitServerConfigActivity : BaseGitActivity() {
         localDirFiles.isNotEmpty() &&
         !(localDirFiles.size == 1 && localDirFiles[0].name == ".git")
     ) {
-      AppDialogBuilder(this)
+      WarningDialog.builder(this)
         .setTitle(R.string.dialog_delete_title)
         .setMessage(resources.getString(R.string.dialog_delete_msg, localDir.toString()))
         .setCancelable(false)

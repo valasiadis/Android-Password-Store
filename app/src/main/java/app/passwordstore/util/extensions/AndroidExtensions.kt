@@ -33,8 +33,8 @@ import app.passwordstore.Application
 import app.passwordstore.BuildConfig
 import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
-import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.OpenPgpCardPrompt
 import app.passwordstore.util.git.ErrorMessages
@@ -259,8 +259,7 @@ private suspend fun FragmentActivity.offerToClearStaleLock(): Boolean =
       return@suspendCancellableCoroutine
     }
     val dialog =
-      AppDialogBuilder(this)
-        .setIcon(R.drawable.ic_warning_red_24dp)
+      WarningDialog.builder(this)
         .setTitle(R.string.git_index_locked_title)
         .setMessage(R.string.git_index_locked_error)
         .setCancelable(false)

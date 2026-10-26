@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -35,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -339,20 +337,10 @@ private fun KeyItem(
   onSelectedChange: ((Boolean) -> Unit)? = null,
   isKeyEnabled: (identifier: PGPIdentifier) -> Boolean = { true },
 ) {
-  var isDeleting by remember { mutableStateOf(false) }
   var keyId = identifier.first ?: throw NullPointerException()
   // Keys that cannot serve the current purpose (e.g. a public-only key when selecting an SSH
   // authentication key) are shown greyed out and are not selectable.
   val enabled = isKeyEnabled(keyId)
-  DeleteConfirmationDialog(
-    isDeleting = isDeleting,
-    isSecretKey = isSecretKey(keyId),
-    onDismiss = { isDeleting = false },
-    onConfirm = {
-      onDeleteItemClick(keyId)
-      isDeleting = false
-    },
-  )
   val rowShape = RoundedCornerShape(dimensionResource(R.dimen.corner_radius_medium))
   val outlineColor = MaterialTheme.colorScheme.outlineVariant
   Row(
@@ -480,65 +468,13 @@ private fun KeyItem(
             },
             onClick = {
               isMenuExpanded = false
-              isDeleting = true
+              // Asked first by the screen, as every other deletion in the app is.
+              onDeleteItemClick(keyId)
             },
           )
         }
       }
     }
-  }
-}
-
-@Suppress("NOTHING_TO_INLINE")
-@Composable
-private inline fun DeleteConfirmationDialog(
-  isDeleting: Boolean,
-  isSecretKey: Boolean,
-  noinline onDismiss: () -> Unit,
-  noinline onConfirm: () -> Unit,
-) {
-  if (isDeleting) {
-    AlertDialog(
-      onDismissRequest = onDismiss,
-      // The mark sits beside the question, as it does on the app's other warnings, rather than
-      // centred above it with the title pushed down the dialog.
-      title = {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(
-            painter = painterResource(id = R.drawable.ic_warning_red_24dp),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
-          )
-          Spacer(modifier = Modifier.width(SpacingLarge))
-          Text(
-            text =
-              if (isSecretKey)
-                stringResource(R.string.pgp_key_manager_delete_secret_key_confirmation_dialog_title)
-              else stringResource(R.string.pgp_key_manager_delete_key_confirmation_dialog_title)
-          )
-        }
-      },
-      text = {
-        if (isSecretKey)
-          Text(text = stringResource(R.string.pgp_key_manager_delete_confirmation_dialog_message))
-      },
-      confirmButton = {
-        TextButton(onClick = onConfirm) {
-          Text(
-            text = stringResource(R.string.delete),
-            color = MaterialTheme.colorScheme.error,
-          )
-        }
-      },
-      dismissButton = {
-        TextButton(onClick = onDismiss) {
-          Text(
-            text = stringResource(R.string.dialog_do_not_delete),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
-      },
-    )
   }
 }
 

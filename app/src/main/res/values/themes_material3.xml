@@ -93,6 +93,21 @@
     For the rare dialog whose buttons are all answers and none of them a way out — which SSH key
     to use, say — so none of them is made quieter than the rest.
   -->
+  <!--
+    For a dialog whose action cannot be taken back — deleting a key, a repository, a lock; going
+    ahead with a passphrase too weak to protect anything. Material 3 has no "warning" role; error
+    is what it gives destructive actions, so the action stands in that colour, here once rather
+    than in each dialog that offers one.
+  -->
+  <style name="APSThemeM3.MaterialAlertDialog.Destructive">
+    <item name="buttonBarPositiveButtonStyle">@style/APSThemeM3.DialogButton.Destructive</item>
+  </style>
+
+  <style name="APSThemeM3.DialogButton.Destructive" parent="Widget.Material3.Button.TextButton.Dialog">
+    <item name="android:textColor">@color/dialog_destructive_button_text</item>
+    <item name="rippleColor">@color/dialog_destructive_button_ripple</item>
+  </style>
+
   <style name="APSThemeM3.MaterialAlertDialog.Choices">
     <item name="buttonBarNegativeButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog</item>
   </style>

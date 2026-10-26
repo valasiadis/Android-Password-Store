@@ -53,6 +53,7 @@ import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.PasswordDialog
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.pgp.PGPKeyImportActivity.Companion.EXTRA_IMPORT_FROM_CARD
 import app.passwordstore.util.extensions.wipe
 import app.passwordstore.util.git.sshj.SshKey
@@ -247,7 +248,7 @@ class PGPKeyListActivity : AppCompatActivity() {
               isStubKey = ::isStubKey,
               onKeyInfoClick = ::showKeyInfo,
               onChangePassphraseClick = ::changeKeyPassphrase,
-              onDeleteItemClick = ::deleteKey,
+              onDeleteItemClick = ::confirmDeleteKey,
               onExportItemClick = ::exportKey,
               onExportPublicClick = ::exportPublicKey,
               onKeySelected =
@@ -407,6 +408,26 @@ class PGPKeyListActivity : AppCompatActivity() {
     val intent = Intent(this, PGPKeyChangePassphraseActivity::class.java)
     intent.putExtra(PGPKeyChangePassphraseActivity.EXTRA_SELECTED_IDENTIFIER, identifier.toString())
     keyAction.launch(intent)
+  }
+
+  /** Asks before a key goes, in the words and the look of the app's other deletions. */
+  private fun confirmDeleteKey(identifier: PGPIdentifier) {
+    val secret = isSecretKey(identifier)
+    WarningDialog.show(
+      context = this,
+      title =
+        getString(
+          if (secret) R.string.pgp_key_manager_delete_secret_key_confirmation_dialog_title
+          else R.string.pgp_key_manager_delete_key_confirmation_dialog_title
+        ),
+      message =
+        if (secret) getString(R.string.pgp_key_manager_delete_confirmation_dialog_message)
+        else null,
+      proceedLabel = getString(R.string.delete),
+      cancelLabelRes = R.string.dialog_do_not_delete,
+    ) {
+      deleteKey(identifier)
+    }
   }
 
   private fun deleteKey(identifier: PGPIdentifier) {

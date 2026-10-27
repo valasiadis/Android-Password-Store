@@ -56,8 +56,11 @@ class ListBlock @JvmOverloads constructor(context: Context, attrs: AttributeSet?
       row.setTag(R.id.list_block_place, place)
       val top = if (place.startsBlock) outerRadius else innerRadius
       val bottom = if (place.endsBlock) outerRadius else innerRadius
-      if (row is TextInputLayout) {
-        row.setBoxCornerRadii(top, top, bottom, bottom)
+      // A field is shaped on its own box, whether it is the row or the first thing in one — a field
+      // with a button laid over it stands in a frame of its own.
+      val field = row as? TextInputLayout ?: (row as? ViewGroup)?.getChildAt(0) as? TextInputLayout
+      if (field != null) {
+        field.setBoxCornerRadii(top, top, bottom, bottom)
       } else {
         row.setBackgroundResource(
           when {

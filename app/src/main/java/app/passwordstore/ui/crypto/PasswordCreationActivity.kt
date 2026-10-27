@@ -110,7 +110,7 @@ class PasswordCreationActivity : BasePGPActivity() {
   private val otpImportAction =
     registerForActivityResult(StartActivityForResult()) { result ->
       if (result.resultCode == RESULT_OK) {
-        binding.otpImportButton.isVisible = false
+        binding.otpImportButton.root.isVisible = false
         val intentResult = IntentIntegrator.parseActivityResult(RESULT_OK, result.data)
         val contents = "${intentResult.contents}\n"
         binding.extraContent.text?.let { currentExtras ->
@@ -159,7 +159,7 @@ class PasswordCreationActivity : BasePGPActivity() {
           this@PasswordCreationActivity,
           R.string.otp_import_success,
         )
-        binding.otpImportButton.isVisible = false
+        binding.otpImportButton.root.isVisible = false
       }
         .onErr {
           ErrorDialog.show(this@PasswordCreationActivity, R.string.otp_import_failure_generic)
@@ -246,7 +246,8 @@ class PasswordCreationActivity : BasePGPActivity() {
 
       saveFab.setOnClickListener { save() }
       generatePassword.setOnClickListener { generatePassword() }
-      otpImportButton.setOnClickListener {
+      otpImportButton.actionTitle.setText(R.string.add_otp)
+      otpImportButton.root.setOnClickListener {
         supportFragmentManager.setFragmentResultListener(
           OTP_RESULT_REQUEST_KEY,
           this@PasswordCreationActivity,
@@ -484,7 +485,7 @@ class PasswordCreationActivity : BasePGPActivity() {
       val entry = passwordEntryFactory.create("PLACEHOLDER\n${extraContent.text}".toCharArray())
       val hasTotp = entry.hasTotp()
       entry.clear()
-      otpImportButton.isVisible = !hasTotp
+      otpImportButton.root.isVisible = !hasTotp
     }
 
   /** Encrypts the password and the extra content */

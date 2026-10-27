@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  What a page is about, set under its rows as the system settings explain a setting: an information
+  mark, and the explanation beneath it in the quieter colour, on the background rather than in a
+  block.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="vertical"
+  android:paddingHorizontal="@dimen/spacing_large"
+  android:paddingTop="@dimen/spacing_xlarge">
+
+  <androidx.appcompat.widget.AppCompatImageView
+    android:layout_width="24dp"
+    android:layout_height="24dp"
+    android:contentDescription="@null"
+    android:src="@drawable/ic_info_24dp"
+    app:tint="?attr/colorOnSurfaceVariant" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/footer_text"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_medium"
+    android:textAppearance="?attr/textAppearanceBodyMedium"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    tools:text="How long a copied password stays on the clipboard before it is cleared." />
+
+</LinearLayout>

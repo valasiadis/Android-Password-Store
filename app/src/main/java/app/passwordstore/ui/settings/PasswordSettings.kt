@@ -6,6 +6,7 @@
 package app.passwordstore.ui.settings
 
 import android.text.InputType
+import androidx.annotation.PluralsRes
 import androidx.core.content.edit
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.R
@@ -15,8 +16,6 @@ import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.extensions.unlockPins
 import app.passwordstore.util.settings.PreferenceKeys
 import de.Maxr1998.modernpreferences.PreferenceScreen
-import de.Maxr1998.modernpreferences.helpers.editText
-import de.Maxr1998.modernpreferences.helpers.onClick
 import de.Maxr1998.modernpreferences.helpers.switch
 
 class PasswordSettings(private val activity: FragmentActivity) : SettingsProvider {
@@ -56,17 +55,21 @@ class PasswordSettings(private val activity: FragmentActivity) : SettingsProvide
         activity.persistentPassphrases.edit { clear() }
         activity.unlockPins.edit { clear() }
       }
-      editText(PreferenceKeys.BIOMETRICS_AND_PIN_TIMEOUT) {
-        titleRes = R.string.pref_biometrics_and_pin_timeout_title
-        summaryProvider = { timeout ->
-          activity.getString(R.string.pref_biometrics_and_pin_timeout_summary, timeout ?: "3")
-        }
-        textInputType = InputType.TYPE_CLASS_NUMBER
-        onClick {
-          activity.persistentPassphrases.edit { clear() }
-          activity.unlockPins.edit { clear() }
-          true
-        }
+      // A new period drops what the old one had kept, so nothing outlives the period now set.
+      // A new period drops what the old one had kept, so nothing outlives the period now set.
+      textSetting(
+        PreferenceKeys.BIOMETRICS_AND_PIN_TIMEOUT,
+        R.string.pref_biometrics_and_pin_timeout_title,
+        activity,
+        activity.sharedPrefs,
+        summary = { duration(activity, it, R.plurals.duration_days) },
+        default = "3",
+        inputType = InputType.TYPE_CLASS_NUMBER,
+        suffix = R.string.setting_unit_days,
+        footer = R.string.pref_biometrics_and_pin_timeout_footer,
+      ) {
+        activity.persistentPassphrases.edit { clear() }
+        activity.unlockPins.edit { clear() }
       }
       switch(PreferenceKeys.SHOW_PASSWORD) {
         titleRes = R.string.show_password_pref_title
@@ -78,13 +81,17 @@ class PasswordSettings(private val activity: FragmentActivity) : SettingsProvide
         summaryRes = R.string.pref_copy_summary
         defaultValue = false
       }
-      editText(PreferenceKeys.GENERAL_SHOW_TIME) {
-        titleRes = R.string.pref_clipboard_timeout_title
-        summaryProvider = { timeout ->
-          activity.getString(R.string.pref_clipboard_timeout_summary, timeout ?: "45")
-        }
-        textInputType = InputType.TYPE_CLASS_NUMBER
-      }
+      textSetting(
+        PreferenceKeys.GENERAL_SHOW_TIME,
+        R.string.pref_clipboard_timeout_title,
+        activity,
+        activity.sharedPrefs,
+        summary = { duration(activity, it, R.plurals.duration_seconds) },
+        default = "45",
+        inputType = InputType.TYPE_CLASS_NUMBER,
+        suffix = R.string.setting_unit_seconds,
+        footer = R.string.pref_clipboard_timeout_footer,
+      )
       switch(PreferenceKeys.CLEAR_CLIPBOARD_HISTORY) {
         defaultValue = false
         titleRes = R.string.pref_clear_clipboard_title
@@ -97,4 +104,11 @@ class PasswordSettings(private val activity: FragmentActivity) : SettingsProvide
       }
     }
   }
+}
+
+/** A stored number of units said as a duration: [label] counts them, and 0 is never. */
+private fun duration(activity: FragmentActivity, value: String?, @PluralsRes label: Int): String {
+  val count = value?.toIntOrNull() ?: return value.orEmpty()
+  return if (count == 0) activity.getString(R.string.duration_never)
+  else activity.resources.getQuantityString(label, count, count)
 }

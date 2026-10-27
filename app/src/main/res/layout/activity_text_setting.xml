@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!-- A setting that is typed, on a page of its own: its field, and what it does beneath. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent">
+
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/password_list_margin"
+    android:paddingTop="@dimen/password_list_margin_top"
+    android:paddingBottom="@dimen/spacing_large">
+
+    <app.passwordstore.ui.util.ListBlock
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content">
+
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/setting_field_layout"
+        style="@style/Widget.APS.ListField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/setting_field"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:imeOptions="actionDone|flagNoPersonalizedLearning"
+          android:importantForAutofill="no" />
+
+      </com.google.android.material.textfield.TextInputLayout>
+
+    </app.passwordstore.ui.util.ListBlock>
+
+    <include
+      android:id="@+id/footer"
+      layout="@layout/list_footer" />
+
+  </LinearLayout>
+
+</ScrollView>

@@ -111,9 +111,7 @@
   <string name="pref_category_general_title">Allgemein</string>
   <string name="pref_category_passwords_title">Passwörter</string>
   <string name="pref_biometrics_and_pin_timeout_title">Gültigkeitsdauer (in Tagen) von Biometrie/PIN</string>
-  <string name="pref_biometrics_and_pin_timeout_summary">Nach Ablauf müssen Sie den PGP-Kennwortsatz erneut eingeben. 0 bedeutet für immer. Aktueller Wert: %1$s</string>
   <string name="pref_clipboard_timeout_title">Timeout für das Kopieren des Passwortes</string>
-  <string name="pref_clipboard_timeout_summary">Legen Sie die Zeitspanne (in Sekunden) fest, wie lange das Passwort in der Zwischenablage liegen soll. 0 bedeutet für immer. Aktueller Wert: %1$s</string>
   <string name="pref_copy_title">Kopiere Passwort automatisch</string>
   <string name="pref_copy_summary">Kopiert das Passwort in die Zwischenablage, nachdem es entschlüsselt wurde.</string>
   <string name="ssh_key_import_error_not_an_ssh_key_message">Die ausgewählte Datei scheint kein privater SSH-Schlüssel zu sein.</string>

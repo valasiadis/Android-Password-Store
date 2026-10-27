@@ -78,7 +78,6 @@
   <string name="pref_category_general_title">일반</string>
   <string name="pref_category_passwords_title">암호 목록</string>
   <string name="pref_clipboard_timeout_title">암호 복사 시간 만료</string>
-  <string name="pref_clipboard_timeout_summary">암호를 클립보드에 저장할 시간(초) 을 설정하십시오. 0은 제한시간이 없습니다. 현재값: %1$s</string>
   <string name="pref_copy_title">암호 자동 복사</string>
   <string name="pref_copy_summary">복호화 성공 후 자동으로 암호를 클립보드에 복사합니다.</string>
   <string name="ssh_key_import_error_not_an_ssh_key_message">선택된 파일이 SSH 개인키가 아닌 것 같습니다.</string>

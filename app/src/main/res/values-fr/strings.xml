@@ -80,7 +80,6 @@
   <string name="pref_category_general_title">Général</string>
   <string name="pref_category_passwords_title">Mots de passe</string>
   <string name="pref_clipboard_timeout_title">Délai imparti pour la copie</string>
-  <string name="pref_clipboard_timeout_summary">Définissez le temps (en secondes) durant lequel le mot de passe restera dans le presse-papiers. 0 pour une rétention illimitée. Valeur actuelle: %1$s</string>
   <string name="pref_copy_title">Copie automatique du mot de passe</string>
   <string name="pref_copy_summary">Copie automatiquement le mot de passe vers le presse-papier si le déchiffrement a réussi.</string>
   <string name="ssh_key_import_error_not_an_ssh_key_message">Le fichier sélectionné ne semble pas être une clé privée SSH.</string>

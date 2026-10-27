@@ -85,7 +85,6 @@
   <string name="pref_category_general_title">Общие</string>
   <string name="pref_category_passwords_title">Пароли</string>
   <string name="pref_clipboard_timeout_title">Срок хранения пароля в буфере обмена</string>
-  <string name="pref_clipboard_timeout_summary">Установите время (в секундах), которое вы хотите, чтобы пароль был в буфере обмена. 0 означает навсегда. Текущее значение: %1$s</string>
   <string name="pref_copy_title">Автоматически копировать пароль</string>
   <string name="pref_copy_summary">Автоматически копировать пароль в буфер обмена после успешного расшифрования</string>
   <string name="ssh_key_import_error_not_an_ssh_key_message">Выбранный файл не похож на приватный SSH-ключ.</string>

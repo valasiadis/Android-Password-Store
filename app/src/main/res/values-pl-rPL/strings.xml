@@ -79,7 +79,6 @@
   <string name="pref_category_general_title">Ogólne</string>
   <string name="pref_category_passwords_title">Hasła</string>
   <string name="pref_clipboard_timeout_title">Czas do wyczyszczenia hasła ze schowka</string>
-  <string name="pref_clipboard_timeout_summary">Ustaw czas (w sekundach), przechowywania hasła w schowku. 0 oznacza brak limitu. Aktualna wartość: %1$s</string>
   <string name="pref_copy_title">Automatycznie skopiuj hasło</string>
   <string name="pref_copy_summary">Automatycznie skopiuj hasło do schowka po pomyślnym odszyfrowaniu.</string>
   <string name="ssh_key_import_error_not_an_ssh_key_message">Wybrany plik nie wydaje się być kluczem prywatnym SSH.</string>

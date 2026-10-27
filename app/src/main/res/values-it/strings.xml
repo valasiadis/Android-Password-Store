@@ -80,7 +80,6 @@
   <string name="pref_category_general_title">Generale</string>
   <string name="pref_category_passwords_title">Password</string>
   <string name="pref_clipboard_timeout_title">Timeout copia della password</string>
-  <string name="pref_clipboard_timeout_summary">Imposta per quanto tempo (in secondi) vuoi che la password rimanga negli appunti. 0 significa per sempre. Valore corrente: %1$s</string>
   <string name="pref_copy_title">Copia automaticamente la password</string>
   <string name="pref_copy_summary">Copia automaticamente la password negli appunti dopo il successo della decifratura.</string>
   <string name="ssh_key_import_error_not_an_ssh_key_message">Il file selezionato non sembra essere una chiave privata SSH.</string>

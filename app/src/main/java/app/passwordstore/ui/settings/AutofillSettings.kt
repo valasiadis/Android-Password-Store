@@ -8,6 +8,7 @@ package app.passwordstore.ui.settings
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.provider.Settings
+import android.text.InputType
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.net.toUri
@@ -16,11 +17,11 @@ import app.passwordstore.BuildConfig
 import app.passwordstore.R
 import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.util.extensions.autofillManager
+import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.settings.PreferenceKeys
 import com.github.androidpasswordstore.autofillparser.BrowserAutofillSupportLevel
 import com.github.androidpasswordstore.autofillparser.getInstalledBrowsersWithAutofillSupportLevel
 import de.Maxr1998.modernpreferences.PreferenceScreen
-import de.Maxr1998.modernpreferences.helpers.editText
 import de.Maxr1998.modernpreferences.helpers.onClick
 import de.Maxr1998.modernpreferences.helpers.switch
 import de.Maxr1998.modernpreferences.preferences.SwitchPreference
@@ -93,17 +94,34 @@ class AutofillSettings(private val activity: FragmentActivity) : SettingsProvide
         defaultValue = true
         dependency = PreferenceKeys.AUTOFILL_ENABLE
       }
-      editText(PreferenceKeys.OREO_AUTOFILL_DEFAULT_USERNAME) {
-        dependency = PreferenceKeys.AUTOFILL_ENABLE
-        titleRes = R.string.preference_default_username_title
-        summaryProvider = { activity.getString(R.string.preference_default_username_summary) }
-      }
-      editText(PreferenceKeys.OREO_AUTOFILL_CUSTOM_PUBLIC_SUFFIXES) {
-        dependency = PreferenceKeys.AUTOFILL_ENABLE
-        titleRes = R.string.preference_custom_public_suffixes_title
-        summaryProvider = { activity.getString(R.string.preference_custom_public_suffixes_summary) }
-        textInputHintRes = R.string.preference_custom_public_suffixes_hint
-      }
+      textSetting(
+        PreferenceKeys.OREO_AUTOFILL_DEFAULT_USERNAME,
+        R.string.preference_default_username_title,
+        activity,
+        activity.sharedPrefs,
+        summary = { it.orNotSet(activity) },
+        hint = R.string.crypto_username_hint,
+        footer = R.string.preference_default_username_summary,
+        configure = { dependency = PreferenceKeys.AUTOFILL_ENABLE },
+      )
+      textSetting(
+        PreferenceKeys.OREO_AUTOFILL_CUSTOM_PUBLIC_SUFFIXES,
+        R.string.preference_custom_public_suffixes_title,
+        activity,
+        activity.sharedPrefs,
+        summary = {
+          it?.lines()?.filter(String::isNotBlank)?.joinToString(", ").orNotSet(activity)
+        },
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE,
+        hint = R.string.setting_field_domains,
+        placeholder = R.string.preference_custom_public_suffixes_hint,
+        footer = R.string.preference_custom_public_suffixes_summary,
+        configure = { dependency = PreferenceKeys.AUTOFILL_ENABLE },
+      )
     }
   }
 }
+
+/** A typed setting's value as its row says it, or that there is none. */
+private fun String?.orNotSet(activity: FragmentActivity): String =
+  takeUnless { it.isNullOrBlank() } ?: activity.getString(R.string.setting_not_set)

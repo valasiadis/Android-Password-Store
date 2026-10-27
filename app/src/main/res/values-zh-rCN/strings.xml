@@ -78,7 +78,6 @@
   <string name="pref_category_general_title">通用</string>
   <string name="pref_category_passwords_title">密码</string>
   <string name="pref_clipboard_timeout_title">密码复制超时</string>
-  <string name="pref_clipboard_timeout_summary">设置您希望密码在剪贴板中的时间(以秒为单位) 0永不清除 当前值:%1$s</string>
   <string name="pref_copy_title">自动复制密码</string>
   <string name="pref_copy_summary">解密成功后自动将密码复制到剪贴板</string>
   <string name="ssh_key_import_error_not_an_ssh_key_message">选择的文件似乎不是SSH私钥</string>

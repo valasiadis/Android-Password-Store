@@ -101,7 +101,6 @@
   <string name="pref_category_general_title">General</string>
   <string name="pref_category_passwords_title">Contraseñas</string>
   <string name="pref_clipboard_timeout_title">Tiempo de expiración al copiar</string>
-  <string name="pref_clipboard_timeout_summary">Establezca el tiempo (en segundos) que desea que la contraseña permanezca en el portapapeles. 0 significa para siempre. Valor actual: %1$s</string>
   <string name="pref_copy_title">Copiar automáticamente la contraseña</string>
   <string name="pref_copy_summary">Copie automáticamente la contraseña en el portapapeles después de que el descifrado se haya realizado correctamente.</string>
   <string name="ssh_key_import_error_not_an_ssh_key_message">El archivo seleccionado no parece ser una clave privada SSH.</string>

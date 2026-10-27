@@ -158,13 +158,6 @@
 
       </LinearLayout>
 
-      <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/show_server_response"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_large"
-        android:text="@string/show_server_response" />
-
       <com.google.android.material.button.MaterialButton
         android:id="@+id/clear_host_key_button"
         style="?attr/materialButtonOutlinedStyle"
@@ -174,6 +167,13 @@
         android:text="@string/clear_saved_host_key"
         android:visibility="gone"
         tools:visibility="visible" />
+
+      <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/show_server_response"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_large"
+        android:text="@string/show_server_response" />
 
     </LinearLayout>
   </ScrollView>

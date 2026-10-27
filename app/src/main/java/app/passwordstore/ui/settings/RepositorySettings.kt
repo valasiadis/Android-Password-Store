@@ -390,11 +390,23 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
           logcat { e.asLog() }
           ErrorDialog.show(
             activity,
-            activity.getString(R.string.repository_move_failed, e.message ?: e.toString()),
+            if (e is PasswordRepository.UnfitNamesException)
+              activity.getString(
+                R.string.repository_move_unfit_names,
+                e.paths.take(MAX_LISTED_NAMES).joinToString("\n") { "\u2022 $it" },
+              )
+            else activity.getString(R.string.repository_move_failed, e.message ?: e.toString()),
           )
         },
       )
     }
+  }
+
+  private companion object {
+    /**
+     * How many unfit names the error lists, so a large store's list does not run off the dialog.
+     */
+    const val MAX_LISTED_NAMES = 10
   }
 
   @EntryPoint

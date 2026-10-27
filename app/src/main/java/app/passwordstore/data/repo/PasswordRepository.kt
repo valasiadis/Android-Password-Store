@@ -35,6 +35,8 @@ object PasswordRepository {
 
   val TYPE_FILE: Int = 1
   val TYPE_DIR: Int = 2
+  private const val UNFIT_CHARACTERS = "\"*/:<>?\\|"
+  private const val FIRST_PRINTABLE = 0x20
 
   var repository: Repository? = null
   private val settings by unsafeLazy { Application.instance.sharedPrefs }
@@ -152,11 +154,36 @@ object PasswordRepository {
    * folder that already holds something is not written into: what is there is not the app's to
    * merge or replace.
    */
+  /**
+   * Whether a shared folder will hold a file or folder called [name]. Shared storage on Android
+   * refuses the characters FAT refuses, and a name ending in a dot or a space, all of which the
+   * app's own storage takes without a word.
+   */
+  private fun isFitForSharedStorage(name: String): Boolean =
+    name.none { it in UNFIT_CHARACTERS || it.code < FIRST_PRINTABLE } &&
+      !name.endsWith('.') &&
+      !name.endsWith(' ')
+
+  /** The store holds [paths] whose names a shared folder will not take, so it cannot move there. */
+  class UnfitNamesException(val paths: List<String>) :
+    IllegalStateException("${paths.size} names cannot be stored in a shared folder")
+
   fun moveRepository(shared: Boolean) {
     val from = getRepositoryDirectory()
     val to = repositoryDirectory(shared)
     if (from == to) return
     check(!to.exists() || to.list().isNullOrEmpty()) { "${to.path} already holds files" }
+    // A shared folder refuses names the app's own storage takes, so the store is checked before
+    // anything is copied, rather than found out halfway through.
+    if (shared) {
+      val unfit =
+        from
+          .walkTopDown()
+          .filter { !isFitForSharedStorage(it.name) }
+          .map { it.relativeTo(from).path }
+          .toList()
+      if (unfit.isNotEmpty()) throw UnfitNamesException(unfit)
+    }
     repository?.close()
     repository = null
     try {

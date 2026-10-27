@@ -233,6 +233,7 @@
   <string name="repository_move_internal_message">The repository will be moved back into the app’s own storage, where no other app can read it.</string>
   <string name="repository_move_confirm">Move</string>
   <string name="repository_move_progress">Moving the repository…</string>
+  <string name="repository_move_unfit_names">A shared folder cannot hold names with ? : * \" &lt; &gt; | \\ or a dot or space at their end, and these are in the repository. Rename them, then move it again. Nothing was moved.\n\n%1$s</string>
   <string name="repository_move_failed">The repository could not be moved, and is still where it was: %1$s</string>
   <string name="prefs_export_passwords_title">Export repository</string>
   <string name="prefs_export_passwords_summary">Exports the password repository to an external directory.</string>

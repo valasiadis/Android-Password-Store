@@ -20,7 +20,7 @@
   android:minHeight="@dimen/password_row_height"
   android:orientation="horizontal"
   android:paddingHorizontal="@dimen/spacing_large"
-  tools:background="@drawable/list_choice_row_top">
+  tools:background="@drawable/list_row_top">
 
   <androidx.appcompat.widget.AppCompatImageView
     android:id="@+id/choice_mark"

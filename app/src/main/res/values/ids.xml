@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<resources>
+  <!-- Where a row of a ListBlock was last shaped as falling, so it is only reshaped when it moves. -->
+  <item name="list_block_place" type="id" />
+</resources>

@@ -43,6 +43,12 @@
   <dimen name="list_icon_circle">40dp</dimen>
   <dimen name="list_icon_circle_padding">8dp</dimen>
   <dimen name="list_icon_text_gap">12dp</dimen>
+  <!--
+    A block's heading, as the system settings set one: a little in from the block's edge, and as
+    tall as a touch target so a help mark beside it is one.
+  -->
+  <dimen name="list_section_header_inset">8dp</dimen>
+  <dimen name="list_section_header_height">48dp</dimen>
 
   <!--
     List item metrics. Rows carry their own filled, rounded container and are

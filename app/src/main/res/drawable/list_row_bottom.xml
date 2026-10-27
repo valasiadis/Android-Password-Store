@@ -4,8 +4,9 @@
   -->
 
 <!--
-  The only row of a block of choices, rounded fully all round as a block on its own is, and filled
-  as every list row is, with the touch drawn inside the same shape.
+  The bottom row of a block, rounded as the app's lists round their blocks: fully at the
+  block's outer edge, slightly where it meets the next row, and filled as every list row is,
+  with the touch drawn inside the same shape.
 -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
   android:color="?attr/colorControlHighlight">
@@ -14,8 +15,8 @@
       <corners
         android:bottomLeftRadius="@dimen/list_outer_corner_radius"
         android:bottomRightRadius="@dimen/list_outer_corner_radius"
-        android:topLeftRadius="@dimen/list_outer_corner_radius"
-        android:topRightRadius="@dimen/list_outer_corner_radius" />
+        android:topLeftRadius="@dimen/list_inner_corner_radius"
+        android:topRightRadius="@dimen/list_inner_corner_radius" />
       <solid android:color="@android:color/white" />
     </shape>
   </item>
@@ -24,8 +25,8 @@
       <corners
         android:bottomLeftRadius="@dimen/list_outer_corner_radius"
         android:bottomRightRadius="@dimen/list_outer_corner_radius"
-        android:topLeftRadius="@dimen/list_outer_corner_radius"
-        android:topRightRadius="@dimen/list_outer_corner_radius" />
+        android:topLeftRadius="@dimen/list_inner_corner_radius"
+        android:topRightRadius="@dimen/list_inner_corner_radius" />
       <solid android:color="@color/list_row_fill" />
     </shape>
   </item>

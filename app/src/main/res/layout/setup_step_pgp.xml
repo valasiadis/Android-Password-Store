@@ -3,145 +3,60 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
+<!--
+  Everything a store needs settled before it exists, as groups of rows the way the settings set
+  theirs: the key, how entries are written, and where the repository is kept.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:app="http://schemas.android.com/apk/res-auto"
   android:layout_width="match_parent"
   android:layout_height="wrap_content"
   android:orientation="vertical">
 
   <!--
-    A field rather than a button: it holds a value, it says what that value is, and tapping it
-    goes to where it is chosen — the same shape the folder's key wears elsewhere in the app.
+    A row rather than a field: it holds a value, says what that value is, and opens where it is
+    chosen — the same shape the settings give anything picked on a screen of its own.
   -->
-  <com.google.android.material.textfield.TextInputLayout
-    android:id="@+id/gpg_key_container"
+  <app.passwordstore.ui.util.ListBlock
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:hint="@string/folder_encryption_key"
-    app:endIconContentDescription="@string/folder_encryption_key_choose"
-    app:endIconDrawable="@drawable/ic_keyboard_arrow_right_24dp"
-    app:endIconMode="custom">
+    android:layout_height="wrap_content">
 
-    <com.google.android.material.textfield.TextInputEditText
-      android:id="@+id/gpg_key_value"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:clickable="true"
-      android:cursorVisible="false"
-      android:ellipsize="end"
-      android:focusable="false"
-      android:inputType="textNoSuggestions"
-      android:paddingStart="@dimen/spacing_large"
-      android:paddingEnd="@dimen/text_field_end_icon_room"
-      android:singleLine="true"
-      android:text="@string/setup_key_none_chosen" />
+    <include
+      android:id="@+id/gpg_key"
+      layout="@layout/list_value_row" />
 
-  </com.google.android.material.textfield.TextInputLayout>
+  </app.passwordstore.ui.util.ListBlock>
 
-  <LinearLayout
+  <include
+    android:id="@+id/encryption_header"
+    layout="@layout/list_section_header" />
+
+  <app.passwordstore.ui.util.ListBlock
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_xlarge"
-    android:gravity="center_vertical"
-    android:orientation="horizontal">
+    android:layout_height="wrap_content">
 
-    <androidx.appcompat.widget.AppCompatTextView
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="@string/setup_encryption_title"
-      android:textAppearance="?attr/textAppearanceTitleMedium"
-      android:textColor="?attr/colorOnSurface" />
-
-    <androidx.appcompat.widget.AppCompatImageView
-      android:id="@+id/encryption_help"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:background="?attr/selectableItemBackgroundBorderless"
-      android:padding="@dimen/spacing_small"
-      android:src="@drawable/ic_help_20dp"
-      app:tint="?attr/colorOnSurfaceVariant" />
-
-  </LinearLayout>
-
-  <!-- What ASCII armor is stays behind the question mark, out of the way of the switch. -->
-  <LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_medium"
-    android:gravity="center_vertical"
-    android:orientation="horizontal">
-
-    <androidx.appcompat.widget.AppCompatTextView
-      android:id="@+id/ascii_armor_label"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="@string/pref_pgp_ascii_armor_title"
-      android:textAppearance="?attr/textAppearanceBodyLarge"
-      android:textColor="?attr/colorOnSurface" />
-
-    <androidx.appcompat.widget.AppCompatImageView
-      android:id="@+id/ascii_armor_help"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:background="?attr/selectableItemBackgroundBorderless"
-      android:padding="@dimen/spacing_small"
-      android:src="@drawable/ic_help_20dp"
-      app:tint="?attr/colorOnSurfaceVariant" />
-
-    <Space
-      android:layout_width="0dp"
-      android:layout_height="1dp"
-      android:layout_weight="1" />
-
-    <com.google.android.material.materialswitch.MaterialSwitch
+    <include
       android:id="@+id/ascii_armor"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content" />
+      layout="@layout/list_switch_row" />
 
-  </LinearLayout>
-
-  <!--
-    Where the repository is kept, asked with everything else that decides what the store will be
-    before it exists: inside the app, or in a shared folder other apps can reach. Two rows of one
-    block, drawn as the app's lists are, the chosen one tinted and checked.
-  -->
-  <LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_xlarge"
-    android:gravity="center_vertical"
-    android:orientation="horizontal">
-
-    <androidx.appcompat.widget.AppCompatTextView
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="@string/select_n_repository_visibility"
-      android:textAppearance="?attr/textAppearanceTitleMedium"
-      android:textColor="?attr/colorOnSurface" />
-
-    <androidx.appcompat.widget.AppCompatImageView
-      android:id="@+id/repo_visibility_help"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:background="?attr/selectableItemBackgroundBorderless"
-      android:padding="@dimen/spacing_small"
-      android:src="@drawable/ic_help_20dp"
-      app:tint="?attr/colorOnSurfaceVariant" />
-
-  </LinearLayout>
+  </app.passwordstore.ui.util.ListBlock>
 
   <include
-    android:id="@+id/internal_repo"
-    layout="@layout/list_choice_row"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_medium" />
+    android:id="@+id/repo_visibility_header"
+    layout="@layout/list_section_header" />
 
-  <include
-    android:id="@+id/shared_repo"
-    layout="@layout/list_choice_row"
+  <!-- Inside the app, or in a shared folder other apps can reach: one choice, as radio rows. -->
+  <app.passwordstore.ui.util.ListBlock
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/list_item_gap" />
+    android:layout_height="wrap_content">
+
+    <include
+      android:id="@+id/internal_repo"
+      layout="@layout/list_choice_row" />
+
+    <include
+      android:id="@+id/shared_repo"
+      layout="@layout/list_choice_row" />
+
+  </app.passwordstore.ui.util.ListBlock>
 
 </LinearLayout>

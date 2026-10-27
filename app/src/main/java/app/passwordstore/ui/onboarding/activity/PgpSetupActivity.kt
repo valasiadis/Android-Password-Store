@@ -14,11 +14,9 @@ import androidx.core.content.edit
 import app.passwordstore.R
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.databinding.SetupStepPgpBinding
-import app.passwordstore.ui.dialogs.ChoiceRows
-import app.passwordstore.ui.dialogs.showsTip
+import app.passwordstore.ui.dialogs.ListRows
 import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.ui.pgp.keyNames
-import app.passwordstore.util.extensions.setInlineText
 import app.passwordstore.util.extensions.sharedPrefs
 import app.passwordstore.util.settings.PreferenceKeys
 import dagger.hilt.android.AndroidEntryPoint
@@ -59,34 +57,38 @@ class PgpSetupActivity : SetupStepActivity() {
     selectedKeyIds =
       savedInstanceState?.getString(STATE_SELECTED_KEYS) ?: intent.getStringExtra(EXTRA_KEY_IDS)
 
-    binding.gpgKeyValue.setOnClickListener { chooseKeys() }
-    binding.gpgKeyContainer.setEndIconOnClickListener { chooseKeys() }
-
-    binding.asciiArmor.isChecked = sharedPrefs.getBoolean(PreferenceKeys.ASCII_ARMOR, false)
     // Stored as it is switched, like every other setting in the app, so that going back a step and
     // coming forward again shows what was chosen rather than what the default is.
-    binding.asciiArmor.setOnCheckedChangeListener { _, isChecked ->
-      sharedPrefs.edit { putBoolean(PreferenceKeys.ASCII_ARMOR, isChecked) }
+    ListRows.header(
+      binding.encryptionHeader,
+      R.string.setup_encryption_title,
+      R.string.setup_encryption_message,
+    )
+    ListRows.switch(
+      binding.asciiArmor,
+      R.string.pref_pgp_ascii_armor_title,
+      checked = sharedPrefs.getBoolean(PreferenceKeys.ASCII_ARMOR, false),
+      summary = getString(R.string.setup_ascii_armor_explanation),
+    ) { checked ->
+      sharedPrefs.edit { putBoolean(PreferenceKeys.ASCII_ARMOR, checked) }
     }
-    binding.asciiArmorHelp.showsTip(R.string.setup_ascii_armor_explanation)
-    binding.encryptionHelp.showsTip(R.string.setup_encryption_message)
 
-    binding.repoVisibilityHelp.showsTip(R.string.setup_repo_visibility_tip)
     // Stored as it is chosen, like the switch above it: the repository is cloned or created where
     // this says, and that happens after the last step.
-    ChoiceRows.show(
-      row = binding.internalRepo,
-      index = 0,
-      count = 2,
+    ListRows.header(
+      binding.repoVisibilityHeader,
+      R.string.select_n_repository_visibility,
+      R.string.setup_repo_visibility_tip,
+    )
+    ListRows.choice(
+      binding.internalRepo,
       title = getString(R.string.repo_visibility_internal_title),
       summary = getString(R.string.repo_visibility_internal_summary),
     ) {
       chooseVisibility(shared = false)
     }
-    ChoiceRows.show(
-      row = binding.sharedRepo,
-      index = 1,
-      count = 2,
+    ListRows.choice(
+      binding.sharedRepo,
       title = getString(R.string.repo_visibility_shared_title),
       summary = getString(R.string.shared_repo_path, Build.MODEL),
     ) {
@@ -115,16 +117,19 @@ class PgpSetupActivity : SetupStepActivity() {
 
   private fun showVisibility() {
     val shared = sharedPrefs.getBoolean(PreferenceKeys.PREF_SHARED_REPO, false)
-    ChoiceRows.select(binding.internalRepo, selected = !shared)
-    ChoiceRows.select(binding.sharedRepo, selected = shared)
+    ListRows.select(binding.internalRepo, selected = !shared)
+    ListRows.select(binding.sharedRepo, selected = shared)
   }
 
-  /** Names the chosen keys in the field, and opens the way onwards once there are any. */
+  /** Names the chosen keys in their row, and opens the way onwards once there are any. */
   private fun showSelectedKeys() {
     val names = cryptoRepository.keyNames(selectedKeyIds)
-    binding.gpgKeyValue.setInlineText(
+    ListRows.value(
+      binding.gpgKey,
+      R.string.folder_encryption_key,
       if (names.isEmpty()) getString(R.string.setup_key_none_chosen)
-      else names.joinToString(separator = ", ")
+      else names.joinToString(separator = ", "),
+      onOpen = ::chooseKeys,
     )
     setCanProceed(names.isNotEmpty())
   }

@@ -4,7 +4,7 @@
   -->
 
 <!--
-  A row in the middle of a block of choices, rounded as the app's lists round their blocks: only
+  A row in the middle of a block, rounded as the app's lists round their blocks: only
   slightly, where it meets the rows on either side, and filled as every list row is, with the touch
   drawn inside the same shape.
 -->

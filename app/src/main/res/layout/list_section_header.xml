@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  What a block of rows is about, set above it as the system settings set a group's heading: small
+  and bold, a little in from the block's edge, with the mark that explains it beside it where it
+  needs explaining.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:gravity="center_vertical"
+  android:minHeight="@dimen/list_section_header_height"
+  android:orientation="horizontal"
+  android:paddingStart="@dimen/list_section_header_inset"
+  android:paddingTop="@dimen/spacing_large">
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/section_title"
+    style="@style/TextAppearance.APS.SectionHeader"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    tools:text="How entries are stored" />
+
+  <androidx.appcompat.widget.AppCompatImageView
+    android:id="@+id/section_help"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:contentDescription="@null"
+    android:padding="@dimen/spacing_small"
+    android:src="@drawable/ic_help_20dp"
+    android:visibility="gone"
+    app:tint="?attr/colorOnSurfaceVariant"
+    tools:visibility="visible" />
+
+</LinearLayout>

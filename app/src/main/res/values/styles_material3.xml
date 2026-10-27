@@ -43,4 +43,39 @@
   </style>
 
 
+  <!-- A block's heading: small and bold, as the system settings head a group of rows. -->
+  <style name="TextAppearance.APS.SectionHeader" parent="TextAppearance.Material3.TitleSmall">
+    <item name="android:textStyle">bold</item>
+    <item name="android:textColor">?attr/colorOnSurface</item>
+  </style>
+
+  <!--
+    A text field as a row of a block: filled with the colour every row is filled with, with no
+    outline and no underline, its corners given by the ListBlock it stands in. The label sits where
+    a row's name does and the text where its value does, so a form reads as one more group of
+    settings rather than as a stack of boxes.
+  -->
+  <style name="Widget.APS.ListField" parent="Widget.Material3.TextInputLayout.FilledBox">
+    <item name="boxBackgroundColor">@color/list_row_fill</item>
+    <item name="boxStrokeWidth">0dp</item>
+    <item name="boxStrokeWidthFocused">0dp</item>
+    <item name="boxCornerRadiusTopStart">@dimen/list_outer_corner_radius</item>
+    <item name="boxCornerRadiusTopEnd">@dimen/list_outer_corner_radius</item>
+    <item name="boxCornerRadiusBottomStart">@dimen/list_outer_corner_radius</item>
+    <item name="boxCornerRadiusBottomEnd">@dimen/list_outer_corner_radius</item>
+    <item name="materialThemeOverlay">@style/ThemeOverlay.APS.ListField</item>
+  </style>
+
+  <style name="ThemeOverlay.APS.ListField" parent="">
+    <item name="editTextStyle">@style/Widget.APS.ListField.EditText</item>
+  </style>
+
+  <!-- As tall as a row: the room above the text is where the label floats to. -->
+  <style name="Widget.APS.ListField.EditText" parent="Widget.Material3.TextInputEditText.FilledBox">
+    <item name="android:minHeight">@dimen/password_row_height</item>
+    <item name="android:paddingStart">@dimen/spacing_large</item>
+    <item name="android:paddingEnd">@dimen/spacing_large</item>
+    <item name="android:paddingTop">28dp</item>
+    <item name="android:paddingBottom">@dimen/spacing_medium</item>
+  </style>
 </resources>

@@ -17,6 +17,7 @@
   android:minHeight="@dimen/list_section_header_height"
   android:orientation="horizontal"
   android:paddingStart="@dimen/list_section_header_inset"
+  android:paddingEnd="@dimen/list_section_header_inset"
   android:paddingTop="@dimen/spacing_large">
 
   <androidx.appcompat.widget.AppCompatTextView

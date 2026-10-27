@@ -36,7 +36,7 @@ class TextSettingActivity : AppCompatActivity() {
     enableEdgeToEdgeView(binding.root)
     setContentView(binding.root)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
-    val key = requireNotNull(intent.getStringExtra(EXTRA_KEY))
+    val key = requireNotNull(intent.getStringExtra(EXTRA_KEY)) { "No setting to edit was named" }
     setTitle(intent.getIntExtra(EXTRA_TITLE, 0))
 
     with(binding) {

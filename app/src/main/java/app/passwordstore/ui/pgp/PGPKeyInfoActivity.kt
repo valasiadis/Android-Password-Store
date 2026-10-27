@@ -56,7 +56,9 @@ import app.passwordstore.ui.dialogs.Notice
 import com.github.michaelbull.result.get
 import com.google.android.material.color.MaterialColors
 import dagger.hilt.android.AndroidEntryPoint
-import java.text.DateFormat
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import javax.inject.Inject
 
 /**
@@ -156,7 +158,8 @@ private fun KeyInfo(
   onCopy: (label: String, value: String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val dateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM)
+  val dateFormat =
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault())
   val never = stringResource(R.string.pgp_key_info_never)
   val revoked = stringResource(R.string.pgp_key_info_revoked)
   val noUsage = stringResource(R.string.pgp_key_info_no_usage)

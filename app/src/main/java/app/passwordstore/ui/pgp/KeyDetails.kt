@@ -7,6 +7,7 @@ package app.passwordstore.ui.pgp
 
 import androidx.annotation.StringRes
 import app.passwordstore.R
+import java.time.Instant
 import java.util.Date
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.nist.NISTNamedCurves
@@ -36,8 +37,11 @@ internal data class KeyDetails(val userIds: List<String>, val parts: List<KeyPar
      * [cardFingerprints] are the parts a smartcard was set up as holding: a key read from a card is
      * only its public half, and whether a part is on a card is not written into the key itself.
      */
+    // BouncyCastle gives a key's times as Dates and asks for the moment to judge it at as one; they
+    // are turned into Instants here, and go no further.
+    @Suppress("DenyListedApi")
     fun of(cert: OpenPGPCertificate, cardFingerprints: List<ByteArray> = emptyList()): KeyDetails {
-      val now = Date()
+      val now = Date.from(Instant.now())
       val authKeys =
         cert.getComponentKeysWithFlag(now, KeyFlags.AUTHENTICATION).map { it.keyIdentifier }
       val secretKeys = (cert as? OpenPGPKey)?.secretKeys.orEmpty()
@@ -67,13 +71,11 @@ internal data class KeyDetails(val userIds: List<String>, val parts: List<KeyPar
             fingerprint = formatFingerprint(publicKey.fingerprint),
             algorithm = algorithmName(publicKey),
             usages = usages,
-            created = publicKey.creationTime,
+            created = publicKey.creationTime.toInstant(),
             expires =
               publicKey.validSeconds
                 .takeIf { it > 0 }
-                ?.let {
-                  Date(publicKey.creationTime.time + it * MILLIS_PER_SECOND)
-                },
+                ?.let { publicKey.creationTime.toInstant().plusSeconds(it) },
             isRevoked = publicKey.hasRevocation(),
             location = location,
           )
@@ -128,7 +130,6 @@ internal data class KeyDetails(val userIds: List<String>, val parts: List<KeyPar
             ?: oid.id
       }
 
-    private const val MILLIS_PER_SECOND = 1000L
     private const val BYTE_MASK = 0xFF
     private const val FINGERPRINT_GROUP = 4
   }
@@ -140,8 +141,8 @@ internal data class KeyPart(
   val fingerprint: String,
   val algorithm: String,
   val usages: List<Usage>,
-  val created: Date,
-  val expires: Date?,
+  val created: Instant,
+  val expires: Instant?,
   val isRevoked: Boolean,
   val location: Location,
 )

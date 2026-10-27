@@ -8,7 +8,7 @@ import android.util.Patterns
 import androidx.core.widget.doOnTextChanged
 import app.passwordstore.R
 import app.passwordstore.databinding.GitIdentityFieldsBinding
-import app.passwordstore.ui.dialogs.showsTip
+import app.passwordstore.ui.dialogs.ListRows
 import app.passwordstore.util.settings.GitSettings
 
 /**
@@ -29,7 +29,6 @@ class GitIdentityFields(
   init {
     binding.gitUserName.setText(gitSettings.authorName)
     binding.gitUserEmail.setText(gitSettings.authorEmail)
-    binding.signCommits.isChecked = gitSettings.signCommits
 
     binding.gitUserName.doOnTextChanged { _, _, _, _ ->
       saveName()
@@ -39,10 +38,14 @@ class GitIdentityFields(
       saveEmail()
       reportValidity()
     }
-    binding.signCommits.setOnCheckedChangeListener { _, isChecked ->
-      gitSettings.signCommits = isChecked
+    ListRows.switch(
+      binding.signCommits,
+      R.string.git_sign_commits,
+      checked = gitSettings.signCommits,
+      summary = binding.root.context.getString(R.string.setup_sign_commits_tip),
+    ) { checked ->
+      gitSettings.signCommits = checked
     }
-    binding.signCommitsHelp.showsTip(R.string.setup_sign_commits_tip)
     reportValidity()
   }
 

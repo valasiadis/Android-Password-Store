@@ -5,73 +5,59 @@
 
 <!--
   Who the commits belong to. Included by both the setup step that asks it and the settings screen
-  that changes it later, so the same question is never asked twice in two different shapes.
+  that changes it later, so the same question is never asked twice in two different shapes: the
+  name and address as one block of fields, and signing as a switch row of its own.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:app="http://schemas.android.com/apk/res-auto"
   android:layout_width="match_parent"
   android:layout_height="wrap_content"
   android:orientation="vertical">
 
-  <com.google.android.material.textfield.TextInputLayout
-    android:id="@+id/username_input_layout"
+  <app.passwordstore.ui.util.ListBlock
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:hint="@string/git_user_name_hint">
+    android:layout_height="wrap_content">
 
-    <com.google.android.material.textfield.TextInputEditText
-      android:id="@+id/git_user_name"
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/username_input_layout"
+      style="@style/Widget.APS.ListField"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:inputType="textPersonName" />
+      android:hint="@string/git_user_name_hint">
 
-  </com.google.android.material.textfield.TextInputLayout>
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/git_user_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName" />
 
-  <com.google.android.material.textfield.TextInputLayout
-    android:id="@+id/email_input_layout"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_small"
-    android:hint="@string/git_user_email">
+    </com.google.android.material.textfield.TextInputLayout>
 
-    <com.google.android.material.textfield.TextInputEditText
-      android:id="@+id/git_user_email"
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/email_input_layout"
+      style="@style/Widget.APS.ListField"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:inputType="textEmailAddress" />
+      android:hint="@string/git_user_email">
 
-  </com.google.android.material.textfield.TextInputLayout>
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/git_user_email"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textEmailAddress" />
 
-  <LinearLayout
+    </com.google.android.material.textfield.TextInputLayout>
+
+  </app.passwordstore.ui.util.ListBlock>
+
+  <app.passwordstore.ui.util.ListBlock
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_large"
-    android:gravity="center_vertical"
-    android:orientation="horizontal">
+    android:layout_marginTop="@dimen/spacing_large">
 
-    <androidx.appcompat.widget.AppCompatTextView
-      android:layout_width="0dp"
-      android:layout_height="wrap_content"
-      android:layout_weight="1"
-      android:text="@string/git_sign_commits"
-      android:textAppearance="?attr/textAppearanceBodyLarge"
-      android:textColor="?attr/colorOnSurface" />
-
-    <androidx.appcompat.widget.AppCompatImageView
-      android:id="@+id/sign_commits_help"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:background="?attr/selectableItemBackgroundBorderless"
-      android:padding="@dimen/spacing_small"
-      android:src="@drawable/ic_help_20dp"
-      app:tint="?attr/colorOnSurfaceVariant" />
-
-    <com.google.android.material.materialswitch.MaterialSwitch
+    <include
       android:id="@+id/sign_commits"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginStart="@dimen/spacing_medium" />
+      layout="@layout/list_switch_row" />
 
-  </LinearLayout>
+  </app.passwordstore.ui.util.ListBlock>
 
 </LinearLayout>

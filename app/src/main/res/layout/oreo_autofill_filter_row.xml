@@ -8,9 +8,13 @@
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="@dimen/list_item_height"
-  android:layout_marginHorizontal="@dimen/spacing_small"
-  android:layout_marginVertical="@dimen/spacing_xsmall"
-  android:background="@drawable/password_row_background">
+  android:layout_marginHorizontal="@dimen/password_list_margin"
+  tools:background="@drawable/password_row_background">
+
+  <!--
+    No background here: as in the password list, the row's container comes from
+    PasswordRowDecoration, which rounds the list's ends and keeps its rows a thin gap apart.
+  -->
 
   <ImageView
     android:id="@+id/credentialIcon"

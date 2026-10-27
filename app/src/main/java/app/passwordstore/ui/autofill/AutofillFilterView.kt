@@ -29,6 +29,7 @@ import app.passwordstore.R
 import app.passwordstore.data.password.PasswordItem
 import app.passwordstore.databinding.ActivityOreoAutofillFilterBinding
 import app.passwordstore.injection.prefs.SettingsPreferences
+import app.passwordstore.ui.adapters.PasswordRowDecoration
 import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.util.autofill.AutofillMatcher
 import app.passwordstore.util.autofill.AutofillPreferences
@@ -218,6 +219,8 @@ class AutofillFilterView : AppCompatActivity() {
   }
 
   private fun bindUI() {
+    // Once, not with every search: results stand as one block of rows, as the password list's do.
+    PasswordRowDecoration(this).attachTo(binding.rvPassword)
     with(binding) {
       search.apply {
         val initialSearch = formOrigin.getPrettyIdentifier(applicationContext, untrusted = false)

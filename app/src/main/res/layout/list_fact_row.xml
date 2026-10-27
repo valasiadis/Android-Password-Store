@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  A fact, as the system settings' About page shows one: its name, and its value beneath in the
+  quieter colour. Nothing to tap. Its background comes from the ListBlock it stands in.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:gravity="center_vertical"
+  android:minHeight="@dimen/password_row_height"
+  android:orientation="vertical"
+  android:paddingHorizontal="@dimen/spacing_large"
+  android:paddingVertical="@dimen/spacing_medium"
+  tools:background="@drawable/list_row_single">
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/fact_title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:textAppearance="?attr/textAppearanceTitleMedium"
+    android:textColor="?attr/colorOnSurface"
+    tools:text="User ID" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/fact_value"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:textAppearance="?attr/textAppearanceBodyMedium"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    tools:text="Jane Doe &lt;jane@example.org&gt;" />
+
+</LinearLayout>

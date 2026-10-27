@@ -5,16 +5,11 @@
 
 package app.passwordstore.ui.pgp
 
-import android.content.Context
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.res.ResourcesCompat
 import androidx.core.widget.doOnTextChanged
 import app.passwordstore.R
 import app.passwordstore.crypto.KeyUtils.tryGetKeyId
@@ -24,16 +19,16 @@ import app.passwordstore.crypto.PGPIdentifier.KeyId
 import app.passwordstore.crypto.PGPKeyManager
 import app.passwordstore.crypto.displayName
 import app.passwordstore.data.crypto.CryptoRepository
+import app.passwordstore.databinding.ListChoiceRowBinding
 import app.passwordstore.databinding.PgpKeyChangePassphraseActivityBinding
-import app.passwordstore.ui.compose.R as composeR
 import app.passwordstore.ui.dialogs.AppDialogBuilder
+import app.passwordstore.ui.dialogs.ListRows
 import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.getString
 import app.passwordstore.util.extensions.viewBinding
 import app.passwordstore.util.extensions.wipe
 import com.github.michaelbull.result.get
-import com.github.michaelbull.result.map
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import logcat.LogPriority.ERROR
@@ -49,6 +44,12 @@ class PGPKeyChangePassphraseActivity : AppCompatActivity() {
 
   private lateinit var identifier: PGPIdentifier
   private var subkeyIdsUsagesIsStripped: List<Triple<KeyId, String, Boolean>>? = null
+
+  /**
+   * Which part of the key the passphrase is changed for: 0 for every part that has the current
+   * passphrase, otherwise the subkey at that place in [subkeyIdsUsagesIsStripped], one past it.
+   */
+  private var selectedKeyChoice = 0
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -69,21 +70,14 @@ class PGPKeyChangePassphraseActivity : AppCompatActivity() {
 
     subkeyIdsUsagesIsStripped = tryGetSecretSubkeyIdsUsagesIsStripped(pgpKey)
 
-    val keySpinnerItems = mutableListOf(getString(R.string.pgp_change_passphrase_matching_subkeys))
-    keySpinnerItems +=
-      subkeyIdsUsagesIsStripped?.map { "${it.first.displayName} ${it.second}" } ?: listOf<String>()
-    val disabledItems = mutableListOf<Boolean>(false)
-    disabledItems += subkeyIdsUsagesIsStripped?.map { it.third } ?: listOf<Boolean>()
-
-    val adapter = KeySpinnerAdapter(this, keySpinnerItems, disabledItems)
-    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-
     with(binding) {
       enableEdgeToEdgeView(root)
       setContentView(root)
-      userid.text = cryptoRepository.getUserIdFromKeyId(identifier)
-
-      keySpinner.adapter = adapter
+      userid.factTitle.setText(R.string.pgp_key_info_user_id_label)
+      userid.factValue.text = cryptoRepository.getUserIdFromKeyId(identifier)
+      ListRows.header(keyChoicesHeader, R.string.pgp_key_info_section_subkeys)
+      ListRows.header(passphraseHeader, R.string.ssh_keygen_passphrase)
+      showKeyChoices()
 
       oldPassphrase.doOnTextChanged { _, _, _, _ -> oldPassphraseInputLayout.error = null }
       passphrase.doOnTextChanged { _, _, _, _ ->
@@ -99,6 +93,31 @@ class PGPKeyChangePassphraseActivity : AppCompatActivity() {
     }
   }
 
+  /**
+   * The parts of the key as one choice, as the settings draw a choice: all of them that share the
+   * passphrase, then each subkey by its ID and what it is for. A subkey whose secret is not here —
+   * on a card, or stripped — has no passphrase to change, and is shown but cannot be chosen.
+   */
+  private fun showKeyChoices() {
+    val rows = mutableListOf<ListChoiceRowBinding>()
+    fun addChoice(title: String, summary: String?, enabled: Boolean) {
+      val index = rows.size
+      val row = ListChoiceRowBinding.inflate(layoutInflater, binding.keyChoices, true)
+      ListRows.choice(row, title, summary) {
+        selectedKeyChoice = index
+        rows.forEachIndexed { i, other -> ListRows.select(other, i == index) }
+      }
+      row.root.isEnabled = enabled
+      if (!enabled) row.root.alpha = DISABLED_ALPHA
+      rows += row
+    }
+    addChoice(getString(R.string.pgp_change_passphrase_matching_subkeys), null, enabled = true)
+    subkeyIdsUsagesIsStripped?.forEach { (keyId, usages, isStripped) ->
+      addChoice(keyId.displayName, usages, enabled = !isStripped)
+    }
+    rows.forEachIndexed { i, row -> ListRows.select(row, i == selectedKeyChoice) }
+  }
+
   override fun onCreateOptionsMenu(menu: Menu): Boolean {
     menuInflater.inflate(R.menu.pgp_key_manager_new_key, menu)
     return true
@@ -111,7 +130,7 @@ class PGPKeyChangePassphraseActivity : AppCompatActivity() {
         onBackPressedDispatcher.onBackPressed()
       }
       R.id.save_key -> {
-        val selectedIndex = binding.keySpinner.selectedItemPosition
+        val selectedIndex = selectedKeyChoice
 
         val subkeyIdentifier =
           if (selectedIndex > 0) {
@@ -266,33 +285,5 @@ class PGPKeyChangePassphraseActivity : AppCompatActivity() {
   companion object {
 
     const val EXTRA_SELECTED_IDENTIFIER = "SELECTED_IDENTIFIER"
-  }
-}
-
-private class KeySpinnerAdapter(
-  context: Context,
-  items: List<String>,
-  private val disabledItems: List<Boolean>,
-) : ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, items) {
-
-  override fun isEnabled(position: Int): Boolean {
-    return !disabledItems.get(position)
-  }
-
-  override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
-    val view = super.getDropDownView(position, convertView, parent)
-    val textView = view as? TextView
-    if (position > 0)
-      textView?.typeface = ResourcesCompat.getFont(context, composeR.font.jetbrainsmono_nl_regular)
-    view.isEnabled = isEnabled(position)
-    return view
-  }
-
-  override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-    val view = super.getView(position, convertView, parent)
-    val textView = view as? TextView
-    if (position > 0)
-      textView?.typeface = ResourcesCompat.getFont(context, composeR.font.jetbrainsmono_nl_regular)
-    return view
   }
 }

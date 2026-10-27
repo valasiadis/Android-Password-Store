@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  The top row of a block of choices, rounded as the app's lists round their blocks: fully at the
+  block's outer edge, slightly where it meets the next row, and filled as every list row is,
+  with the touch drawn inside the same shape.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+  android:color="?attr/colorControlHighlight">
+  <item android:id="@android:id/mask">
+    <shape android:shape="rectangle">
+      <corners
+        android:bottomLeftRadius="@dimen/list_inner_corner_radius"
+        android:bottomRightRadius="@dimen/list_inner_corner_radius"
+        android:topLeftRadius="@dimen/list_outer_corner_radius"
+        android:topRightRadius="@dimen/list_outer_corner_radius" />
+      <solid android:color="@android:color/white" />
+    </shape>
+  </item>
+  <item>
+    <shape android:shape="rectangle">
+      <corners
+        android:bottomLeftRadius="@dimen/list_inner_corner_radius"
+        android:bottomRightRadius="@dimen/list_inner_corner_radius"
+        android:topLeftRadius="@dimen/list_outer_corner_radius"
+        android:topRightRadius="@dimen/list_outer_corner_radius" />
+      <solid android:color="@color/list_row_fill" />
+    </shape>
+  </item>
+</ripple>

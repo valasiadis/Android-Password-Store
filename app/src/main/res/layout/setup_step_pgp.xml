@@ -100,4 +100,48 @@
 
   </LinearLayout>
 
+  <!--
+    Where the repository is kept, asked with everything else that decides what the store will be
+    before it exists: inside the app, or in a shared folder other apps can reach. Two rows of one
+    block, drawn as the app's lists are, the chosen one tinted and checked.
+  -->
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_xlarge"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <androidx.appcompat.widget.AppCompatTextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/select_n_repository_visibility"
+      android:textAppearance="?attr/textAppearanceTitleMedium"
+      android:textColor="?attr/colorOnSurface" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+      android:id="@+id/repo_visibility_help"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:background="?attr/selectableItemBackgroundBorderless"
+      android:padding="@dimen/spacing_small"
+      android:src="@drawable/ic_help_20dp"
+      app:tint="?attr/colorOnSurfaceVariant" />
+
+  </LinearLayout>
+
+  <include
+    android:id="@+id/internal_repo"
+    layout="@layout/list_choice_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_medium" />
+
+  <include
+    android:id="@+id/shared_repo"
+    layout="@layout/list_choice_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/list_item_gap" />
+
 </LinearLayout>

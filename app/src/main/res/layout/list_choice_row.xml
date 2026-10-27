@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  One answer in a block of choices, as the system settings draw theirs: a radio mark where a row's
+  icon stands, in a column as wide as the icon's circle so the answers' names line up with the
+  names of rows that carry icons, and what the answer means beneath its name. The row it is
+  included as gives it its background, which says where in the block it falls.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:clickable="true"
+  android:focusable="true"
+  android:gravity="center_vertical"
+  android:minHeight="@dimen/password_row_height"
+  android:orientation="horizontal"
+  android:paddingHorizontal="@dimen/spacing_large"
+  tools:background="@drawable/list_choice_row_top">
+
+  <androidx.appcompat.widget.AppCompatImageView
+    android:id="@+id/choice_mark"
+    android:layout_width="@dimen/list_icon_circle"
+    android:layout_height="@dimen/list_icon_circle"
+    android:contentDescription="@null"
+    android:padding="@dimen/list_icon_circle_padding"
+    android:src="@drawable/ic_radio_unchecked_24dp"
+    app:tint="@color/choice_mark"
+    tools:src="@drawable/ic_radio_checked_24dp" />
+
+  <LinearLayout
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/list_icon_text_gap"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:paddingVertical="@dimen/spacing_medium">
+
+    <androidx.appcompat.widget.AppCompatTextView
+      android:id="@+id/choice_title"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:textAppearance="?attr/textAppearanceTitleMedium"
+      android:textColor="?attr/colorOnSurface"
+      tools:text="Inside the app" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+      android:id="@+id/choice_summary"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:textAppearance="?attr/textAppearanceBodyMedium"
+      android:textColor="?attr/colorOnSurfaceVariant"
+      android:visibility="gone"
+      tools:text="No other app can read it"
+      tools:visibility="visible" />
+
+  </LinearLayout>
+
+</LinearLayout>

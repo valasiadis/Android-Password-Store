@@ -100,6 +100,10 @@
   <string name="setup_sign_commits_tip">Signing proves the changes came from you. It asks for your PGP key each time something is saved.</string>
   <string name="setup_identity_message">Git records a name and email address with every change you make, and both are needed before the store can be synchronised.</string>
   <string name="setup_ascii_armor_explanation">Stores passwords as text rather than binary. The files are larger, but survive tools that would mangle binary data.</string>
+  <string name="repo_visibility_internal_title">Inside the app</string>
+  <string name="repo_visibility_internal_summary">No other app can read it (recommended)</string>
+  <string name="repo_visibility_shared_title">Shared folder</string>
+  <string name="setup_repo_visibility_tip">Inside the app, only Password Store can read the repository. In a shared folder, other apps — a file manager, a Git client, a sync app — can read and change it too. Your passwords stay encrypted either way; who can see the files and their names is what changes.</string>
   <string name="pgp_key_creation_in_progress">Creating key…</string>
   <string name="notice_password_created">Password created</string>
   <string name="notice_password_discarded">Entry discarded</string>
@@ -478,8 +482,6 @@
   <string name="gpg_key_select">Select key(s)</string>
   <string name="gpg_key_single_select">Select key</string>
   <string name="select_n_repository_visibility">Repository visibility</string>
-  <string name="internal_repo">app-internal (hidden)</string>
-  <string name="shared_repo">shared folder</string>
   <string name="shared_repo_path" translatable="false">%1$s › Documents › PasswordStore</string>
 
   <!-- SSH port validation -->

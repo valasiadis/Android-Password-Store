@@ -6,6 +6,7 @@
 package app.passwordstore.ui.onboarding.activity
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
@@ -13,6 +14,7 @@ import androidx.core.content.edit
 import app.passwordstore.R
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.databinding.SetupStepPgpBinding
+import app.passwordstore.ui.dialogs.ChoiceRows
 import app.passwordstore.ui.dialogs.showsTip
 import app.passwordstore.ui.pgp.PGPKeyListActivity
 import app.passwordstore.ui.pgp.keyNames
@@ -69,6 +71,29 @@ class PgpSetupActivity : SetupStepActivity() {
     binding.asciiArmorHelp.showsTip(R.string.setup_ascii_armor_explanation)
     binding.encryptionHelp.showsTip(R.string.setup_encryption_message)
 
+    binding.repoVisibilityHelp.showsTip(R.string.setup_repo_visibility_tip)
+    // Stored as it is chosen, like the switch above it: the repository is cloned or created where
+    // this says, and that happens after the last step.
+    ChoiceRows.show(
+      row = binding.internalRepo,
+      index = 0,
+      count = 2,
+      title = getString(R.string.repo_visibility_internal_title),
+      summary = getString(R.string.repo_visibility_internal_summary),
+    ) {
+      chooseVisibility(shared = false)
+    }
+    ChoiceRows.show(
+      row = binding.sharedRepo,
+      index = 1,
+      count = 2,
+      title = getString(R.string.repo_visibility_shared_title),
+      summary = getString(R.string.shared_repo_path, Build.MODEL),
+    ) {
+      chooseVisibility(shared = true)
+    }
+    showVisibility()
+
     showSelectedKeys()
   }
 
@@ -81,6 +106,17 @@ class PgpSetupActivity : SetupStepActivity() {
     keySelectAction.launch(
       PGPKeyListActivity.newIntent(this, keySelection = true, preselectedKeyIds = selectedKeyIds)
     )
+  }
+
+  private fun chooseVisibility(shared: Boolean) {
+    sharedPrefs.edit { putBoolean(PreferenceKeys.PREF_SHARED_REPO, shared) }
+    showVisibility()
+  }
+
+  private fun showVisibility() {
+    val shared = sharedPrefs.getBoolean(PreferenceKeys.PREF_SHARED_REPO, false)
+    ChoiceRows.select(binding.internalRepo, selected = !shared)
+    ChoiceRows.select(binding.sharedRepo, selected = shared)
   }
 
   /** Names the chosen keys in the field, and opens the way onwards once there are any. */

@@ -6,7 +6,6 @@
 package app.passwordstore.ui.onboarding.fragments
 
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
@@ -157,34 +156,14 @@ class CloneFragment : Fragment(R.layout.fragment_clone) {
     // because it is the only step that can be answered differently later without rewriting
     // anything.
     binding.repoTypeHelp.showsTip(R.string.setup_repo_tip)
-    binding.sharedRepo.isChecked = settings.getBoolean(PreferenceKeys.PREF_SHARED_REPO, false)
-    showSharedFolder()
-    binding.repoVisibilityGroup.setOnCheckedChangeListener { _, _ -> showSharedFolder() }
     binding.cloneRemote.setOnClickListener {
       isCloning = true
-      keepVisibility()
       startSetup()
     }
     binding.createLocal.setOnClickListener {
       isCloning = false
-      keepVisibility()
       startSetup()
     }
-  }
-
-  /** Names the shared folder while it is the answer, holding its line's room either way. */
-  private fun showSharedFolder() {
-    binding.repoSharedParent.text = getString(R.string.shared_repo_path, Build.MODEL)
-    binding.repoSharedParent.visibility =
-      if (binding.sharedRepo.isChecked) View.VISIBLE else View.INVISIBLE
-  }
-
-  /**
-   * Stores where the repository is kept before anything is cloned or created, since that is where
-   * the repository directory is taken from.
-   */
-  private fun keepVisibility() {
-    settings.edit { putBoolean(PreferenceKeys.PREF_SHARED_REPO, binding.sharedRepo.isChecked) }
   }
 
   override fun onSaveInstanceState(outState: Bundle) {

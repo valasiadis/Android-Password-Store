@@ -129,7 +129,11 @@ object PasswordRepository {
   }
 
   fun getRepositoryDirectory(): File =
-    if (settings.getBoolean(PreferenceKeys.PREF_SHARED_REPO, false))
+    repositoryDirectory(shared = settings.getBoolean(PreferenceKeys.PREF_SHARED_REPO, false))
+
+  /** Where the repository is kept: in a shared folder other apps can reach, or inside the app. */
+  fun repositoryDirectory(shared: Boolean): File =
+    if (shared)
       File(
         File(
           Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
@@ -138,6 +142,39 @@ object PasswordRepository {
         "store",
       )
     else File(filesDir, "store")
+
+  /**
+   * Moves the repository to the shared folder or back inside the app, and opens it there.
+   *
+   * Copied rather than renamed, since the two places are on different file systems, and the old
+   * copy is deleted only once the new one is complete and open — a move that fails part of the way
+   * leaves the repository where it was, still in use, and takes away whatever it had copied. A
+   * folder that already holds something is not written into: what is there is not the app's to
+   * merge or replace.
+   */
+  fun moveRepository(shared: Boolean) {
+    val from = getRepositoryDirectory()
+    val to = repositoryDirectory(shared)
+    if (from == to) return
+    check(!to.exists() || to.list().isNullOrEmpty()) { "${to.path} already holds files" }
+    repository?.close()
+    repository = null
+    try {
+      check(to.mkdirs() || to.isDirectory) { "Failed to create ${to.path}" }
+      check(from.copyRecursively(to, overwrite = false)) { "Failed to copy to ${to.path}" }
+    } catch (e: Exception) {
+      to.deleteRecursively()
+      initialize()
+      throw e
+    }
+    settings.edit {
+      putBoolean(PreferenceKeys.PREF_SHARED_REPO, shared)
+      // The password list holds the path it was opened on, and has to be opened on the new one.
+      putBoolean(PreferenceKeys.REPO_CHANGED, true)
+    }
+    initialize()
+    from.deleteRecursively()
+  }
 
   /* referencePath: /a/b/c
    * /a/b/c/d/e/dir -> /d/e/dir

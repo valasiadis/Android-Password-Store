@@ -210,6 +210,13 @@
   <string name="pref_git_delete_repo_summary">Deletes the hidden, app-internal repository.</string>
   <string name="prefs_external_repository_title">External repository</string>
   <string name="prefs_external_repository_summary">The password repository is located in a shared folder that other apps can also access.</string>
+  <string name="repository_move_shared_title">Move the repository to a shared folder?</string>
+  <string name="repository_move_shared_message">The repository will be moved to %1$s, where other apps can read it.</string>
+  <string name="repository_move_internal_title">Move the repository into the app?</string>
+  <string name="repository_move_internal_message">The repository will be moved back into the app’s own storage, where no other app can read it.</string>
+  <string name="repository_move_confirm">Move</string>
+  <string name="repository_move_progress">Moving the repository…</string>
+  <string name="repository_move_failed">The repository could not be moved, and is still where it was: %1$s</string>
   <string name="prefs_export_passwords_title">Export repository</string>
   <string name="prefs_export_passwords_summary">Exports the password repository to an external directory.</string>
   <string name="prefs_export_passwords_dialog_title">Exporting passwords</string>

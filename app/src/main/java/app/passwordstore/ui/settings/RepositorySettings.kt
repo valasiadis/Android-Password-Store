@@ -16,6 +16,7 @@ import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import androidx.lifecycle.lifecycleScope
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -27,6 +28,7 @@ import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
+import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.git.config.GitConfigActivity
 import app.passwordstore.ui.git.config.GitServerConfigActivity
@@ -53,6 +55,7 @@ import de.Maxr1998.modernpreferences.helpers.onClick
 import de.Maxr1998.modernpreferences.helpers.pref
 import de.Maxr1998.modernpreferences.helpers.subScreen
 import de.Maxr1998.modernpreferences.helpers.switch
+import de.Maxr1998.modernpreferences.preferences.TwoStatePreference
 import java.io.IOException
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -62,6 +65,7 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.asLog
 import logcat.logcat
@@ -275,9 +279,18 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
       switch(PreferenceKeys.PREF_SHARED_REPO) {
         titleRes = R.string.prefs_external_repository_title
         summaryRes = R.string.prefs_external_repository_summary
-        summaryOn = activity.getString(R.string.shared_repo_path, android.os.Build.MODEL)
+        summaryOn = activity.getString(R.string.shared_repo_path, Build.MODEL)
         disableDependents = true
         defaultValue = false
+        // Switching where the repository is kept moves it there. The switch only follows once the
+        // move has gone through: on its own it pointed the app at a folder the repository was
+        // not in, and left the repository that was open where it was.
+        checkedChangeListener =
+          TwoStatePreference.OnCheckedChangeListener { preference, _, checked ->
+            if (movedTo == checked) return@OnCheckedChangeListener true
+            confirmRepositoryMove(preference, shared = checked)
+            false
+          }
       }
 
       pref(PreferenceKeys.EXPORT_PASSWORDS) {
@@ -336,10 +349,60 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
     }
   }
 
+  /** Where the repository has just been moved to, while the switch is being set to match. */
+  private var movedTo: Boolean? = null
+
+  /** Asks before moving the repository, saying where it is going and who can read it there. */
+  private fun confirmRepositoryMove(preference: TwoStatePreference, shared: Boolean) {
+    val destination = activity.getString(R.string.shared_repo_path, Build.MODEL)
+    AppDialogBuilder(activity)
+      .setTitle(
+        if (shared) R.string.repository_move_shared_title
+        else R.string.repository_move_internal_title
+      )
+      .setMessage(
+        if (shared) activity.getString(R.string.repository_move_shared_message, destination)
+        else activity.getString(R.string.repository_move_internal_message)
+      )
+      .setPositiveButton(R.string.repository_move_confirm) { _, _ ->
+        moveRepository(preference, shared)
+      }
+      .setNegativeButton(R.string.dialog_cancel, null)
+      .show()
+  }
+
+  private fun moveRepository(preference: TwoStatePreference, shared: Boolean) {
+    val progress = ProgressOverlay.show(activity, R.string.repository_move_progress)
+    activity.lifecycleScope.launch {
+      val result =
+        withContext(hiltEntryPoint.dispatcherProvider().io()) {
+          runCatching { PasswordRepository.moveRepository(shared) }
+        }
+      progress.dismiss()
+      result.fold(
+        success = {
+          // Setting the switch runs its listener again; this says the change is already made.
+          movedTo = shared
+          preference.checked = shared
+          movedTo = null
+        },
+        failure = { e ->
+          logcat { e.asLog() }
+          ErrorDialog.show(
+            activity,
+            activity.getString(R.string.repository_move_failed, e.message ?: e.toString()),
+          )
+        },
+      )
+    }
+  }
+
   @EntryPoint
   @InstallIn(SingletonComponent::class)
   interface RepositorySettingsEntryPoint {
     fun gitSettings(): GitSettings
+
+    fun dispatcherProvider(): DispatcherProvider
   }
 }
 

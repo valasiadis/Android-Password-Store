@@ -16,6 +16,7 @@ import app.passwordstore.data.passfile.Totp
 import app.passwordstore.data.password.FieldItem
 import app.passwordstore.databinding.ItemFieldBinding
 import app.passwordstore.ui.compose.R as composeR
+import app.passwordstore.ui.util.ListBlock
 import app.passwordstore.util.extensions.wipe
 import com.google.android.material.textfield.TextInputLayout
 import java.nio.CharBuffer
@@ -39,6 +40,8 @@ class FieldItemAdapter(
 
   override fun onBindViewHolder(holder: FieldItemViewHolder, position: Int) {
     itemFieldBindings.add(holder.binding)
+    // The entry's lines read as one block, as the settings set their rows.
+    ListBlock.shapeField(holder.binding.itemTextContainer, position, itemCount)
     holder.bind(fieldItemList[position], showPassword, copyToClipboard)
   }
 

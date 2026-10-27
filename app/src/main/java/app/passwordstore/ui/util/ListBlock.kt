@@ -75,4 +75,25 @@ class ListBlock @JvmOverloads constructor(context: Context, attrs: AttributeSet?
   }
 
   private data class Place(val startsBlock: Boolean, val endsBlock: Boolean)
+
+  companion object {
+
+    /**
+     * Shapes [field] as the row at [index] of [count] in a block, for a list whose rows are bound
+     * by an adapter rather than laid out in a ListBlock: its corners, and the gap above it.
+     */
+    fun shapeField(field: TextInputLayout, index: Int, count: Int) {
+      val resources = field.resources
+      val outer = resources.getDimension(R.dimen.list_outer_corner_radius)
+      val inner = resources.getDimension(R.dimen.list_inner_corner_radius)
+      val top = if (index == 0) outer else inner
+      val bottom = if (index == count - 1) outer else inner
+      field.setBoxCornerRadii(top, top, bottom, bottom)
+      (field.layoutParams as? ViewGroup.MarginLayoutParams)?.let { params ->
+        params.topMargin =
+          if (index == 0) 0 else resources.getDimensionPixelSize(R.dimen.list_item_gap)
+        field.layoutParams = params
+      }
+    }
+  }
 }

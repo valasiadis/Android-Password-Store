@@ -3,6 +3,10 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
+<!--
+  One line of an entry, as a row of the block the entry's lines make: a filled field to read and
+  copy from, shaped by the adapter for where it falls among them.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
@@ -11,10 +15,9 @@
 
   <com.google.android.material.textfield.TextInputLayout
     android:id="@+id/item_text_container"
-    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+    style="@style/Widget.APS.ListField"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_large"
     tools:hint="@string/password"
     tools:visibility="visible">
 

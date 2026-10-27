@@ -3,94 +3,104 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
-
+<!-- Who the new key is for, then the passphrase that protects it: two blocks of fields. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
-  android:fillViewport="false"
   tools:context="app.passwordstore.ui.pgp.PGPKeyCreationActivity">
 
-  <androidx.constraintlayout.widget.ConstraintLayout
+  <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="@dimen/activity_horizontal_margin">
+    android:paddingHorizontal="@dimen/password_list_margin"
+    android:paddingTop="@dimen/password_list_margin_top"
+    android:paddingBottom="@dimen/spacing_large">
 
-    <com.google.android.material.textfield.TextInputLayout
-      android:id="@+id/name_input_layout"
+    <app.passwordstore.ui.util.ListBlock
       android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:layout_gravity="center_vertical"
-      android:layout_margin="8dp"
-      android:hint="@string/pgp_full_name_hint"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toTopOf="parent">
+      android:layout_height="wrap_content">
 
-      <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/name"
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/name_input_layout"
+        style="@style/Widget.APS.ListField"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:imeOptions="actionNext"
-        android:inputType="textNoSuggestions"
-        android:nextFocusForward="@id/email" />
-    </com.google.android.material.textfield.TextInputLayout>
+        android:hint="@string/pgp_full_name_hint">
 
-    <com.google.android.material.textfield.TextInputLayout
-      android:id="@+id/email_input_layout"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:layout_gravity="center_vertical"
-      android:layout_margin="8dp"
-      android:hint="@string/pgp_email_hint"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/name_input_layout">
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/name"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:imeOptions="actionNext"
+          android:inputType="textNoSuggestions"
+          android:nextFocusForward="@id/email" />
 
-      <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/email"
+      </com.google.android.material.textfield.TextInputLayout>
+
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/email_input_layout"
+        style="@style/Widget.APS.ListField"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:imeOptions="actionNext"
-        android:inputType="textEmailAddress"
-        android:nextFocusForward="@id/passphrase" />
-    </com.google.android.material.textfield.TextInputLayout>
+        android:hint="@string/pgp_email_hint">
 
-    <com.google.android.material.textfield.TextInputLayout
-      android:id="@+id/passphrase_input_layout"
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/email"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:imeOptions="actionNext"
+          android:inputType="textEmailAddress"
+          android:nextFocusForward="@id/passphrase" />
+
+      </com.google.android.material.textfield.TextInputLayout>
+
+    </app.passwordstore.ui.util.ListBlock>
+
+    <app.passwordstore.ui.util.ListBlock
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:layout_margin="8dp"
-      android:hint="@string/ssh_keygen_passphrase"
-      app:errorTextAppearance="@style/ErrorTextAppearance"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/email_input_layout">
+      android:layout_marginTop="@dimen/spacing_large">
 
-      <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/passphrase"
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/passphrase_input_layout"
+        style="@style/Widget.APS.ListField"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:imeOptions="actionNext"
-        android:inputType="textPassword"
-        android:nextFocusForward="@id/repeat_passphrase" />
-    </com.google.android.material.textfield.TextInputLayout>
+        android:hint="@string/ssh_keygen_passphrase"
+        app:endIconMode="password_toggle">
 
-    <com.google.android.material.textfield.TextInputLayout
-      android:id="@+id/repeat_passphrase_input_layout"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:layout_margin="8dp"
-      android:hint="@string/ssh_keygen_repeat_passphrase"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/passphrase_input_layout">
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/passphrase"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:imeOptions="actionNext"
+          android:inputType="textPassword"
+          android:nextFocusForward="@id/repeat_passphrase" />
 
-      <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/repeat_passphrase"
+      </com.google.android.material.textfield.TextInputLayout>
+
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/repeat_passphrase_input_layout"
+        style="@style/Widget.APS.ListField"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:imeOptions="actionDone"
-        android:inputType="textPassword" />
-    </com.google.android.material.textfield.TextInputLayout>
+        android:hint="@string/ssh_keygen_repeat_passphrase"
+        app:endIconMode="password_toggle">
 
-  </androidx.constraintlayout.widget.ConstraintLayout>
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/repeat_passphrase"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:imeOptions="actionDone"
+          android:inputType="textPassword" />
+
+      </com.google.android.material.textfield.TextInputLayout>
+
+    </app.passwordstore.ui.util.ListBlock>
+
+  </LinearLayout>
+
 </ScrollView>

@@ -7,9 +7,8 @@ package app.passwordstore.ui.git.log
 
 import android.os.Bundle
 import android.view.MenuItem
-import androidx.recyclerview.widget.DividerItemDecoration
-import androidx.recyclerview.widget.LinearLayoutManager
 import app.passwordstore.databinding.ActivityGitLogBinding
+import app.passwordstore.ui.adapters.PasswordRowDecoration
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.viewBinding
@@ -44,7 +43,8 @@ class GitLogActivity : BaseGitActivity() {
   private fun createRecyclerView() {
     binding.gitLogRecyclerView.apply {
       setHasFixedSize(true)
-      addItemDecoration(DividerItemDecoration(context, LinearLayoutManager.VERTICAL))
+      // Commits as one block of rows, as the password list sets its entries, not ruled apart.
+      PasswordRowDecoration(context).attachTo(this)
       adapter = GitLogAdapter()
     }
   }

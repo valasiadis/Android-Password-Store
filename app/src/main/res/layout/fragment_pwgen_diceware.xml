@@ -23,6 +23,7 @@
     app:layout_constraintTop_toTopOf="parent" />
 
   <com.google.android.material.textfield.TextInputLayout
+    style="@style/Widget.APS.ListField"
     android:id="@+id/password_length"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
@@ -46,6 +47,7 @@
   </com.google.android.material.textfield.TextInputLayout>
 
   <com.google.android.material.textfield.TextInputLayout
+    style="@style/Widget.APS.ListField"
     android:id="@+id/password_separator"
     android:layout_width="0dp"
     android:layout_height="wrap_content"

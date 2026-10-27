@@ -3,7 +3,7 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<app.passwordstore.ui.util.ListBlock xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
@@ -13,6 +13,7 @@
   android:paddingVertical="@dimen/activity_horizontal_margin">
 
   <com.google.android.material.textfield.TextInputLayout
+    style="@style/Widget.APS.ListField"
     android:id="@+id/folder_name_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -33,10 +34,10 @@
     the folder above it, or overrides it. It is not typed into; tapping it opens the key picker.
   -->
   <com.google.android.material.textfield.TextInputLayout
+    style="@style/Widget.APS.ListField"
     android:id="@+id/gpg_key_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/spacing_medium"
     android:hint="@string/folder_encryption_key"
     android:visibility="gone"
     app:endIconContentDescription="@string/folder_encryption_key_choose"
@@ -60,4 +61,4 @@
 
   </com.google.android.material.textfield.TextInputLayout>
 
-</LinearLayout>
+</app.passwordstore.ui.util.ListBlock>

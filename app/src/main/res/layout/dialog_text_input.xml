@@ -11,6 +11,7 @@
   android:paddingVertical="@dimen/activity_horizontal_margin">
 
   <com.google.android.material.textfield.TextInputLayout
+    style="@style/Widget.APS.ListField"
     android:id="@+id/text_input_layout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">

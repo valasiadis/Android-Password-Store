@@ -139,13 +139,17 @@ class PGPKeyListActivity : AppCompatActivity() {
     // fingerprint, in capitals, or with an 0x in front, and a row that hands back the key it was
     // drawn from can only ever remove the one spelling it knows. Tapping a key off the list left
     // the caller's wording of it sitting in the set, so the key came back on confirmation.
+    //
+    // A key named by its address is looked up and held by its ID too: only IDs can be shown as
+    // selected, and a store set up with `pass init address` names its key no other way — so the
+    // key it actually uses opened unselected.
     val preselectedKeys =
       intent
         .getStringExtra(EXTRA_PRESELECTED_KEYS)
         ?.split("\n")
         ?.filter { it.isNotBlank() }
         .orEmpty()
-        .map { line -> PGPIdentifier.fromString(line)?.toString() ?: line }
+        .map { line -> PGPIdentifier.fromString(line)?.let(::asKeyId)?.toString() ?: line }
         .distinct()
     selectedKeyIds.addAll(preselectedKeys)
     // What the caller arrived with, to tell an actual change from merely looking.
@@ -364,6 +368,12 @@ class PGPKeyListActivity : AppCompatActivity() {
     setResult(RESULT_OK, result)
     finish()
   }
+
+  /** [identifier] as the ID of the key it names, if that key is held here; as it was otherwise. */
+  private fun asKeyId(identifier: PGPIdentifier): PGPIdentifier =
+    identifier as? KeyId
+      ?: pgpKeyManager.getKeyById(identifier).get()?.let(KeyUtils::tryGetKeyId)
+      ?: identifier
 
   private fun isSecretKey(identifier: PGPIdentifier): Boolean =
     cryptoRepository.isSecretKey(identifier)

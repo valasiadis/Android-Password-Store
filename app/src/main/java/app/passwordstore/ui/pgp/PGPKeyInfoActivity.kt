@@ -285,8 +285,9 @@ private fun LazyListScope.factGroup(
     Text(
       text = stringResource(heading),
       modifier =
+        // As far in from the block's edge as a heading over a block of rows is everywhere else.
         Modifier.padding(
-          start = dimensionResource(R.dimen.spacing_large),
+          start = dimensionResource(R.dimen.list_section_header_inset),
           top = dimensionResource(R.dimen.spacing_xlarge),
           bottom = dimensionResource(R.dimen.spacing_small),
         ),

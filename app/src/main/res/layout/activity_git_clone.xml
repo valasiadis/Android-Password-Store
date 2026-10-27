@@ -1,4 +1,4 @@
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
@@ -7,6 +7,9 @@
   Where the store lives and how this app is let in. Reached both as the last step of setting a
   store up and from the settings afterwards, so it wears the setup step's heading and its button
   in the corner while cloning, and neither once there is a store to edit the settings of.
+
+  Laid out as the settings are: the address as a field, the way in as a choice, the key it uses
+  and what can be done with it, then the connection itself — each a block of rows.
 -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -27,7 +30,9 @@
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:orientation="vertical"
-      android:padding="@dimen/activity_horizontal_margin">
+      android:paddingHorizontal="@dimen/password_list_margin"
+      android:paddingTop="@dimen/password_list_margin_top"
+      android:paddingBottom="@dimen/spacing_large">
 
       <include
         android:id="@+id/header"
@@ -38,144 +43,88 @@
         android:visibility="gone"
         tools:visibility="visible" />
 
-      <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/label_server_url"
+      <app.passwordstore.ui.util.ListBlock
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/server_url">
+        android:layout_height="wrap_content">
 
-        <com.google.android.material.textfield.TextInputEditText
-          android:id="@+id/server_url"
+        <com.google.android.material.textfield.TextInputLayout
+          android:id="@+id/label_server_url"
+          style="@style/Widget.APS.ListField"
           android:layout_width="match_parent"
           android:layout_height="wrap_content"
-          android:imeOptions="actionNext"
-          android:inputType="textWebEmailAddress"
-          android:nextFocusForward="@id/auth_mode_group" />
+          android:hint="@string/server_url">
 
-      </com.google.android.material.textfield.TextInputLayout>
+          <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/server_url"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionDone"
+            android:inputType="textWebEmailAddress" />
 
-      <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/label_auth_mode"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_xlarge"
-        android:layout_marginBottom="@dimen/spacing_medium"
-        android:text="@string/connection_mode"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:textColor="?attr/colorOnSurfaceVariant" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-      <com.google.android.material.button.MaterialButtonToggleGroup
-        android:id="@+id/auth_mode_group"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:singleSelection="true">
+      </app.passwordstore.ui.util.ListBlock>
 
-        <com.google.android.material.button.MaterialButton
+      <include
+        android:id="@+id/auth_mode_header"
+        layout="@layout/list_section_header" />
+
+      <!-- Public key or password: one choice, as radio rows. Only a password works over HTTPS. -->
+      <app.passwordstore.ui.util.ListBlock
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <include
           android:id="@+id/auth_mode_ssh_key"
-          style="?attr/materialButtonOutlinedStyle"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/connection_mode_ssh_key" />
+          layout="@layout/list_choice_row" />
 
-        <com.google.android.material.button.MaterialButton
+        <include
           android:id="@+id/auth_mode_password"
-          style="?attr/materialButtonOutlinedStyle"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/connection_mode_basic_authentication" />
+          layout="@layout/list_choice_row" />
 
-      </com.google.android.material.button.MaterialButtonToggleGroup>
+      </app.passwordstore.ui.util.ListBlock>
 
       <!--
-        Public-key authentication needs a key, and this is where the one in use is named: a single
-        row that says what is set, and opens the ways of setting another. It used to be one button
-        per way of getting a key, side by side and all equally loud, which asked the question four
-        times without ever answering it.
+        Public-key authentication needs a key, and this is where the one in use is named: a row that
+        says what is set and opens the ways of setting another, and below it what the server needs
+        to be told about the key, which acts on it rather than picks it.
       -->
-      <LinearLayout
+      <app.passwordstore.ui.util.ListBlock
         android:id="@+id/auth_key_section"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:layout_marginTop="@dimen/spacing_large"
         android:visibility="gone"
         tools:visibility="visible">
 
-        <LinearLayout
+        <include
           android:id="@+id/auth_key_row"
-          android:layout_width="match_parent"
-          android:layout_height="wrap_content"
-          android:layout_marginTop="@dimen/spacing_large"
-          android:background="?attr/selectableItemBackground"
-          android:clickable="true"
-          android:focusable="true"
-          android:gravity="center_vertical"
-          android:minHeight="64dp"
-          android:orientation="horizontal"
-          android:paddingHorizontal="@dimen/spacing_small"
-          android:paddingVertical="@dimen/spacing_small">
+          layout="@layout/list_value_row" />
 
-          <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <androidx.appcompat.widget.AppCompatTextView
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:text="@string/setup_auth_key_label"
-              android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-            <androidx.appcompat.widget.AppCompatTextView
-              android:id="@+id/auth_key_status"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:textAppearance="?attr/textAppearanceBodyMedium"
-              android:textColor="?attr/colorOnSurfaceVariant"
-              tools:text="No key set yet" />
-
-          </LinearLayout>
-
-          <androidx.appcompat.widget.AppCompatImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_keyboard_arrow_right_24dp"
-            app:tint="?attr/colorOnSurfaceVariant" />
-
-        </LinearLayout>
-
-        <!-- What the server needs to be told about the key, which acts on it rather than picks it. -->
-        <com.google.android.material.button.MaterialButton
+        <include
           android:id="@+id/auth_key_show"
-          style="?attr/materialButtonOutlinedStyle"
-          android:layout_width="match_parent"
-          android:layout_height="wrap_content"
-          android:layout_marginTop="@dimen/spacing_small"
-          android:text="@string/pref_ssh_see_key_title"
-          android:visibility="gone"
-          tools:visibility="visible" />
+          layout="@layout/list_action_row" />
 
-      </LinearLayout>
+      </app.passwordstore.ui.util.ListBlock>
 
-      <com.google.android.material.button.MaterialButton
-        android:id="@+id/clear_host_key_button"
-        style="?attr/materialButtonOutlinedStyle"
+      <!-- The connection itself: the server's key this app remembers, and its banner. -->
+      <app.passwordstore.ui.util.ListBlock
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_large"
-        android:text="@string/clear_saved_host_key"
-        android:visibility="gone"
-        tools:visibility="visible" />
+        android:layout_marginTop="@dimen/spacing_large">
 
-      <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/show_server_response"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_large"
-        android:text="@string/show_server_response" />
+        <include
+          android:id="@+id/clear_host_key_button"
+          layout="@layout/list_action_row" />
+
+        <include
+          android:id="@+id/show_server_response"
+          layout="@layout/list_switch_row" />
+
+      </app.passwordstore.ui.util.ListBlock>
 
     </LinearLayout>
+
   </ScrollView>
 
   <include

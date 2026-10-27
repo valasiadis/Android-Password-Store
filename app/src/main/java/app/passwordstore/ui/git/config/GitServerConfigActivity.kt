@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
-import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -18,6 +17,7 @@ import app.passwordstore.data.repo.PasswordRepository
 import app.passwordstore.databinding.ActivityGitCloneBinding
 import app.passwordstore.ui.dialogs.AuthKeySourceBottomSheet
 import app.passwordstore.ui.dialogs.ErrorDialog
+import app.passwordstore.ui.dialogs.ListRows
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.WarningDialog
@@ -77,26 +77,17 @@ class GitServerConfigActivity : BaseGitActivity() {
     newAuthMode = gitSettings.authMode
     setUpChrome()
 
-    binding.authModeGroup.apply {
-      when (oldAuthMode) {
-        AuthMode.SshKey -> check(binding.authModeSshKey.id)
-        AuthMode.Password -> check(binding.authModePassword.id)
-        AuthMode.None -> clearChecked()
-      }
-      addOnButtonCheckedListener { _, _, _ ->
-        if (checkedButtonIds.isEmpty()) {
-          newAuthMode = AuthMode.None
-        } else {
-          when (checkedButtonId) {
-            binding.authModeSshKey.id -> newAuthMode = AuthMode.SshKey
-            binding.authModePassword.id -> newAuthMode = AuthMode.Password
-            View.NO_ID -> newAuthMode = AuthMode.None
-          }
-        }
-        showAuthKeyState()
-        if (isClone) reportUrlState() else applySettings()
-      }
+    ListRows.header(binding.authModeHeader, R.string.connection_mode)
+    ListRows.choice(binding.authModeSshKey, getString(R.string.connection_mode_ssh_key)) {
+      chooseAuthMode(AuthMode.SshKey)
     }
+    ListRows.choice(
+      binding.authModePassword,
+      getString(R.string.connection_mode_basic_authentication),
+    ) {
+      chooseAuthMode(AuthMode.Password)
+    }
+    showAuthMode()
 
     binding.serverUrl.setText(
       gitSettings.url.also {
@@ -114,38 +105,40 @@ class GitServerConfigActivity : BaseGitActivity() {
       if (isClone) reportUrlState() else applySettings()
     }
 
-    binding.authKeyRow.setOnClickListener { showAuthKeySources() }
+    binding.authKeyRow.valueTitle.setText(R.string.setup_auth_key_label)
+    binding.authKeyRow.root.setOnClickListener { showAuthKeySources() }
     supportFragmentManager.setFragmentResultListener(
       AuthKeySourceBottomSheet.AUTH_KEY_SOURCE_REQUEST_KEY,
       this,
     ) { _, result ->
       useAuthKeyFrom(result.getString(AuthKeySourceBottomSheet.SOURCE_KEY))
     }
-    binding.authKeyShow.setOnClickListener {
+    ListRows.action(binding.authKeyShow, R.string.pref_ssh_see_key_title) {
       ShowSshKeyFragment().show(supportFragmentManager, "public_key")
     }
     showAuthKeyState()
 
-    binding.clearHostKeyButton.isVisible = gitSettings.hasSavedHostKey()
-    binding.clearHostKeyButton.setOnClickListener {
+    binding.clearHostKeyButton.root.isVisible = gitSettings.hasSavedHostKey()
+    ListRows.action(binding.clearHostKeyButton, R.string.clear_saved_host_key) {
       gitSettings.clearSavedHostKey()
       Notice.show(
         this@GitServerConfigActivity,
         R.string.clear_saved_host_key_success,
       )
-      it.isVisible = false
+      binding.clearHostKeyButton.root.isVisible = false
     }
 
-    binding.showServerResponse.isChecked = gitSettings.showSshServerResponse
-    binding.showServerResponse.visibility =
-      gitSettings.url.let {
-        if (it.isNullOrEmpty() || !it.startsWith("http://") && !it.startsWith("https://"))
-          View.VISIBLE
-        else View.GONE
-      }
-    binding.showServerResponse.setOnCheckedChangeListener { _, isChecked ->
-      gitSettings.showSshServerResponse = isChecked
+    ListRows.switch(
+      binding.showServerResponse,
+      R.string.show_server_response,
+      checked = gitSettings.showSshServerResponse,
+    ) { checked ->
+      gitSettings.showSshServerResponse = checked
     }
+    binding.showServerResponse.root.isVisible =
+      gitSettings.url.let {
+        it.isNullOrEmpty() || !it.startsWith("http://") && !it.startsWith("https://")
+      }
   }
 
   private inline fun <reified T> intentFor() = Intent(this, T::class.java)
@@ -264,10 +257,10 @@ class GitServerConfigActivity : BaseGitActivity() {
    */
   private fun showAuthKeyState() {
     binding.authKeySection.isVisible = newAuthMode == AuthMode.SshKey
-    binding.authKeyStatus.text = describeAuthKey()
+    binding.authKeyRow.valueText.text = describeAuthKey()
     // Only some kinds of key can show their public half; the others were imported as a private
     // key alone, and the server was told about them elsewhere.
-    binding.authKeyShow.isVisible = SshKey.canShowSshPublicKey
+    binding.authKeyShow.root.isVisible = SshKey.canShowSshPublicKey
     if (isClone) reportUrlState()
   }
 
@@ -329,20 +322,34 @@ class GitServerConfigActivity : BaseGitActivity() {
     }
   }
 
+  /** Takes [mode] as the way in, and acts on it as a change to the screen's answers. */
+  private fun chooseAuthMode(mode: AuthMode) {
+    if (newAuthMode == mode) return
+    newAuthMode = mode
+    showAuthMode()
+    showAuthKeyState()
+    if (isClone) reportUrlState() else applySettings()
+  }
+
+  private fun showAuthMode() {
+    ListRows.select(binding.authModeSshKey, newAuthMode == AuthMode.SshKey)
+    ListRows.select(binding.authModePassword, newAuthMode == AuthMode.Password)
+  }
+
+  /**
+   * Offers the ways in the address allows: only a password over HTTPS, either over SSH. A choice
+   * the address rules out is dropped, and SSH is taken as the answer where there was none.
+   */
   private fun setAuthModes(isHttps: Boolean) =
     with(binding) {
+      authModeSshKey.root.isVisible = !isHttps
+      showServerResponse.root.isVisible = !isHttps
       if (isHttps) {
-        authModeSshKey.isVisible = false
-        authModePassword.isVisible = true
-        showServerResponse.visibility = View.GONE
         gitSettings.showSshServerResponse = true
-        if (authModeGroup.checkedButtonId != authModePassword.id) authModeGroup.clearChecked()
+        if (newAuthMode != AuthMode.Password) chooseAuthMode(AuthMode.None)
       } else {
-        authModeSshKey.isVisible = true
-        authModePassword.isVisible = true
-        showServerResponse.visibility = View.VISIBLE
-        showServerResponse.isChecked = gitSettings.showSshServerResponse
-        if (authModeGroup.checkedButtonId == View.NO_ID) authModeGroup.check(authModeSshKey.id)
+        showServerResponse.switchToggle.isChecked = gitSettings.showSshServerResponse
+        if (newAuthMode == AuthMode.None) chooseAuthMode(AuthMode.SshKey)
       }
     }
 

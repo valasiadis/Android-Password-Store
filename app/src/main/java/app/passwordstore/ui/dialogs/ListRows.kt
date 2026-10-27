@@ -7,6 +7,7 @@ package app.passwordstore.ui.dialogs
 import androidx.annotation.StringRes
 import androidx.core.view.isVisible
 import app.passwordstore.R
+import app.passwordstore.databinding.ListActionRowBinding
 import app.passwordstore.databinding.ListChoiceRowBinding
 import app.passwordstore.databinding.ListSectionHeaderBinding
 import app.passwordstore.databinding.ListSwitchRowBinding
@@ -14,8 +15,8 @@ import app.passwordstore.databinding.ListValueRowBinding
 
 /**
  * The rows a screen is built from, so that every screen is built from the same ones: a value that
- * opens where it is chosen, a switch, an answer to a choice, and the heading over a block of them.
- * They stand in a `ListBlock`, which gives each its shape.
+ * opens where it is chosen, something to do, a switch, an answer to a choice, and the heading over
+ * a block of them. They stand in a `ListBlock`, which gives each its shape.
  */
 object ListRows {
 
@@ -36,6 +37,19 @@ object ListRows {
     row.valueTitle.setText(title)
     row.valueText.text = value
     row.root.setOnClickListener { onOpen() }
+  }
+
+  /** Something to do, named [title] and explained by [summary], done by [onClick]. */
+  fun action(
+    row: ListActionRowBinding,
+    @StringRes title: Int,
+    summary: CharSequence? = null,
+    onClick: () -> Unit,
+  ) {
+    row.actionTitle.setText(title)
+    row.actionSummary.text = summary
+    row.actionSummary.isVisible = !summary.isNullOrEmpty()
+    row.root.setOnClickListener { onClick() }
   }
 
   /**

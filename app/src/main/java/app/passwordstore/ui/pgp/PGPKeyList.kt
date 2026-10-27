@@ -220,7 +220,7 @@ fun KeyList(
  * settings give theirs.
  */
 @Composable
-private fun rowShape(index: Int, count: Int): Shape {
+internal fun rowShape(index: Int, count: Int): Shape {
   val outer = dimensionResource(R.dimen.list_outer_corner_radius)
   val inner = dimensionResource(R.dimen.list_inner_corner_radius)
   val top = if (index == 0) outer else inner

@@ -92,6 +92,17 @@ constructor(
     return key != null && isSmartcardBacked(key)
   }
 
+  /**
+   * The fingerprints of the parts of the key [id] names that are held on a smartcard, as the card
+   * reported them when it was set up — a key read from a card is only its public half, so this is
+   * where the app knows which of its parts the card holds.
+   */
+  fun cardFingerprints(id: PGPIdentifier): List<ByteArray> {
+    val key = pgpKeyManager.getKeyById(id).get() ?: return emptyList()
+    val primaryKeyId = KeyUtils.tryGetKeyId(key) ?: return emptyList()
+    return smartcardStore.getFingerprints(primaryKeyId)
+  }
+
   private fun isSmartcardBacked(key: PGPKey): Boolean {
     val primaryKeyId = KeyUtils.tryGetKeyId(key) ?: return false
     return smartcardStore.hasAssociation(primaryKeyId)

@@ -236,6 +236,12 @@
       android:configChanges="screenSize|smallestScreenSize|orientation|screenLayout"
       android:parentActivityName=".ui.settings.SettingsActivity" />
     <activity
+      android:name=".ui.pgp.PGPKeyInfoActivity"
+      android:theme="@style/NoBackgroundThemeM3"
+      android:exported="false"
+      android:label="@string/pgp_key_info_title"
+      android:parentActivityName=".ui.pgp.PGPKeyListActivity" />
+    <activity
       android:name=".ui.pgp.PGPKeyCreationActivity"
       android:exported="false"
       android:label="@string/pgp_new_pgp_key_title"

@@ -383,48 +383,8 @@ class PGPKeyListActivity : AppCompatActivity() {
     cryptoRepository.isSmartcardBacked(identifier) || cryptoRepository.hasOnlyStubDecKey(identifier)
 
   private fun showKeyInfo(identifier: PGPIdentifier) {
-    val fingerprint =
-      pgpKeyManager.getKeyById(identifier).get()?.let { key ->
-        KeyUtils.tryGetFingerprints(key).firstOrNull()?.let(::formatFingerprint)
-      }
-    val type =
-      when {
-        // Both a registered smartcard and a bare stub mean the private key lives on hardware;
-        // mirror isStubKey() so the info label matches the hardware icon shown in the list.
-        cryptoRepository.isSmartcardBacked(identifier) ||
-          cryptoRepository.hasOnlyStubDecKey(identifier) ->
-          getString(R.string.pgp_key_info_type_hardware)
-        cryptoRepository.isSecretKey(identifier) -> getString(R.string.pgp_key_info_type_secret)
-        else -> getString(R.string.pgp_key_info_type_public)
-      }
-    val message = buildString {
-      cryptoRepository
-        .getUserIdFromKeyId(identifier)
-        ?.takeIf { it != "null" }
-        ?.let {
-          appendLine(getString(R.string.pgp_key_info_user_id, it))
-        }
-      cryptoRepository.getEmailFromKeyId(identifier)?.let {
-        appendLine(getString(R.string.pgp_key_info_email, it))
-      }
-      cryptoRepository.getLongKeyIdFromKeyId(identifier)?.let {
-        appendLine(getString(R.string.pgp_key_info_key_id, "0x$it"))
-      }
-      fingerprint?.let { appendLine(getString(R.string.pgp_key_info_fingerprint, it)) }
-      append(getString(R.string.pgp_key_info_type, type))
-    }
-    AppDialogBuilder(this)
-      .setTitle(R.string.pgp_key_info_title)
-      .setMessage(message)
-      .setPositiveButton(R.string.dialog_ok, null)
-      .show()
+    startActivity(PGPKeyInfoActivity.newIntent(this, identifier))
   }
-
-  private fun formatFingerprint(fingerprint: ByteArray): String =
-    fingerprint
-      .joinToString(separator = "") { "%02X".format(it.toInt() and 0xFF) }
-      .chunked(4)
-      .joinToString(separator = " ")
 
   private fun changeKeyPassphrase(identifier: PGPIdentifier) {
     val intent = Intent(this, PGPKeyChangePassphraseActivity::class.java)

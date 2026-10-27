@@ -17,9 +17,7 @@ import app.passwordstore.util.settings.DirectoryStructure
 import app.passwordstore.util.settings.PreferenceKeys
 import de.Maxr1998.modernpreferences.PreferenceScreen
 import de.Maxr1998.modernpreferences.helpers.onClick
-import de.Maxr1998.modernpreferences.helpers.singleChoice
 import de.Maxr1998.modernpreferences.helpers.switch
-import de.Maxr1998.modernpreferences.preferences.choice.SelectionItem
 
 class GeneralSettings(private val activity: FragmentActivity) : SettingsProvider {
 
@@ -27,28 +25,33 @@ class GeneralSettings(private val activity: FragmentActivity) : SettingsProvider
     builder.apply {
       val themeValues = activity.resources.getStringArray(R.array.app_theme_values)
       val themeOptions = activity.resources.getStringArray(R.array.app_theme_options)
-      val themeItems =
-        themeValues.zip(themeOptions).map { SelectionItem(it.first, it.second, null) }
-      singleChoice(PreferenceKeys.APP_THEME, themeItems) {
-        initialSelection = activity.resources.getString(R.string.app_theme_def)
-        titleRes = R.string.pref_app_theme_title
-      }
+      radioChoice(
+        PreferenceKeys.APP_THEME,
+        R.string.pref_app_theme_title,
+        themeValues.zip(themeOptions),
+        default = activity.resources.getString(R.string.app_theme_def),
+        prefs = activity.sharedPrefs,
+      )
 
       val values = activity.resources.getStringArray(R.array.directory_structure_values)
       val titles = activity.resources.getStringArray(R.array.directory_structure_entries)
-      val items = values.zip(titles).map { SelectionItem(it.first, it.second, null) }
-      singleChoice(PreferenceKeys.DIRECTORY_STRUCTURE, items) {
-        initialSelection = DirectoryStructure.DEFAULT.value
-        titleRes = R.string.pref_directory_structure
-      }
+      radioChoice(
+        PreferenceKeys.DIRECTORY_STRUCTURE,
+        R.string.pref_directory_structure,
+        values.zip(titles),
+        default = DirectoryStructure.DEFAULT.value,
+        prefs = activity.sharedPrefs,
+      )
 
       val sortValues = activity.resources.getStringArray(R.array.sort_order_values)
       val sortOptions = activity.resources.getStringArray(R.array.sort_order_entries)
-      val sortItems = sortValues.zip(sortOptions).map { SelectionItem(it.first, it.second, null) }
-      singleChoice(PreferenceKeys.SORT_ORDER, sortItems) {
-        initialSelection = sortValues[0]
-        titleRes = R.string.pref_sort_order_title
-      }
+      radioChoice(
+        PreferenceKeys.SORT_ORDER,
+        R.string.pref_sort_order_title,
+        sortValues.zip(sortOptions),
+        default = sortValues[0],
+        prefs = activity.sharedPrefs,
+      )
 
       switch(PreferenceKeys.DISABLE_SYNC_ACTION) {
         titleRes = R.string.pref_disable_sync_on_pull_title
@@ -70,12 +73,13 @@ class GeneralSettings(private val activity: FragmentActivity) : SettingsProvider
 
       val filterModeValues = arrayOf("exact", "fuzzy")
       val filterModeLabels = activity.resources.getStringArray(R.array.search_filter_mode_labels)
-      val filterModeItems =
-        filterModeValues.zip(filterModeLabels).map { SelectionItem(it.first, it.second, null) }
-      singleChoice(PreferenceKeys.SEARCH_FILTER_MODE, filterModeItems) {
-        initialSelection = "exact"
-        titleRes = R.string.pref_search_filter_mode_title
-      }
+      radioChoice(
+        PreferenceKeys.SEARCH_FILTER_MODE,
+        R.string.pref_search_filter_mode_title,
+        filterModeValues.zip(filterModeLabels),
+        default = "exact",
+        prefs = activity.sharedPrefs,
+      )
 
       switch(PreferenceKeys.SHOW_HIDDEN_CONTENTS) {
         titleRes = R.string.pref_show_hidden_title

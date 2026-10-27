@@ -142,15 +142,21 @@ class PreferenceGroupDecoration(context: Context) : RecyclerView.ItemDecoration(
       }
       icon.setPadding(iconCirclePadding, iconCirclePadding, iconCirclePadding, iconCirclePadding)
       icon.scaleType = ImageView.ScaleType.FIT_CENTER
-      icon.background = AppCompatResources.getDrawable(row.context, R.drawable.list_icon_circle)
-      icon.backgroundTintList =
-        ColorStateList.valueOf(
-          MaterialColors.getColor(row, AppCompatR.attr.colorPrimary, Color.TRANSPARENT)
-        )
-      icon.imageTintList =
-        ColorStateList.valueOf(
-          MaterialColors.getColor(row, MaterialR.attr.colorOnPrimary, Color.TRANSPARENT)
-        )
+      // A radio mark stands bare, in the colour its row gives it, where the system settings put
+      // one; only an icon stands in the circle.
+      if (icon.getTag(R.id.list_radio_mark) == true) {
+        icon.background = null
+      } else {
+        icon.background = AppCompatResources.getDrawable(row.context, R.drawable.list_icon_circle)
+        icon.backgroundTintList =
+          ColorStateList.valueOf(
+            MaterialColors.getColor(row, AppCompatR.attr.colorPrimary, Color.TRANSPARENT)
+          )
+        icon.imageTintList =
+          ColorStateList.valueOf(
+            MaterialColors.getColor(row, MaterialR.attr.colorOnPrimary, Color.TRANSPARENT)
+          )
+      }
     }
     // Said either way: rows are recycled, and one that has just given up its icon would otherwise
     // keep the leading edge it only had because of it.

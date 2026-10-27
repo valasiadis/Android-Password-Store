@@ -6,4 +6,6 @@
 <resources>
   <!-- Where a row of a ListBlock was last shaped as falling, so it is only reshaped when it moves. -->
   <item name="list_block_place" type="id" />
+  <!-- Marks a settings row's icon as a radio mark, which stands bare rather than in a circle. -->
+  <item name="list_radio_mark" type="id" />
 </resources>

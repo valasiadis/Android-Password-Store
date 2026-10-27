@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  The end of a radio row in the settings, which holds nothing. It exists so radio rows are a kind
+  of row of their own to the list, and their views are never recycled for ordinary rows.
+-->
+<Space xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="0dp"
+  android:layout_height="0dp" />

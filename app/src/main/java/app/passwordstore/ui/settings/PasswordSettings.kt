@@ -17,9 +17,7 @@ import app.passwordstore.util.settings.PreferenceKeys
 import de.Maxr1998.modernpreferences.PreferenceScreen
 import de.Maxr1998.modernpreferences.helpers.editText
 import de.Maxr1998.modernpreferences.helpers.onClick
-import de.Maxr1998.modernpreferences.helpers.singleChoice
 import de.Maxr1998.modernpreferences.helpers.switch
-import de.Maxr1998.modernpreferences.preferences.choice.SelectionItem
 
 class PasswordSettings(private val activity: FragmentActivity) : SettingsProvider {
 
@@ -27,11 +25,13 @@ class PasswordSettings(private val activity: FragmentActivity) : SettingsProvide
     builder.apply {
       val values = activity.resources.getStringArray(R.array.pwgen_provider_values)
       val labels = activity.resources.getStringArray(R.array.pwgen_provider_labels)
-      val items = values.zip(labels).map { SelectionItem(it.first, it.second, null) }
-      singleChoice(PreferenceKeys.PREF_KEY_PWGEN_TYPE, items) {
-        initialSelection = "diceware"
-        titleRes = R.string.pref_password_generator_type_title
-      }
+      radioChoice(
+        PreferenceKeys.PREF_KEY_PWGEN_TYPE,
+        R.string.pref_password_generator_type_title,
+        values.zip(labels),
+        default = "diceware",
+        prefs = activity.sharedPrefs,
+      )
       val unlockValues = arrayOf("disabled", "fingerprint", "PIN")
       val unlockLabels = activity.resources.getStringArray(R.array.fast_unlock_option_labels)
       val unlockOpts =
@@ -44,18 +44,17 @@ class PasswordSettings(private val activity: FragmentActivity) : SettingsProvide
           )
       )
         activity.sharedPrefs.edit { putString(PreferenceKeys.PREF_FAST_UNLOCK_OPTION, "disabled") }
-      val unlockItems =
-        unlockValues.slice(unlockOpts).zip(unlockLabels.slice(unlockOpts)).map {
-          SelectionItem(it.first, it.second, null)
-        }
-      singleChoice(PreferenceKeys.PREF_FAST_UNLOCK_OPTION, unlockItems) {
-        titleRes = R.string.fast_unlock_pref_title
-        initialSelection = "disabled"
-        onClick {
-          activity.persistentPassphrases.edit { clear() }
-          activity.unlockPins.edit { clear() }
-          true
-        }
+      // Changing how entries are unlocked drops what the old way had kept, so nothing is left
+      // behind that the new way would not ask for.
+      radioChoice(
+        PreferenceKeys.PREF_FAST_UNLOCK_OPTION,
+        R.string.fast_unlock_pref_title,
+        unlockValues.slice(unlockOpts).zip(unlockLabels.slice(unlockOpts)),
+        default = "disabled",
+        prefs = activity.sharedPrefs,
+      ) {
+        activity.persistentPassphrases.edit { clear() }
+        activity.unlockPins.edit { clear() }
       }
       editText(PreferenceKeys.BIOMETRICS_AND_PIN_TIMEOUT) {
         titleRes = R.string.pref_biometrics_and_pin_timeout_title

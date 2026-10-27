@@ -5,58 +5,63 @@
 
 <!--
   Where an authentication key can come from, in the same sheet the key manager uses to ask where a
-  PGP key comes from: the choices as a short column, each said in full and marked with what it is.
+  PGP key comes from: the choices as one block of rows, each said in full and marked with what it
+  is.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:app="http://schemas.android.com/apk/res-auto"
   android:layout_width="match_parent"
   android:layout_height="wrap_content"
   android:orientation="vertical"
-  android:paddingVertical="@dimen/spacing_small">
+  android:paddingHorizontal="@dimen/password_list_margin"
+  android:paddingTop="@dimen/spacing_xlarge"
+  android:paddingBottom="@dimen/spacing_large">
 
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/auth_key_generate"
-    style="@style/Widget.Material3.Button.TextButton"
+  <app.passwordstore.ui.util.ListBlock
     android:layout_width="match_parent"
-    android:layout_height="@dimen/bottom_sheet_item_height"
-    android:layout_marginHorizontal="@dimen/normal_margin"
-    android:text="@string/setup_auth_key_source_generate"
-    android:textAlignment="viewStart"
-    android:textAllCaps="false"
-    android:textColor="?attr/colorOnSurface"
-    app:icon="@drawable/ic_software_key_24dp"
-    app:iconPadding="@dimen/normal_margin"
-    app:iconTint="?attr/colorSecondary"
-    app:rippleColor="?attr/colorSecondary" />
+    android:layout_height="wrap_content">
 
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/auth_key_import"
-    style="@style/Widget.Material3.Button.TextButton"
-    android:layout_width="match_parent"
-    android:layout_height="@dimen/bottom_sheet_item_height"
-    android:layout_marginHorizontal="@dimen/normal_margin"
-    android:text="@string/setup_auth_key_source_import"
-    android:textAlignment="viewStart"
-    android:textAllCaps="false"
-    android:textColor="?attr/colorOnSurface"
-    app:icon="@drawable/ic_action_new_folder"
-    app:iconPadding="@dimen/normal_margin"
-    app:iconTint="?attr/colorSecondary"
-    app:rippleColor="?attr/colorSecondary" />
+    <LinearLayout
+      android:id="@+id/auth_key_generate"
+      style="@style/Widget.APS.ListIconRow">
 
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/auth_key_pgp"
-    style="@style/Widget.Material3.Button.TextButton"
-    android:layout_width="match_parent"
-    android:layout_height="@dimen/bottom_sheet_item_height"
-    android:layout_marginHorizontal="@dimen/normal_margin"
-    android:text="@string/setup_auth_key_source_pgp"
-    android:textAlignment="viewStart"
-    android:textAllCaps="false"
-    android:textColor="?attr/colorOnSurface"
-    app:icon="@drawable/ic_action_new_pgp_key"
-    app:iconPadding="@dimen/normal_margin"
-    app:iconTint="?attr/colorSecondary"
-    app:rippleColor="?attr/colorSecondary" />
+      <androidx.appcompat.widget.AppCompatImageView
+        style="@style/Widget.APS.ListIconRow.Icon"
+        android:src="@drawable/ic_software_key_24dp" />
+
+      <androidx.appcompat.widget.AppCompatTextView
+        style="@style/Widget.APS.ListIconRow.Title"
+        android:text="@string/setup_auth_key_source_generate" />
+
+    </LinearLayout>
+
+    <LinearLayout
+      android:id="@+id/auth_key_import"
+      style="@style/Widget.APS.ListIconRow">
+
+      <androidx.appcompat.widget.AppCompatImageView
+        style="@style/Widget.APS.ListIconRow.Icon"
+        android:src="@drawable/ic_action_new_folder" />
+
+      <androidx.appcompat.widget.AppCompatTextView
+        style="@style/Widget.APS.ListIconRow.Title"
+        android:text="@string/setup_auth_key_source_import" />
+
+    </LinearLayout>
+
+    <LinearLayout
+      android:id="@+id/auth_key_pgp"
+      style="@style/Widget.APS.ListIconRow">
+
+      <androidx.appcompat.widget.AppCompatImageView
+        style="@style/Widget.APS.ListIconRow.Icon"
+        android:src="@drawable/ic_action_new_pgp_key" />
+
+      <androidx.appcompat.widget.AppCompatTextView
+        style="@style/Widget.APS.ListIconRow.Title"
+        android:text="@string/setup_auth_key_source_pgp" />
+
+    </LinearLayout>
+
+  </app.passwordstore.ui.util.ListBlock>
 
 </LinearLayout>

@@ -116,5 +116,4 @@
   <!-- What that field leaves free on each side for those buttons. -->
   <dimen name="search_bar_side_room">88dp</dimen>
   <dimen name="normal_margin">8dp</dimen>
-  <dimen name="bottom_sheet_item_height">56dp</dimen>
 </resources>

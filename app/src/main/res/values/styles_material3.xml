@@ -78,4 +78,38 @@
     <item name="android:paddingTop">28dp</item>
     <item name="android:paddingBottom">@dimen/spacing_medium</item>
   </style>
+  <!--
+    A row that does one thing, marked with what it is, as the password list marks its rows: its icon
+    in a circle of the theme's primary colour, and its name. Used where a sheet offers a few ways of
+    going on, each as a row of one block. Its background comes from the ListBlock it stands in.
+  -->
+  <style name="Widget.APS.ListIconRow" parent="">
+    <item name="android:layout_width">match_parent</item>
+    <item name="android:layout_height">wrap_content</item>
+    <item name="android:minHeight">@dimen/password_row_height</item>
+    <item name="android:orientation">horizontal</item>
+    <item name="android:gravity">center_vertical</item>
+    <item name="android:paddingHorizontal">@dimen/spacing_large</item>
+    <item name="android:clickable">true</item>
+    <item name="android:focusable">true</item>
+  </style>
+
+  <style name="Widget.APS.ListIconRow.Icon" parent="">
+    <item name="android:layout_width">@dimen/list_icon_circle</item>
+    <item name="android:layout_height">@dimen/list_icon_circle</item>
+    <item name="android:background">@drawable/list_icon_circle</item>
+    <item name="android:backgroundTint">?attr/colorPrimary</item>
+    <item name="android:padding">@dimen/list_icon_circle_padding</item>
+    <item name="android:contentDescription">@null</item>
+    <item name="tint">?attr/colorOnPrimary</item>
+  </style>
+
+  <style name="Widget.APS.ListIconRow.Title" parent="">
+    <item name="android:layout_width">0dp</item>
+    <item name="android:layout_height">wrap_content</item>
+    <item name="android:layout_weight">1</item>
+    <item name="android:layout_marginStart">@dimen/list_icon_text_gap</item>
+    <item name="android:textAppearance">?attr/textAppearanceTitleMedium</item>
+    <item name="android:textColor">?attr/colorOnSurface</item>
+  </style>
 </resources>

@@ -3,95 +3,98 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Where the proxy is, then who logs in to it: two blocks of fields, as the settings set forms. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
-  xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="match_parent">
 
-  <com.google.android.material.textfield.TextInputLayout
-    android:id="@+id/proxy_host_input_layout"
+  <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginTop="@dimen/activity_vertical_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:hint="@string/proxy_hostname"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toTopOf="parent"
-    tools:layout_editor_absoluteY="64dp">
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/password_list_margin"
+    android:paddingTop="@dimen/password_list_margin_top"
+    android:paddingBottom="@dimen/spacing_large">
 
-    <com.google.android.material.textfield.TextInputEditText
-      android:id="@+id/proxy_host"
+    <app.passwordstore.ui.util.ListBlock
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content">
+
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/proxy_host_input_layout"
+        style="@style/Widget.APS.ListField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/proxy_hostname">
+
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/proxy_host"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:inputType="textUri"
+          android:nextFocusForward="@id/proxy_port" />
+
+      </com.google.android.material.textfield.TextInputLayout>
+
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/proxy_port_input_layout"
+        style="@style/Widget.APS.ListField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/port">
+
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/proxy_port"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:inputType="number"
+          android:nextFocusForward="@id/proxy_user" />
+
+      </com.google.android.material.textfield.TextInputLayout>
+
+    </app.passwordstore.ui.util.ListBlock>
+
+    <app.passwordstore.ui.util.ListBlock
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:inputType="textUri"
-      android:nextFocusForward="@id/proxy_user" />
+      android:layout_marginTop="@dimen/spacing_large">
 
-  </com.google.android.material.textfield.TextInputLayout>
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/proxy_user_input_layout"
+        style="@style/Widget.APS.ListField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/username">
 
-  <com.google.android.material.textfield.TextInputLayout
-    android:id="@+id/proxy_user_input_layout"
-    android:layout_width="0dp"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginTop="@dimen/normal_margin"
-    android:layout_marginEnd="@dimen/normal_margin"
-    android:hint="@string/username"
-    app:layout_constraintEnd_toStartOf="@id/proxy_port_input_layout"
-    app:layout_constraintHorizontal_weight="0.65"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/proxy_host_input_layout">
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/proxy_user"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:inputType="textWebEmailAddress"
+          android:nextFocusForward="@id/proxy_password" />
 
-    <com.google.android.material.textfield.TextInputEditText
-      android:id="@+id/proxy_user"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:inputType="textWebEmailAddress"
-      android:nextFocusForward="@id/proxy_port" />
+      </com.google.android.material.textfield.TextInputLayout>
 
-  </com.google.android.material.textfield.TextInputLayout>
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/proxy_password_input_layout"
+        style="@style/Widget.APS.ListField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/password"
+        app:endIconMode="password_toggle">
 
-  <com.google.android.material.textfield.TextInputLayout
-    android:id="@+id/proxy_port_input_layout"
-    android:layout_width="0dp"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/normal_margin"
-    android:layout_marginTop="@dimen/normal_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:hint="@string/port"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintHorizontal_weight="0.35"
-    app:layout_constraintStart_toEndOf="@id/proxy_user_input_layout"
-    app:layout_constraintTop_toBottomOf="@id/proxy_host_input_layout">
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/proxy_password"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:imeOptions="flagNoPersonalizedLearning"
+          android:inputType="textPassword" />
 
-    <com.google.android.material.textfield.TextInputEditText
-      android:id="@+id/proxy_port"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:inputType="number"
-      android:nextFocusForward="@id/proxy_password" />
-  </com.google.android.material.textfield.TextInputLayout>
+      </com.google.android.material.textfield.TextInputLayout>
 
-  <com.google.android.material.textfield.TextInputLayout
-    android:id="@+id/proxy_password_input_layout"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginTop="@dimen/normal_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:hint="@string/password"
-    app:endIconMode="password_toggle"
-    app:layout_constraintStart_toStartOf="@id/proxy_user_input_layout"
-    app:layout_constraintTop_toBottomOf="@id/proxy_user_input_layout">
+    </app.passwordstore.ui.util.ListBlock>
 
-    <com.google.android.material.textfield.TextInputEditText
-      android:id="@+id/proxy_password"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:importantForAutofill="no"
-      android:imeOptions="flagNoPersonalizedLearning"
-      android:inputType="textPassword" />
-  </com.google.android.material.textfield.TextInputLayout>
+  </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

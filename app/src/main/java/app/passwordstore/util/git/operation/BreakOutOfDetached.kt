@@ -57,9 +57,8 @@ class BreakOutOfDetached(callingActivity: AppCompatActivity) : GitOperation(call
         .setMessage(
           callingActivity.resources.getString(R.string.git_break_out_of_detached_unneeded)
         )
-        .setPositiveButton(callingActivity.resources.getString(R.string.dialog_ok)) { _, _ ->
-          callingActivity.finish()
-        }
+        // Only says so: the screen it was asked from stays open, as it does after the operation.
+        .setPositiveButton(R.string.dialog_ok, null)
         .show()
       false
     } else {

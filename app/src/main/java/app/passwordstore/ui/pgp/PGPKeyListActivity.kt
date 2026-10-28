@@ -530,7 +530,11 @@ class PGPKeyListActivity : AppCompatActivity() {
       val fileName = "keyID-${keyNumericId}." + (code?.let { "sec" } ?: "pub") + ".pgp"
       keyExportAction.launch(fileName)
     } else {
-      ErrorDialog.show(this@PGPKeyListActivity, R.string.pgp_key_export_failed)
+      ErrorDialog.show(
+        this@PGPKeyListActivity,
+        R.string.pgp_key_export_failed,
+        titleRes = R.string.error_title_export_key,
+      )
     }
   }
 
@@ -547,7 +551,11 @@ class PGPKeyListActivity : AppCompatActivity() {
       }
       .onErr { e ->
         logcat(ERROR) { e.asLog() }
-        ErrorDialog.show(this@PGPKeyListActivity, R.string.pgp_key_export_failed)
+        ErrorDialog.show(
+          this@PGPKeyListActivity,
+          R.string.pgp_key_export_failed,
+          titleRes = R.string.error_title_export_key,
+        )
       }
   }
 

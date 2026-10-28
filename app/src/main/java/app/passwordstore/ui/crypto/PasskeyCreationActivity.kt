@@ -156,14 +156,22 @@ class PasskeyCreationActivity : BasePGPActivity() {
           R.string.otp_import_success,
         )
       } else {
-        ErrorDialog.show(this@PasskeyCreationActivity, R.string.otp_import_failure_generic)
+        ErrorDialog.show(
+          this@PasskeyCreationActivity,
+          R.string.otp_import_failure_generic,
+          titleRes = R.string.error_title_add_otp,
+        )
       }
     }
 
   private val imageImportAction =
     registerForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
       if (imageUri == null) {
-        ErrorDialog.show(this@PasskeyCreationActivity, R.string.otp_import_failure_no_selection)
+        ErrorDialog.show(
+          this@PasskeyCreationActivity,
+          R.string.otp_import_failure_no_selection,
+          titleRes = R.string.error_title_add_otp,
+        )
         return@registerForActivityResult
       }
       val bitmap =
@@ -195,7 +203,11 @@ class PasskeyCreationActivity : BasePGPActivity() {
         binding.otpImportButton.root.isVisible = false
       }
         .onErr {
-          ErrorDialog.show(this@PasskeyCreationActivity, R.string.otp_import_failure_generic)
+          ErrorDialog.show(
+            this@PasskeyCreationActivity,
+            R.string.otp_import_failure_generic,
+            titleRes = R.string.error_title_add_otp,
+          )
         }
     }
 
@@ -269,7 +281,11 @@ class PasskeyCreationActivity : BasePGPActivity() {
                 .onErr { e ->
                   logcat(ERROR) { e.asLog() }
                   e.message?.let { message ->
-                    ErrorDialog.show(this@PasskeyCreationActivity, message)
+                    ErrorDialog.show(
+                      this@PasskeyCreationActivity,
+                      message,
+                      titleRes = R.string.error_title_add_otp,
+                    )
                   }
                 }
             },
@@ -336,7 +352,9 @@ class PasskeyCreationActivity : BasePGPActivity() {
                     .setNegativeButton(R.string.dialog_cancel) { _, _ -> finish() }
                 }
                 else -> {
-                  dialog.setTitle(R.string.error).setPositiveButton(android.R.string.ok) { _, _ ->
+                  dialog.setTitle(R.string.error_title_create_passkey).setPositiveButton(
+                    android.R.string.ok
+                  ) { _, _ ->
                     finish()
                   }
                 }
@@ -423,7 +441,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
         if (PasswordRepository.isEmpty()) {
           AppDialogBuilder(this)
             .setCancelable(false)
-            .setTitle(R.string.error)
+            .setTitle(R.string.error_title_no_store)
             .setMessage(R.string.creation_dialog_text)
             .setPositiveButton(R.string.dialog_ok) { _, _ ->
               setResult(RESULT_CANCELED)
@@ -433,7 +451,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
         } else if (!editing && !BiometricAuthenticator.canAuthenticate(this, allowPin = true)) {
           AppDialogBuilder(this)
             .setCancelable(false)
-            .setTitle(R.string.error)
+            .setTitle(R.string.error_title_create_passkey)
             .setMessage(R.string.passkey_biometric_auth_missing_error)
             .setPositiveButton(R.string.git_server_hostkey_dialog_abort) { _, _ ->
               setResult(RESULT_CANCELED)
@@ -593,6 +611,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
                   R.string.password_creation_directory_failed,
                   editRelativePath.trimEnd('/'),
                 ),
+                titleRes = R.string.error_title_save_entry,
               )
               return@runCatching
             }
@@ -611,6 +630,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
             ErrorDialog.show(
               this@PasskeyCreationActivity,
               R.string.password_creation_duplicate_error,
+              titleRes = R.string.error_title_save_entry,
             )
             return@runCatching
           }
@@ -619,6 +639,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
             ErrorDialog.show(
               this@PasskeyCreationActivity,
               R.string.message_error_destination_outside_repo,
+              titleRes = R.string.error_title_save_entry,
             )
             return@runCatching
           }
@@ -706,7 +727,7 @@ class PasskeyCreationActivity : BasePGPActivity() {
                 else -> e.message ?: e.toString()
               }
             AppDialogBuilder(this@PasskeyCreationActivity)
-              .setTitle(R.string.error)
+              .setTitle(R.string.error_title_save_entry)
               .setMessage(errMessage)
               .setCancelable(false)
               .setPositiveButton(android.R.string.ok) { _, _ -> finish() }

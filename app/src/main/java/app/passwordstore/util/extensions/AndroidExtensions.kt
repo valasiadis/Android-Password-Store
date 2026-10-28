@@ -217,10 +217,20 @@ suspend fun FragmentActivity.commitSavedChange(
     // Whatever the screen does about the entry waits until the failure has been read.
     when {
       !restored ->
-        ErrorDialog.show(this, getString(R.string.git_index_locked_error), onDismiss = onRolledBack)
+        ErrorDialog.show(
+          this,
+          getString(R.string.git_index_locked_error),
+          onDismiss = onRolledBack,
+          titleRes = R.string.error_title_commit,
+        )
       !OpenPgpCardPrompt.isHandled(error) &&
         generateSequence(error) { it.cause }.none { it is CanceledException } ->
-        ErrorDialog.show(this, ErrorMessages[error], onDismiss = onRolledBack)
+        ErrorDialog.show(
+          this,
+          ErrorMessages[error],
+          onDismiss = onRolledBack,
+          titleRes = R.string.error_title_commit,
+        )
       else -> onRolledBack()
     }
   }

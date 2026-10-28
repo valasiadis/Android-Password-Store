@@ -338,7 +338,11 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
             proceedLabel = activity.getString(R.string.dialog_delete),
           ) {
             runCatching { PasswordRepository.deleteRepository() }
-              .onErr { it.message?.let { message -> ErrorDialog.show(activity, message) } }
+              .onErr {
+                it.message?.let { message ->
+                  ErrorDialog.show(activity, message, titleRes = R.string.error_title_delete_repo)
+                }
+              }
 
             activity.getSystemService<ShortcutManager>()?.apply {
               removeDynamicShortcuts(dynamicShortcuts.map { it.id }.toMutableList())
@@ -401,6 +405,7 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
                 e.paths.take(MAX_LISTED_NAMES).joinToString("\n") { "\u2022 $it" },
               )
             else activity.getString(R.string.repository_move_failed, e.message ?: e.toString()),
+            titleRes = R.string.error_title_move_store,
           )
         },
       )

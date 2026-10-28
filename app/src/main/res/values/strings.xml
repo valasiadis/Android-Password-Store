@@ -72,7 +72,7 @@
   <string name="empty_username_toast_text">Please provide a username.</string>
 
   <!-- Git Async Task -->
-  <string name="jgit_error_dialog_title">An error occurred during a Git operation</string>
+  <string name="jgit_error_dialog_title">Git operation failed</string>
 
   <!-- Git Handler -->
   <string name="ssh_preferences_dialog_title">Set up authentication key</string>
@@ -208,7 +208,7 @@
   <string name="ssh_use_pgp_key_error_unlocking_wrapped_ed25519_message">Error unlocking authentication key.</string>
   <string name="ssh_use_pgp_key_error_unlocking_pgp_auth_subkey_message">Error unlocking authentication subkey from PGP key.</string>
   <string name="ssh_key_success_dialog_title">SSH-key imported</string>
-  <string name="ssh_key_error_dialog_title">Key import error</string>
+  <string name="ssh_key_error_dialog_title">Can\'t import SSH key</string>
   <string name="ssh_key_error_dialog_text">Message : \n</string>
   <string name="pref_recursive_filter_title">Recursive filtering</string>
   <string name="pref_recursive_filter_summary">Recursively find passwords of the current directory.</string>
@@ -307,6 +307,22 @@
   <string name="biometric_prompt_title_ssh_keygen">Generate SSH key</string>
 
   <!-- Misc -->
+  <string name="error_title_open_entry">Can\'t open entry</string>
+  <string name="error_title_autofill_passkey">Can\'t autofill a passkey</string>
+  <string name="error_title_folder_keys">Can\'t use this folder\'s keys</string>
+  <string name="error_title_change_keys">Can\'t change keys</string>
+  <string name="error_title_add_otp">Can\'t add one-time password</string>
+  <string name="error_title_save_entry">Can\'t save entry</string>
+  <string name="error_title_create_passkey">Can\'t create passkey</string>
+  <string name="error_title_clone">Can\'t clone repository</string>
+  <string name="error_title_commit">Change not committed</string>
+  <string name="error_title_import_key">Can\'t import key</string>
+  <string name="error_title_export_key">Can\'t export key</string>
+  <string name="error_title_reset_branch">Can\'t reset branch</string>
+  <string name="error_title_delete_repo">Can\'t delete repository</string>
+  <string name="error_title_move_store">Can\'t move store</string>
+  <string name="error_title_ssh_key">Can\'t set up SSH key</string>
+  <string name="error_title_no_store">No password store</string>
   <string name="dialog_ok">OK</string>
   <string name="dialog_cancel">Abort</string>
   <string name="git_sync">Synchronise repository</string>
@@ -378,7 +394,7 @@
   <string name="pref_biometric_auth_summary_error">Secure lock screen is not configured.</string>
   <string name="check_devicelock_settings_dialog_message">Check the device settings (device lock).</string>
   <string name="your_public_key">Your public key</string>
-  <string name="error_generate_ssh_key">Error while trying to generate the ssh-key</string>
+  <string name="error_generate_ssh_key">Can\'t generate SSH key</string>
   <string name="pref_show_hidden_title">Show all files and folders</string>
   <string name="pref_show_hidden_summary">Include non-password files and directories in the password list.</string>
   <string name="title_create_folder">Create folder</string>
@@ -567,7 +583,7 @@
   <string name="openpgp_card_decrypt_title">Decrypt entry</string>
   <string name="openpgp_card_sign_title">Sign commit</string>
   <string name="openpgp_card_ssh_title">SSH authentication</string>
-  <string name="openpgp_card_decrypt_failed_title">OpenPGP card decryption failed</string>
+  <string name="openpgp_card_decrypt_failed_title">Can\'t open entry with card</string>
   <string name="pgp_key_import_skipped_existing">Key already exists (replacement skipped)</string>
   <plurals name="pgp_key_import_success_title">
     <item quantity="one">PGP key successfully imported</item>
@@ -595,7 +611,7 @@
   <string name="pgp_passphrase_input_differ_error">Passphrases do not match.</string>
   <string name="pgp_key_creation_succeeded">Successfully created PGP key.</string>
   <string name="pgp_key_creation_succeeded_message">The ID of the new key is:\n%1$s</string>
-  <string name="pgp_key_creation_error">PGP key creation failure</string>
+  <string name="pgp_key_creation_error">Can\'t create key</string>
   <string name="pgp_key_change_passphrase_succeeded">Passphrase changed</string>
   <string name="pgp_key_change_passphrase_succeeded_message">The passphrase of the key with ID %1$s was successfully changed.</string>
   <string name="pgp_subkey_change_passphrase_succeeded_message">The passphrase of the subkey with ID %1$s was successfully changed.</string>

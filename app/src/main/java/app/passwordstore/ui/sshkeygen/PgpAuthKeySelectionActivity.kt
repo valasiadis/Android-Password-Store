@@ -55,7 +55,7 @@ class PgpAuthKeySelectionActivity : AppCompatActivity() {
               e.printStackTrace()
               AppDialogBuilder(this)
                 .setCancelable(false)
-                .setTitle(R.string.error)
+                .setTitle(R.string.error_title_ssh_key)
                 .setMessage(e.message)
                 .setPositiveButton(R.string.dialog_ok) { _, _ -> finish() }
                 .show()
@@ -93,7 +93,13 @@ class PgpAuthKeySelectionActivity : AppCompatActivity() {
     }
       .onErr { e ->
         logcat(ERROR) { e.asLog() }
-        e.message?.let { message -> ErrorDialog.show(this@PgpAuthKeySelectionActivity, message) }
+        e.message?.let { message ->
+          ErrorDialog.show(
+            this@PgpAuthKeySelectionActivity,
+            message,
+            titleRes = R.string.error_title_ssh_key,
+          )
+        }
       }
   }
 }

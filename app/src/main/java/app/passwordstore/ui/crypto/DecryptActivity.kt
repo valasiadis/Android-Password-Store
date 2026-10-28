@@ -264,9 +264,14 @@ class DecryptActivity : BasePGPActivity() {
           this@DecryptActivity,
           R.string.password_decryption_no_decryption_key,
           onDismiss = { finish() },
+          titleRes = R.string.error_title_open_entry,
         )
       } else {
-        ErrorDialog.show(this@DecryptActivity, R.string.password_decryption_unknown_error)
+        ErrorDialog.show(
+          this@DecryptActivity,
+          R.string.password_decryption_unknown_error,
+          titleRes = R.string.error_title_open_entry,
+        )
       }
     }
     if (!settings.getBoolean(PreferenceKeys.CACHE_PASSPHRASE, false)) {
@@ -397,7 +402,11 @@ class DecryptActivity : BasePGPActivity() {
     val decrypted =
       AESEncryption.decrypt(encrypted)
         ?: run {
-          ErrorDialog.show(this@DecryptActivity, R.string.change_keys_failure)
+          ErrorDialog.show(
+            this@DecryptActivity,
+            R.string.change_keys_failure,
+            titleRes = R.string.error_title_change_keys,
+          )
           return
         }
     lifecycleScope.launch(dispatcherProvider.main()) {
@@ -411,7 +420,11 @@ class DecryptActivity : BasePGPActivity() {
       // A key that nothing could be encrypted to would leave the entry unreadable, so it is
       // refused rather than written; keys that failed among others are named, as saving does.
       if (result.isErr || succeededUserIds.isNullOrEmpty()) {
-        ErrorDialog.show(this@DecryptActivity, R.string.change_keys_failure)
+        ErrorDialog.show(
+          this@DecryptActivity,
+          R.string.change_keys_failure,
+          titleRes = R.string.error_title_change_keys,
+        )
         return@launch
       }
       val failedUserIds =
@@ -420,7 +433,11 @@ class DecryptActivity : BasePGPActivity() {
       val previousBytes = withContext(dispatcherProvider.io()) { entryFile.readBytes() }
       val written = replaceEntry(entryFile, result.getOrThrow().toByteArray())
       if (!written) {
-        ErrorDialog.show(this@DecryptActivity, R.string.change_keys_failure)
+        ErrorDialog.show(
+          this@DecryptActivity,
+          R.string.change_keys_failure,
+          titleRes = R.string.error_title_change_keys,
+        )
         return@launch
       }
       commitChange(
@@ -433,7 +450,11 @@ class DecryptActivity : BasePGPActivity() {
           // Put back what was there, so a refused or failed commit does not leave the entry
           // encrypted to keys the repository knows nothing about.
           withContext(dispatcherProvider.io()) { entryFile.writeBytes(previousBytes) }
-          ErrorDialog.show(this@DecryptActivity, R.string.change_keys_failure)
+          ErrorDialog.show(
+            this@DecryptActivity,
+            R.string.change_keys_failure,
+            titleRes = R.string.error_title_change_keys,
+          )
         }
         .onOk {
           // The entry stays open: what it says did not change, only what encrypts it, and the

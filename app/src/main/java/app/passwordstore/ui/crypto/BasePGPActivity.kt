@@ -573,7 +573,11 @@ open class BasePGPActivity : AppCompatActivity() {
     val gpgIdentifierFile =
       File(repoRoot, subDir).findTillRoot(".gpg-id", repoRoot)
         ?: run {
-          ErrorDialog.show(this@BasePGPActivity, R.string.missing_gpg_id)
+          ErrorDialog.show(
+            this@BasePGPActivity,
+            R.string.missing_gpg_id,
+            titleRes = R.string.error_title_folder_keys,
+          )
           return null
         }
 
@@ -601,11 +605,23 @@ open class BasePGPActivity : AppCompatActivity() {
 
     if (gpgIdentifiers.isEmpty()) {
       if (shortIdCount == 0 && invalidIdCount == 0) {
-        ErrorDialog.show(this@BasePGPActivity, R.string.empty_gpg_id)
+        ErrorDialog.show(
+          this@BasePGPActivity,
+          R.string.empty_gpg_id,
+          titleRes = R.string.error_title_folder_keys,
+        )
       } else if (shortIdCount > 0 && invalidIdCount == 0) {
-        ErrorDialog.show(this@BasePGPActivity, R.string.short_gpg_id)
+        ErrorDialog.show(
+          this@BasePGPActivity,
+          R.string.short_gpg_id,
+          titleRes = R.string.error_title_folder_keys,
+        )
       } else {
-        ErrorDialog.show(this@BasePGPActivity, R.string.invalid_gpg_id)
+        ErrorDialog.show(
+          this@BasePGPActivity,
+          R.string.invalid_gpg_id,
+          titleRes = R.string.error_title_folder_keys,
+        )
       }
     }
 

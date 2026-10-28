@@ -399,7 +399,7 @@ class GitServerConfigActivity : BaseGitActivity() {
           }
             .onErr { e ->
               e.printStackTrace()
-              ErrorDialog.show(this, e.message.orEmpty())
+              ErrorDialog.show(this, e.message.orEmpty(), titleRes = R.string.error_title_clone)
             }
           dialog.cancel()
         }
@@ -414,7 +414,7 @@ class GitServerConfigActivity : BaseGitActivity() {
       }
         .onErr { e ->
           logcat(ERROR) { e.asLog() }
-          ErrorDialog.show(this, e.message.orEmpty())
+          ErrorDialog.show(this, e.message.orEmpty(), titleRes = R.string.error_title_clone)
         }
       lifecycleScope.launch {
         launchGitOperation(GitOp.CLONE)

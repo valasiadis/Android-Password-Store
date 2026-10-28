@@ -539,7 +539,7 @@ class PasswordStore : BaseGitActivity() {
     if (!PasswordRepository.isInitialized) {
       AppDialogBuilder(this)
         .setCancelable(false)
-        .setTitle(R.string.error)
+        .setTitle(R.string.error_title_no_store)
         .setMessage(R.string.creation_dialog_text)
         .setPositiveButton(R.string.dialog_ok, null)
         .show()
@@ -645,7 +645,7 @@ class PasswordStore : BaseGitActivity() {
               val message =
                 if (e.isGitLockError() || !restored) getString(R.string.git_index_locked_error)
                 else ErrorMessages[e]
-              ErrorDialog.show(this@PasswordStore, message)
+              ErrorDialog.show(this@PasswordStore, message, titleRes = R.string.error_title_commit)
             }
           }
         updateFabSync()

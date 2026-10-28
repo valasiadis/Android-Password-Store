@@ -117,7 +117,7 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
       if (!PasswordRepository.isInitialized) {
         AppDialogBuilder(requireContext())
           .setCancelable(false)
-          .setTitle(R.string.error)
+          .setTitle(R.string.error_title_no_store)
           .setMessage(R.string.creation_dialog_text)
           .setPositiveButton(R.string.dialog_ok, null)
           .show()

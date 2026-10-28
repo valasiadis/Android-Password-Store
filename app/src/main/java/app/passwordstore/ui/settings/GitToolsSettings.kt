@@ -196,7 +196,11 @@ class GitToolsSettings(private val activity: SettingsActivity) : SettingsProvide
   private fun resetToRemote() {
     val branches = remoteBranches()
     if (branches.isEmpty()) {
-      ErrorDialog.show(activity, R.string.git_utils_no_remote_branches)
+      ErrorDialog.show(
+        activity,
+        R.string.git_utils_no_remote_branches,
+        titleRes = R.string.error_title_reset_branch,
+      )
       return
     }
     val current = PasswordRepository.getCurrentBranch()

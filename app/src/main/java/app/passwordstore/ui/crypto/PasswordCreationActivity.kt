@@ -124,14 +124,22 @@ class PasswordCreationActivity : BasePGPActivity() {
           R.string.otp_import_success,
         )
       } else {
-        ErrorDialog.show(this@PasswordCreationActivity, R.string.otp_import_failure_generic)
+        ErrorDialog.show(
+          this@PasswordCreationActivity,
+          R.string.otp_import_failure_generic,
+          titleRes = R.string.error_title_add_otp,
+        )
       }
     }
 
   private val imageImportAction =
     registerForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
       if (imageUri == null) {
-        ErrorDialog.show(this@PasswordCreationActivity, R.string.otp_import_failure_no_selection)
+        ErrorDialog.show(
+          this@PasswordCreationActivity,
+          R.string.otp_import_failure_no_selection,
+          titleRes = R.string.error_title_add_otp,
+        )
         return@registerForActivityResult
       }
       val bitmap =
@@ -163,7 +171,11 @@ class PasswordCreationActivity : BasePGPActivity() {
         binding.otpImportButton.root.isVisible = false
       }
         .onErr {
-          ErrorDialog.show(this@PasswordCreationActivity, R.string.otp_import_failure_generic)
+          ErrorDialog.show(
+            this@PasswordCreationActivity,
+            R.string.otp_import_failure_generic,
+            titleRes = R.string.error_title_add_otp,
+          )
         }
     }
 
@@ -280,7 +292,11 @@ class PasswordCreationActivity : BasePGPActivity() {
                 .onErr { e ->
                   logcat(ERROR) { e.asLog() }
                   e.message?.let { message ->
-                    ErrorDialog.show(this@PasswordCreationActivity, message)
+                    ErrorDialog.show(
+                      this@PasswordCreationActivity,
+                      message,
+                      titleRes = R.string.error_title_add_otp,
+                    )
                   }
                 }
             },
@@ -430,7 +446,7 @@ class PasswordCreationActivity : BasePGPActivity() {
     if (PasswordRepository.isEmpty()) {
       AppDialogBuilder(this)
         .setCancelable(false)
-        .setTitle(R.string.error)
+        .setTitle(R.string.error_title_no_store)
         .setMessage(R.string.creation_dialog_text)
         .setPositiveButton(R.string.dialog_ok) { _, _ ->
           setResult(RESULT_CANCELED)
@@ -512,14 +528,33 @@ class PasswordCreationActivity : BasePGPActivity() {
       ) {
         if (editName.isBlank()) {
           name.requestFocus()
-          if (editing) ErrorDialog.show(this@PasswordCreationActivity, R.string.file_toast_text)
-          else ErrorDialog.show(this@PasswordCreationActivity, R.string.empty_name_toast_text)
+          if (editing)
+            ErrorDialog.show(
+              this@PasswordCreationActivity,
+              R.string.file_toast_text,
+              titleRes = R.string.error_title_save_entry,
+            )
+          else
+            ErrorDialog.show(
+              this@PasswordCreationActivity,
+              R.string.empty_name_toast_text,
+              titleRes = R.string.error_title_save_entry,
+            )
           return@with
         } else if (editName.contains('/')) {
           name.requestFocus()
           if (editing)
-            ErrorDialog.show(this@PasswordCreationActivity, R.string.invalid_filename_text)
-          else ErrorDialog.show(this@PasswordCreationActivity, R.string.invalid_name_text)
+            ErrorDialog.show(
+              this@PasswordCreationActivity,
+              R.string.invalid_filename_text,
+              titleRes = R.string.error_title_save_entry,
+            )
+          else
+            ErrorDialog.show(
+              this@PasswordCreationActivity,
+              R.string.invalid_name_text,
+              titleRes = R.string.error_title_save_entry,
+            )
           return@with
         }
       }
@@ -534,11 +569,19 @@ class PasswordCreationActivity : BasePGPActivity() {
       ) {
         if (username.text?.isBlank() ?: true) {
           username.requestFocus()
-          ErrorDialog.show(this@PasswordCreationActivity, R.string.empty_username_toast_text)
+          ErrorDialog.show(
+            this@PasswordCreationActivity,
+            R.string.empty_username_toast_text,
+            titleRes = R.string.error_title_save_entry,
+          )
           return@with
         } else if (username.text?.contains('/') ?: false) {
           username.requestFocus()
-          ErrorDialog.show(this@PasswordCreationActivity, R.string.invalid_username_text)
+          ErrorDialog.show(
+            this@PasswordCreationActivity,
+            R.string.invalid_username_text,
+            titleRes = R.string.error_title_save_entry,
+          )
           return@with
         }
       }
@@ -550,18 +593,30 @@ class PasswordCreationActivity : BasePGPActivity() {
       ) {
         if (editFilename.isBlank()) {
           filename.requestFocus()
-          ErrorDialog.show(this@PasswordCreationActivity, R.string.file_toast_text)
+          ErrorDialog.show(
+            this@PasswordCreationActivity,
+            R.string.file_toast_text,
+            titleRes = R.string.error_title_save_entry,
+          )
           return@with
         } else if (editFilename.contains('/')) {
           filename.requestFocus()
-          ErrorDialog.show(this@PasswordCreationActivity, R.string.invalid_filename_text)
+          ErrorDialog.show(
+            this@PasswordCreationActivity,
+            R.string.invalid_filename_text,
+            titleRes = R.string.error_title_save_entry,
+          )
           return@with
         }
       }
 
       if (editPass.isEmpty() && editExtra.isEmpty()) {
         password.requestFocus()
-        ErrorDialog.show(this@PasswordCreationActivity, R.string.empty_toast_text)
+        ErrorDialog.show(
+          this@PasswordCreationActivity,
+          R.string.empty_toast_text,
+          titleRes = R.string.error_title_save_entry,
+        )
         return@with
       }
 
@@ -626,6 +681,7 @@ class PasswordCreationActivity : BasePGPActivity() {
           ErrorDialog.show(
             this@PasswordCreationActivity,
             getString(R.string.password_creation_directory_failed, editRelativePath.trimEnd('/')),
+            titleRes = R.string.error_title_save_entry,
           )
           return
         }
@@ -697,6 +753,7 @@ class PasswordCreationActivity : BasePGPActivity() {
             ErrorDialog.show(
               this@PasswordCreationActivity,
               R.string.password_creation_duplicate_error,
+              titleRes = R.string.error_title_save_entry,
             )
             return@runCatching
           }
@@ -705,6 +762,7 @@ class PasswordCreationActivity : BasePGPActivity() {
             ErrorDialog.show(
               this@PasswordCreationActivity,
               R.string.message_error_destination_outside_repo,
+              titleRes = R.string.error_title_save_entry,
             )
             return@runCatching
           }
@@ -833,7 +891,7 @@ class PasswordCreationActivity : BasePGPActivity() {
                 else -> e.message ?: e.toString()
               }
             AppDialogBuilder(this@PasswordCreationActivity)
-              .setTitle(getString(R.string.error))
+              .setTitle(R.string.error_title_save_entry)
               .setMessage(errMessage)
               .setCancelable(false)
               .setPositiveButton(android.R.string.ok) { _, _ -> finish() }

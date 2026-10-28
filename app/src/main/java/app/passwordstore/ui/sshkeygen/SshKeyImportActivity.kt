@@ -72,7 +72,13 @@ class SshKeyImportActivity : AppCompatActivity() {
     runCatching { sshKeyImportAction.launch("*/*") }
       .onErr { e ->
         logcat(ERROR) { e.asLog() }
-        e.message?.let { message -> ErrorDialog.show(this@SshKeyImportActivity, message) }
+        e.message?.let { message ->
+          ErrorDialog.show(
+            this@SshKeyImportActivity,
+            message,
+            titleRes = R.string.error_title_import_key,
+          )
+        }
       }
   }
 }

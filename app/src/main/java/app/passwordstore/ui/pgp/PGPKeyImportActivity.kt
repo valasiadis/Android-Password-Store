@@ -113,7 +113,13 @@ class PGPKeyImportActivity : AppCompatActivity() {
     runCatching { pgpKeyImportAction.launch("*/*") }
       .onErr { e ->
         logcat(ERROR) { e.asLog() }
-        e.message?.let { message -> ErrorDialog.show(this@PGPKeyImportActivity, message) }
+        e.message?.let { message ->
+          ErrorDialog.show(
+            this@PGPKeyImportActivity,
+            message,
+            titleRes = R.string.error_title_import_key,
+          )
+        }
       }
   }
 

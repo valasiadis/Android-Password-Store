@@ -157,6 +157,7 @@ class AutofillDecryptActivity : BasePGPActivity() {
         ErrorDialog.show(
           this@AutofillDecryptActivity,
           R.string.password_decryption_no_decryption_key,
+          titleRes = R.string.error_title_open_entry,
         )
         val timer = Executors.newSingleThreadScheduledExecutor()
         timer.schedule({ finish() }, 4.toLong(), TimeUnit.SECONDS)
@@ -164,6 +165,7 @@ class AutofillDecryptActivity : BasePGPActivity() {
         ErrorDialog.show(
           this@AutofillDecryptActivity,
           R.string.password_decryption_unknown_error,
+          titleRes = R.string.error_title_open_entry,
         )
         val timer = Executors.newSingleThreadScheduledExecutor()
         timer.schedule({ finish() }, 4.toLong(), TimeUnit.SECONDS)
@@ -222,6 +224,7 @@ class AutofillDecryptActivity : BasePGPActivity() {
       ErrorDialog.show(
         this@AutofillDecryptActivity,
         R.string.password_decryption_no_autofill_with_passkey_error,
+        titleRes = R.string.error_title_autofill_passkey,
       )
       val timer = Executors.newSingleThreadScheduledExecutor()
       timer.schedule({ finish() }, 4.toLong(), TimeUnit.SECONDS)

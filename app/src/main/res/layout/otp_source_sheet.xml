@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  Where a one-time password's secret can come from, as the other sheets that ask where something
+  comes from: the choices as one block of rows, each said in full and marked with what it is.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="vertical"
+  android:paddingHorizontal="@dimen/password_list_margin"
+  android:paddingTop="@dimen/spacing_xlarge"
+  android:paddingBottom="@dimen/spacing_large">
+
+  <app.passwordstore.ui.util.ListBlock
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+      android:id="@+id/otp_source_scan"
+      style="@style/Widget.APS.ListIconRow">
+
+      <androidx.appcompat.widget.AppCompatImageView
+        style="@style/Widget.APS.ListIconRow.Icon"
+        android:src="@drawable/ic_qr_code_scanner_24dp" />
+
+      <androidx.appcompat.widget.AppCompatTextView
+        style="@style/Widget.APS.ListIconRow.Title"
+        android:text="@string/otp_import_qr_code" />
+
+    </LinearLayout>
+
+    <LinearLayout
+      android:id="@+id/otp_source_image"
+      style="@style/Widget.APS.ListIconRow">
+
+      <androidx.appcompat.widget.AppCompatImageView
+        style="@style/Widget.APS.ListIconRow.Icon"
+        android:src="@drawable/ic_image_24dp" />
+
+      <androidx.appcompat.widget.AppCompatTextView
+        style="@style/Widget.APS.ListIconRow.Title"
+        android:text="@string/otp_import_from_file" />
+
+    </LinearLayout>
+
+    <LinearLayout
+      android:id="@+id/otp_source_manual"
+      style="@style/Widget.APS.ListIconRow">
+
+      <androidx.appcompat.widget.AppCompatImageView
+        style="@style/Widget.APS.ListIconRow.Icon"
+        android:src="@drawable/ic_keyboard_24dp" />
+
+      <androidx.appcompat.widget.AppCompatTextView
+        style="@style/Widget.APS.ListIconRow.Title"
+        android:text="@string/otp_import_manual_entry" />
+
+    </LinearLayout>
+
+  </app.passwordstore.ui.util.ListBlock>
+
+</LinearLayout>

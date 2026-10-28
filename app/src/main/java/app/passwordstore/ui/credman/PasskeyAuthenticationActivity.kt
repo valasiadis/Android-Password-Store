@@ -24,6 +24,7 @@ import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.crypto.BasePGPActivity
 import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.util.credman.CALLER_MISSING_ASSET_LINKS
 import app.passwordstore.util.credman.CALLER_RELYING_PARTY_NOT_IDENTIFIED
 import app.passwordstore.util.credman.CALLER_REQUEST_UNSUPPORTED
@@ -228,18 +229,19 @@ class PasskeyAuthenticationActivity : BasePGPActivity() {
               else -> getString(R.string.passkey_authentication_error_message, e.message)
             }
 
-          val dialog = AppDialogBuilder(this@PasskeyAuthenticationActivity)
+          // Trusting an app nobody vouches for is the risky answer, so it is the one put in the
+          // colour of something that cannot be undone; cancelling stays the quiet way out.
+          val dialog =
+            if (e.message == CALLER_UNKNOWN)
+              WarningDialog.builder(this@PasskeyAuthenticationActivity)
+            else AppDialogBuilder(this@PasskeyAuthenticationActivity)
 
           when (e.message) {
             CALLER_UNKNOWN -> {
               dialog
-                .setIcon(R.drawable.ic_warning_red_24dp)
                 .setTitle(R.string.oreo_autofill_warning_publisher_warning_sign_description)
-                .setNegativeButton(
-                  R.string.passkey_caller_dialog_trust,
-                  null,
-                )
-                .setPositiveButton(R.string.dialog_cancel) { _, _ ->
+                .setPositiveButton(R.string.passkey_caller_dialog_trust, null)
+                .setNegativeButton(R.string.dialog_cancel) { _, _ ->
                   setResult(RESULT_CANCELED)
                   finish()
                 }

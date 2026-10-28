@@ -45,6 +45,7 @@ import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.OtpImportDialogFragment
 import app.passwordstore.ui.dialogs.OtpSourceSheet
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.folderselect.SelectFolderActivity
 import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.util.auth.BiometricAuthenticator
@@ -321,18 +322,18 @@ class PasskeyCreationActivity : BasePGPActivity() {
                     getString(R.string.passkey_caller_unknown_failure, e.message ?: e.toString())
                 }
 
-              val dialog = AppDialogBuilder(this@PasskeyCreationActivity)
+              // Trusting an app nobody vouches for is the risky answer, so it is the one put in the
+              // colour of something that cannot be undone; cancelling stays the quiet way out.
+              val dialog =
+                if (e.message == CALLER_UNKNOWN) WarningDialog.builder(this@PasskeyCreationActivity)
+                else AppDialogBuilder(this@PasskeyCreationActivity)
 
               when (e.message) {
                 CALLER_UNKNOWN -> {
                   dialog
-                    .setIcon(R.drawable.ic_warning_red_24dp)
                     .setTitle(R.string.oreo_autofill_warning_publisher_warning_sign_description)
-                    .setNegativeButton(
-                      R.string.passkey_caller_dialog_trust,
-                      null,
-                    )
-                    .setPositiveButton(R.string.dialog_cancel) { _, _ -> finish() }
+                    .setPositiveButton(R.string.passkey_caller_dialog_trust, null)
+                    .setNegativeButton(R.string.dialog_cancel) { _, _ -> finish() }
                 }
                 else -> {
                   dialog

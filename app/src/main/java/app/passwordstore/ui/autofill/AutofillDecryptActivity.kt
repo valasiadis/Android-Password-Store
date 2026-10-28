@@ -26,6 +26,7 @@ import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.util.autofill.AutofillMatcher
 import app.passwordstore.util.autofill.AutofillPreferences
 import app.passwordstore.util.autofill.AutofillResponseBuilder
+import app.passwordstore.util.crypto.NfcCardReader
 import app.passwordstore.util.extensions.base64
 import app.passwordstore.util.extensions.toCharArray
 import app.passwordstore.util.extensions.wipe
@@ -95,109 +96,36 @@ class AutofillDecryptActivity : BasePGPActivity() {
     }
   }
 
+  override fun onDestroy() {
+    // A card held to the phone keeps NFC reader mode on until it is lifted; a screen that goes
+    // before then leaves nothing behind it.
+    NfcCardReader.disableReaderMode(this)
+    super.onDestroy()
+  }
+
   override suspend fun decryptWithPassphrase(
     passphrases: Map<String, CharArray?>,
     identifiers: List<PGPIdentifier>,
     onSuccess: suspend (String) -> Unit,
   ) {
+    // As on the entry screen: a card is asked for only when nothing on this device can open the
+    // entry, so an entry encrypted to both a card and a local key does not reach for the card.
+    val cardKeys = identifiers.filter {
+      repository.isSmartcardBacked(it) || repository.hasOnlyStubDecKey(it)
+    }
+    val localKeys = identifiers - cardKeys.toSet()
+    if (localKeys.isEmpty()) {
+      decryptWithSmartcard(passphrases, cardKeys, onSuccess)
+      return
+    }
     val encryptedFile = File(filePath)
     val message = withContext(dispatcherProvider.io()) { encryptedFile.readBytes().inputStream() }
     val outputStream = ByteArrayOutputStream()
-    val results = repository.decrypt(passphrases, identifiers, message, outputStream)
+    val results = repository.decrypt(passphrases, localKeys, message, outputStream)
     val lastResult = results.last()
 
     if (lastResult.second.isOk) {
-
-      val decryptedEntryBytes = lastResult.second.getOrThrow().toByteArray()
-      lastResult.second.getOrThrow().wipe()
-      val decryptedEntryChars = decryptedEntryBytes.toCharArray()
-      decryptedEntryBytes.wipe()
-      val entry = passwordEntryFactory.create(decryptedEntryChars)
-      entry.clearExtra()
-
-      // no autofill if it is a passkey
-      if (retrievePasskey(entry, stripped = true) != null) {
-        entry.clear()
-
-        AutofillMatcher.updateMatches(this@AutofillDecryptActivity, delete = listOf(encryptedFile))
-
-        onSuccess(lastResult.first) // but pass ID for passphrase caching
-
-        if (!settings.getBoolean(PreferenceKeys.CACHE_PASSPHRASE, false)) {
-          cachedPassphrases.values.forEach { it.wipe() }
-          cachedPassphrases.clear()
-        }
-
-        ErrorDialog.show(
-          this@AutofillDecryptActivity,
-          R.string.password_decryption_no_autofill_with_passkey_error,
-        )
-        val timer = Executors.newSingleThreadScheduledExecutor()
-        timer.schedule({ finish() }, 4.toLong(), TimeUnit.SECONDS)
-      } else {
-        val directoryStructure = AutofillPreferences.directoryStructure(this)
-        val credentials =
-          AutofillPreferences.credentialsFromStoreEntry(
-            this,
-            encryptedFile,
-            entry,
-            origin,
-            directoryStructure,
-          )
-        val fillInDataset =
-          AutofillResponseBuilder.makeFillInDataset(
-            this@AutofillDecryptActivity,
-            credentials,
-            clientState,
-            action,
-          )
-        withContext(dispatcherProvider.main()) {
-          setResult(
-            RESULT_OK,
-            Intent().apply { putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, fillInDataset) },
-          )
-          if (entry.hasTotp()) {
-            val otp = entry.currentOtp
-            val remainingTime = otp.remainingTime.inWholeSeconds
-            copyTextToClipboard(otp.value.toCharArray(), isSensitive = false)
-            otpTimer?.shutdownNow()
-            val otpTimerNew = Executors.newSingleThreadScheduledExecutor()
-            otpTimer = otpTimerNew
-            otpTimerNew.schedule( // refresh otp once
-              { copyTextToClipboard(entry.currentOtp.value.toCharArray(), isSensitive = false) },
-              remainingTime,
-              TimeUnit.SECONDS,
-            )
-          }
-        }
-
-        passwordHistory.edit { // create/update timestamp on the current password file
-          putString(
-            filePath.base64(),
-            System.currentTimeMillis().toString(),
-          )
-        }
-
-        onSuccess(lastResult.first) // pass ID for passphrase caching
-
-        if (!settings.getBoolean(PreferenceKeys.CACHE_PASSPHRASE, false)) {
-          cachedPassphrases.values.forEach { it.wipe() }
-          cachedPassphrases.clear()
-        }
-
-        // update autofill suggestion order (add/move to front or remove)
-        formOrigin?.let {
-          if (AutofillPreferences.addQuickSelectButton(this@AutofillDecryptActivity))
-            AutofillMatcher.addMatchFor(this@AutofillDecryptActivity, it, encryptedFile)
-          else
-            AutofillMatcher.updateMatches(
-              this@AutofillDecryptActivity,
-              delete = listOf(encryptedFile),
-            )
-        }
-
-        withContext(dispatcherProvider.main()) { finish() }
-      }
+      fillFrom(lastResult.first, lastResult.second.getOrThrow(), onSuccess)
     } else {
       passphrases.values.forEach { it?.wipe() }
       if (
@@ -217,6 +145,13 @@ class AutofillDecryptActivity : BasePGPActivity() {
         /* Retry */
         decrypt(identifiers, isError = true)
       } else if (
+        cardKeys.isNotEmpty() &&
+          results.filter { it.second.getError() is NoDecryptionKeyAvailableException }.any()
+      ) {
+        // The local keys turned out not to fit; the card is the remaining candidate.
+        decryptWithSmartcard(passphrases, cardKeys, onSuccess)
+        return
+      } else if (
         results.filter { it.second.getError() is NoDecryptionKeyAvailableException }.any()
       ) {
         ErrorDialog.show(
@@ -226,7 +161,10 @@ class AutofillDecryptActivity : BasePGPActivity() {
         val timer = Executors.newSingleThreadScheduledExecutor()
         timer.schedule({ finish() }, 4.toLong(), TimeUnit.SECONDS)
       } else {
-        ErrorDialog.show(this@AutofillDecryptActivity, R.string.password_decryption_unknown_error)
+        ErrorDialog.show(
+          this@AutofillDecryptActivity,
+          R.string.password_decryption_unknown_error,
+        )
         val timer = Executors.newSingleThreadScheduledExecutor()
         timer.schedule({ finish() }, 4.toLong(), TimeUnit.SECONDS)
       }
@@ -239,6 +177,117 @@ class AutofillDecryptActivity : BasePGPActivity() {
         cachedPassphrases.values.forEach { it.wipe() }
         cachedPassphrases.clear()
       }
+    }
+  }
+
+  /** Opens the entry with the card, and fills the form from it as a local key would. */
+  private suspend fun decryptWithSmartcard(
+    passphrases: Map<String, CharArray?>,
+    identifiers: List<PGPIdentifier>,
+    onSuccess: suspend (String) -> Unit,
+  ) {
+    val messageBytes = withContext(dispatcherProvider.io()) { File(filePath).readBytes() }
+    decryptWithSmartcard(messageBytes, passphrases, identifiers) { decryptedBy, plaintext ->
+      fillFrom(decryptedBy, plaintext, onSuccess)
+    }
+  }
+
+  /** Hands the form the credentials in the decrypted entry [plaintext], and goes. */
+  private suspend fun fillFrom(
+    decryptedBy: String,
+    plaintext: ByteArrayOutputStream,
+    onSuccess: suspend (String) -> Unit,
+  ) {
+    val encryptedFile = File(filePath)
+    val decryptedEntryBytes = plaintext.toByteArray()
+    plaintext.wipe()
+    val decryptedEntryChars = decryptedEntryBytes.toCharArray()
+    decryptedEntryBytes.wipe()
+    val entry = passwordEntryFactory.create(decryptedEntryChars)
+    entry.clearExtra()
+
+    // no autofill if it is a passkey
+    if (retrievePasskey(entry, stripped = true) != null) {
+      entry.clear()
+
+      AutofillMatcher.updateMatches(this@AutofillDecryptActivity, delete = listOf(encryptedFile))
+
+      onSuccess(decryptedBy) // but pass ID for passphrase caching
+
+      if (!settings.getBoolean(PreferenceKeys.CACHE_PASSPHRASE, false)) {
+        cachedPassphrases.values.forEach { it.wipe() }
+        cachedPassphrases.clear()
+      }
+
+      ErrorDialog.show(
+        this@AutofillDecryptActivity,
+        R.string.password_decryption_no_autofill_with_passkey_error,
+      )
+      val timer = Executors.newSingleThreadScheduledExecutor()
+      timer.schedule({ finish() }, 4.toLong(), TimeUnit.SECONDS)
+    } else {
+      val directoryStructure = AutofillPreferences.directoryStructure(this)
+      val credentials =
+        AutofillPreferences.credentialsFromStoreEntry(
+          this,
+          encryptedFile,
+          entry,
+          origin,
+          directoryStructure,
+        )
+      val fillInDataset =
+        AutofillResponseBuilder.makeFillInDataset(
+          this@AutofillDecryptActivity,
+          credentials,
+          clientState,
+          action,
+        )
+      withContext(dispatcherProvider.main()) {
+        setResult(
+          RESULT_OK,
+          Intent().apply { putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, fillInDataset) },
+        )
+        if (entry.hasTotp()) {
+          val otp = entry.currentOtp
+          val remainingTime = otp.remainingTime.inWholeSeconds
+          copyTextToClipboard(otp.value.toCharArray(), isSensitive = false)
+          otpTimer?.shutdownNow()
+          val otpTimerNew = Executors.newSingleThreadScheduledExecutor()
+          otpTimer = otpTimerNew
+          otpTimerNew.schedule( // refresh otp once
+            { copyTextToClipboard(entry.currentOtp.value.toCharArray(), isSensitive = false) },
+            remainingTime,
+            TimeUnit.SECONDS,
+          )
+        }
+      }
+
+      passwordHistory.edit { // create/update timestamp on the current password file
+        putString(
+          filePath.base64(),
+          System.currentTimeMillis().toString(),
+        )
+      }
+
+      onSuccess(decryptedBy) // pass ID for passphrase caching
+
+      if (!settings.getBoolean(PreferenceKeys.CACHE_PASSPHRASE, false)) {
+        cachedPassphrases.values.forEach { it.wipe() }
+        cachedPassphrases.clear()
+      }
+
+      // update autofill suggestion order (add/move to front or remove)
+      formOrigin?.let {
+        if (AutofillPreferences.addQuickSelectButton(this@AutofillDecryptActivity))
+          AutofillMatcher.addMatchFor(this@AutofillDecryptActivity, it, encryptedFile)
+        else
+          AutofillMatcher.updateMatches(
+            this@AutofillDecryptActivity,
+            delete = listOf(encryptedFile),
+          )
+      }
+
+      withContext(dispatcherProvider.main()) { finish() }
     }
   }
 

@@ -86,6 +86,8 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
   private var recyclerViewStateToRestore: Parcelable? = null
   private var actionMode: ActionMode? = null
   private var scrollTarget: File? = null
+  /** A sync started by pulling the list is still running. */
+  private var syncRunning = false
 
   private val model: SearchableRepositoryViewModel by activityViewModels()
   private val binding by viewBinding(PasswordRecyclerViewBinding::bind)
@@ -170,14 +172,16 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
           }
         // One pull, one operation: the gesture is off until this one is done, so pulling again
         // because the server is slow neither starts another nor looks as if it might.
-        binding.swipeRefresher.isEnabled = false
+        syncRunning = true
+        updateSwipeEnabled()
         requireStore().apply {
           lifecycleScope.launch {
-            launchGitOperation(operationId)
-              .fold(success = { refreshPasswordList() }, failure = { promptOnErrorHandler(it) })
-            if (view != null) {
-              binding.swipeRefresher.isEnabled =
-                actionMode == null && !prefs.getBoolean(PreferenceKeys.DISABLE_SYNC_ACTION, false)
+            try {
+              launchGitOperation(operationId)
+                .fold(success = { refreshPasswordList() }, failure = { promptOnErrorHandler(it) })
+            } finally {
+              syncRunning = false
+              updateSwipeEnabled()
             }
           }
         }
@@ -192,7 +196,9 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
           // SwipeRefreshLayout
           // once an item is selected.
           binding.swipeRefresher.isEnabled =
-            selection.isEmpty && !prefs.getBoolean(PreferenceKeys.DISABLE_SYNC_ACTION, false)
+            selection.isEmpty &&
+              !syncRunning &&
+              !prefs.getBoolean(PreferenceKeys.DISABLE_SYNC_ACTION, false)
 
           if (actionMode == null)
             actionMode =
@@ -463,7 +469,21 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
 
   override fun onResume() {
     super.onResume()
-    binding.swipeRefresher.isEnabled = !prefs.getBoolean(PreferenceKeys.DISABLE_SYNC_ACTION, false)
+    updateSwipeEnabled()
+  }
+
+  /**
+   * Whether pulling the list starts a sync: not when the setting turns that off, not while entries
+   * are selected (it would fight drag selection), and not while the sync a pull started still runs.
+   * Asked in one place, since resuming the screen — after a fingerprint prompt in the middle of a
+   * sync, say — would otherwise switch the gesture back on under the sync.
+   */
+  private fun updateSwipeEnabled() {
+    if (view == null) return
+    binding.swipeRefresher.isEnabled =
+      !syncRunning &&
+        actionMode == null &&
+        !prefs.getBoolean(PreferenceKeys.DISABLE_SYNC_ACTION, false)
   }
 
   override fun onAttach(context: Context) {

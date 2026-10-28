@@ -150,8 +150,6 @@
   <string name="biometric_prompt_title_ssh_keygen">生成SSH密钥</string>
   <!-- Misc -->
   <string name="dialog_ok">确定</string>
-  <string name="dialog_yes">同意</string>
-  <string name="dialog_no">否定</string>
   <string name="dialog_cancel">取消</string>
   <string name="git_sync">同步存储库</string>
   <string name="git_pull">拉取远程数据</string>

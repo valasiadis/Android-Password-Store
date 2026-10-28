@@ -184,8 +184,6 @@
 
   <!-- Misc -->
   <string name="dialog_ok">Aceptar</string>
-  <string name="dialog_yes">Si</string>
-  <string name="dialog_no">No</string>
   <string name="dialog_cancel">Cancelar</string>
   <string name="git_sync">Sincronizar repositorio</string>
   <string name="git_pull">Pull desde remoto</string>

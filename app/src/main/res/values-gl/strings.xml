@@ -150,8 +150,6 @@
   <string name="biometric_prompt_title_ssh_keygen">Crear chave SSH</string>
   <!-- Misc -->
   <string name="dialog_ok">OK</string>
-  <string name="dialog_yes">Si</string>
-  <string name="dialog_no">Non</string>
   <string name="dialog_cancel">Cancelar</string>
   <string name="git_sync">Sincronizar repositorio</string>
   <string name="git_pull">Traer desde remoto</string>

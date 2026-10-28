@@ -147,8 +147,6 @@
   <string name="biometric_prompt_title_ssh_keygen">SSH 키 생성</string>
   <!-- Misc -->
   <string name="dialog_ok">확인</string>
-  <string name="dialog_yes">예</string>
-  <string name="dialog_no">아니오</string>
   <string name="dialog_cancel">취소</string>
   <string name="git_sync">저장소 동기화</string>
   <string name="git_pull">원격에서 pull</string>

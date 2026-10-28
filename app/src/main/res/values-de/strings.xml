@@ -212,8 +212,6 @@
 
   <!-- Misc -->
   <string name="dialog_ok">OK</string>
-  <string name="dialog_yes">Ja</string>
-  <string name="dialog_no">Nein</string>
   <string name="dialog_cancel">Abbrechen</string>
   <string name="git_sync">Synchronisiere Repository</string>
   <string name="git_pull">Git Pull</string>

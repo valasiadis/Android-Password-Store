@@ -145,8 +145,6 @@
     <string name="biometric_prompt_title_ssh_auth">Desbloquejeu la clau SSH</string>
     <string name="biometric_prompt_title_ssh_keygen">Genereu la clau SSH</string>
     <string name="dialog_ok">D\'acord</string>
-    <string name="dialog_yes">Sí</string>
-    <string name="dialog_no">No</string>
     <string name="dialog_cancel">Cancel·lar</string>
     <string name="git_sync">Sincronitzeu el repositori</string>
     <string name="git_pull">Baixada des de el remot</string>

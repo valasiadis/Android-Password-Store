@@ -29,6 +29,7 @@ import app.passwordstore.ui.dialogs.CardPrompt
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.dialogs.TextInputDialog
+import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.crypto.CardReader
 import app.passwordstore.util.crypto.OpenPgpCard
@@ -369,10 +370,12 @@ class PGPKeyImportActivity : AppCompatActivity() {
     val error = result.getError()
     if (error is KeyAlreadyExistsException) {
       val keyId = tryGetKeyId(sourceKey)
-      AppDialogBuilder(this)
-        .setTitle(getString(R.string.pgp_key_import_failed))
+      // Replacing a key throws the one already here away, so it is asked as every other such
+      // question is, with the answers naming what they do rather than a yes and a no.
+      WarningDialog.builder(this)
+        .setTitle(R.string.pgp_key_import_exists_title)
         .setMessage(getString(R.string.pgp_key_import_failed_replace_message, keyId?.displayName))
-        .setPositiveButton(R.string.dialog_yes) { _, _ ->
+        .setPositiveButton(R.string.pgp_key_import_replace) { _, _ ->
           val retry = runCatching { addKeyOrThrow(sourceKey, replace = true) }
           if (retry.isOk) {
             retry.get()?.let {
@@ -386,7 +389,7 @@ class PGPKeyImportActivity : AppCompatActivity() {
           }
           processNextImport()
         }
-        .setNegativeButton(R.string.dialog_no) { _, _ ->
+        .setNegativeButton(R.string.pgp_key_import_keep) { _, _ ->
           importFailures.add(sourceKey to error)
           processNextImport()
         }

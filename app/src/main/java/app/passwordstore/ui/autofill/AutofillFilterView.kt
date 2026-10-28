@@ -36,6 +36,7 @@ import app.passwordstore.util.autofill.AutofillPreferences
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.viewBinding
+import app.passwordstore.util.settings.DirectoryStructure
 import app.passwordstore.util.settings.PreferenceKeys
 import app.passwordstore.util.viewmodel.FilterMode
 import app.passwordstore.util.viewmodel.ListMode
@@ -94,6 +95,7 @@ class AutofillFilterView : AppCompatActivity() {
   }
 
   private lateinit var formOrigin: FormOrigin
+  private lateinit var directoryStructure: DirectoryStructure
   private val binding by viewBinding(ActivityOreoAutofillFilterBinding::inflate)
 
   private val model: SearchableRepositoryViewModel by viewModels()
@@ -155,6 +157,7 @@ class AutofillFilterView : AppCompatActivity() {
         }
       }
 
+    directoryStructure = AutofillPreferences.directoryStructure(this)
     supportActionBar?.hide()
 
     binding.filterMenuButton.setOnClickListener {
@@ -274,10 +277,14 @@ class AutofillFilterView : AppCompatActivity() {
               }
 
             // As the password list shows an entry: the folder it is in, small, above its name. What
-            // was searched for is picked out in both, so it is plain why the entry matched.
+            // was searched for is picked out in both, so it is plain why the entry matched. Where
+            // the store keeps one folder per account (example.org/jon@doe.org/password.gpg), the
+            // account folder is the name, or every row would be called "password".
             val searchString = binding.search.text.toString()
-            title.text = highlight(fileName, searchString)
-            val parent = file.parentFile?.path
+            val accountDir =
+              file.parentFile?.takeIf { directoryStructure == DirectoryStructure.DirectoryBased }
+            title.text = highlight(accountDir?.name ?: fileName, searchString)
+            val parent = (accountDir ?: file).parentFile?.path
             subtitle.isVisible = parent != null
             subtitle.text = parent?.let { highlight(it, searchString) }
           }

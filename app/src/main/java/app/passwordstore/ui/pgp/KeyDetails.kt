@@ -94,6 +94,9 @@ internal data class KeyDetails(val userIds: List<String>, val parts: List<KeyPar
      * The algorithm as people name it: RSA with its size, an elliptic curve by its own name rather
      * than by the protocol that uses it, which is what a key is told apart by.
      */
+    // The RSA encrypt-only and sign-only tags and the ElGamal general one are deprecated for making
+    // keys, but keys made with them long ago are still read, and still need a name.
+    @Suppress("DEPRECATION")
     private fun algorithmName(key: PGPPublicKey): String =
       when (key.algorithm) {
         PublicKeyAlgorithmTags.RSA_GENERAL,

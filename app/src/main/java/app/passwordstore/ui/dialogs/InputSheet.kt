@@ -81,8 +81,11 @@ private constructor(
       // below the keyboard.
       dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
       dialog.behavior.skipCollapsed = true
+      // Deprecated for windows that handle the keyboard's insets themselves; the sheet's window
+      // does not, and is made shorter for the keyboard by this, which keeps the buttons above it.
+      @Suppress("DEPRECATION") val resize = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
       dialog.window?.setSoftInputMode(
-        WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+        resize or
           if (showKeyboard) WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE
           else WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
       )

@@ -16,11 +16,28 @@
   <androidx.recyclerview.widget.RecyclerView
     android:id="@+id/preference_recycler_view"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
     android:clipToPadding="false"
     android:paddingHorizontal="@dimen/password_list_margin"
     android:paddingTop="@dimen/password_list_margin_top"
     android:paddingBottom="@dimen/spacing_small"
     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+  <!--
+    Which build this is, small at the foot of the settings' first page, as the system settings say
+    it at the end of theirs. Shown only on that page; the pages it leads to have no use for it.
+  -->
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/settings_version"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:paddingHorizontal="@dimen/password_list_margin"
+    android:paddingVertical="@dimen/spacing_medium"
+    android:textAppearance="?attr/textAppearanceBodySmall"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    android:textIsSelectable="true"
+    android:visibility="gone" />
 
 </LinearLayout>

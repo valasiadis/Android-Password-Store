@@ -12,6 +12,8 @@ import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.edit
 import androidx.core.os.BundleCompat
+import androidx.core.view.isVisible
+import app.passwordstore.BuildConfig
 import app.passwordstore.R
 import app.passwordstore.databinding.ActivityPreferenceRecyclerviewBinding
 import app.passwordstore.injection.prefs.SettingsPreferences
@@ -120,6 +122,7 @@ class SettingsActivity : BaseGitActivity() {
     adapter.onScreenChangeListener =
       PreferencesAdapter.OnScreenChangeListener { subScreen, entering ->
         backPressedCallback.isEnabled = entering
+        binding.settingsVersion.isVisible = !entering
         supportActionBar?.title =
           if (!entering) {
             getString(R.string.action_settings)
@@ -135,6 +138,9 @@ class SettingsActivity : BaseGitActivity() {
         )
         ?.let(adapter::loadSavedState)
     }
+    binding.settingsVersion.text = getString(R.string.settings_version, BuildConfig.VERSION_NAME)
+    // The first page is where the screen opens, unless it was left on one of the others.
+    binding.settingsVersion.isVisible = adapter.currentScreen == screen
     binding.preferenceRecyclerView.adapter = adapter
     PreferenceGroupDecoration(this).attachTo(binding.preferenceRecyclerView)
     // Opening a screen replaces the whole list at once, so every row is rebound in one pass. A

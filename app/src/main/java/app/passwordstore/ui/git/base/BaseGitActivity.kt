@@ -16,6 +16,7 @@ import app.passwordstore.R
 import app.passwordstore.data.crypto.CryptoRepository
 import app.passwordstore.injection.prefs.GitSecrets
 import app.passwordstore.ui.dialogs.AppDialogBuilder
+import app.passwordstore.ui.dialogs.ProgressOverlay
 import app.passwordstore.ui.git.config.GitConfigActivity
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.launchActivity
@@ -110,7 +111,18 @@ abstract class BaseGitActivity : AppCompatActivity() {
   }
 
   suspend fun launchGitOperation(operation: GitOp): Result<Unit, Throwable> {
+    // Said from the moment the operation is asked for, not only once its commands start: finding
+    // the key, unlocking it and reaching the server come first and can take a while, and a screen
+    // that looks idle meanwhile is one that gets pulled again.
+    val progress = ProgressOverlay.show(this, R.string.git_operation_running)
+    return try {
+      launchGitOperationNow(operation)
+    } finally {
+      progress.dismiss()
+    }
+  }
 
+  private suspend fun launchGitOperationNow(operation: GitOp): Result<Unit, Throwable> {
     if (gitSettings.url == null)
       return Err(IllegalStateException(resources.getString(R.string.git_url_not_set_error)))
 

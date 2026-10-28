@@ -5,6 +5,7 @@
 package app.passwordstore.ui.dialogs
 
 import android.app.Activity
+import android.view.View
 import androidx.annotation.StringRes
 import app.passwordstore.databinding.ViewProgressOverlayBinding
 
@@ -20,7 +21,12 @@ import app.passwordstore.databinding.ViewProgressOverlayBinding
  * stays usable and whatever dialogs the work itself raises — a passphrase prompt, a smartcard
  * prompt — appear over it rather than fighting it.
  */
-class ProgressOverlay private constructor(private val binding: ViewProgressOverlayBinding) {
+class ProgressOverlay
+private constructor(
+  private val binding: ViewProgressOverlayBinding,
+  /** False for a wait inside one already said, which leaves taking it down to the outer one. */
+  private val owned: Boolean,
+) {
 
   /** Says something else while the same piece of work moves on to its next part. */
   fun setMessage(message: CharSequence) {
@@ -28,20 +34,33 @@ class ProgressOverlay private constructor(private val binding: ViewProgressOverl
   }
 
   fun dismiss() {
-    removeFromTop(binding.root)
+    if (owned) removeFromTop(binding.root)
   }
 
   companion object {
 
+    /**
+     * Says [message] at the top of [activity]. A wait that starts inside another — a Git command
+     * run as part of an operation already said — says its message in the same bar rather than
+     * stacking a second one under it, and leaves the bar up when it ends.
+     */
     fun show(activity: Activity, message: CharSequence): ProgressOverlay {
+      topBarParent(activity).findViewWithTag<View>(TAG)?.let { shown ->
+        val outer = ViewProgressOverlayBinding.bind(shown)
+        outer.progressMessage.text = message
+        return ProgressOverlay(outer, owned = false)
+      }
       val binding =
         ViewProgressOverlayBinding.inflate(activity.layoutInflater, topBarParent(activity), false)
       binding.progressMessage.text = message
+      binding.root.tag = TAG
       placeAtTopOf(activity, binding.root)
-      return ProgressOverlay(binding)
+      return ProgressOverlay(binding, owned = true)
     }
 
     fun show(activity: Activity, @StringRes message: Int): ProgressOverlay =
       show(activity, activity.getString(message))
+
+    private const val TAG = "progress_overlay"
   }
 }

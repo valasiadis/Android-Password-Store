@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  A question that wants something typed, as a sheet rising from the bottom rather than a box in the
+  middle of the screen: what is asked, why when that needs saying, the fields, and the setup flow's
+  own way out and way on beneath — the quiet one on the left, the action filled on the right.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="vertical"
+  android:paddingTop="@dimen/spacing_xlarge">
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/sheet_title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="?attr/dialogPreferredPadding"
+    android:textAppearance="?attr/textAppearanceHeadlineSmall"
+    android:textColor="?attr/colorOnSurface"
+    tools:text="Enter PIN" />
+
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/sheet_message"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_small"
+    android:paddingHorizontal="?attr/dialogPreferredPadding"
+    android:textAppearance="?attr/textAppearanceBodyMedium"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    android:visibility="gone"
+    tools:text="The PIN of the card holding the key"
+    tools:visibility="visible" />
+
+  <!--
+    The fields, which bring their own room from the sheet's edges, as a dialog's do. When the screen
+    left above the keyboard is too short for all of the sheet, this is what gives way and scrolls,
+    so the buttons beneath stay where they can be reached.
+  -->
+  <androidx.core.widget.NestedScrollView
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_marginTop="@dimen/spacing_small"
+    android:layout_weight="1">
+
+    <FrameLayout
+      android:id="@+id/sheet_content"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content" />
+
+  </androidx.core.widget.NestedScrollView>
+
+  <include
+    android:id="@+id/sheet_footer"
+    layout="@layout/setup_step_footer" />
+
+</LinearLayout>

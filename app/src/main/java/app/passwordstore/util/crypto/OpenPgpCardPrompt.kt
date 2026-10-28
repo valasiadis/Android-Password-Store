@@ -9,7 +9,6 @@ import android.text.InputType
 import android.view.View
 import android.view.WindowManager
 import androidx.annotation.StringRes
-import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.FragmentActivity
@@ -18,6 +17,7 @@ import app.passwordstore.databinding.DialogPasswordEntryBinding
 import app.passwordstore.ui.crypto.BasePGPActivity
 import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.CardPrompt
+import app.passwordstore.ui.dialogs.InputSheet
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.hideKeyboard
 import app.passwordstore.util.extensions.sharedPrefs
@@ -693,20 +693,24 @@ class OpenPgpCardPrompt(
           binding.cacheEnabled.setText(R.string.cache_openpgp_card_pin_until_screen_off)
           binding.cacheEnabled.isChecked = cacheDefault
         }
-        val dialog =
-          AppDialogBuilder(activity)
-            .setTitle(titleRes)
-            .setView(binding.root)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-              val text = binding.passwordEditText.text
-              val secret =
-                text?.let { CharArray(it.length) { index -> it[index] } } ?: charArrayOf()
-              text?.clear()
-              result.complete(SecretEntry(secret, showCache && binding.cacheEnabled.isChecked))
-            }
-            .setNegativeButton(R.string.dialog_cancel) { _, _ -> result.complete(null) }
-            .setOnCancelListener { result.complete(null) }
-            .show()
+        // A sheet rather than a dialog, as every question that wants something typed is asked.
+        // Each way of leaving it answers the question exactly once: the PIN, or nothing.
+        val sheet =
+          InputSheet.create(
+            context = activity,
+            title = titleRes,
+            content = binding.root,
+            primaryLabel = R.string.dialog_ok,
+          ) {
+            val text = binding.passwordEditText.text
+            val secret = text?.let { CharArray(it.length) { index -> it[index] } } ?: charArrayOf()
+            text?.clear()
+            result.complete(SecretEntry(secret, showCache && binding.cacheEnabled.isChecked))
+          }
+        val dialog = sheet.dialog
+        dialog.setOnCancelListener { result.complete(null) }
+        dialog.setOnDismissListener { result.complete(null) }
+        dialog.show()
         // The error and the min-length hint share the caption area below the field, and the error
         // (e.g. "Wrong PIN, N left") takes priority; only fall back to the hint when there is none.
         when {
@@ -722,7 +726,7 @@ class OpenPgpCardPrompt(
         if (minLength > 0) {
           // Enforce the minimum PIN length by keeping the confirm button disabled until enough
           // characters are entered.
-          val okButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+          val okButton = sheet.primary
           val updateOkEnabled = {
             okButton.isEnabled = (binding.passwordEditText.text?.length ?: 0) >= minLength
           }

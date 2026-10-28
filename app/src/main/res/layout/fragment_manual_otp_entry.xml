@@ -3,31 +3,26 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:app="http://schemas.android.com/apk/res-auto"
+<!-- A one-time password typed in: its secret and the account it is for, as one block of fields. -->
+<app.passwordstore.ui.util.ListBlock xmlns:android="http://schemas.android.com/apk/res/android"
   android:layout_width="match_parent"
-  android:layout_height="match_parent">
+  android:layout_height="wrap_content"
+  android:paddingHorizontal="?attr/dialogPreferredPadding"
+  android:paddingVertical="@dimen/activity_horizontal_margin">
 
   <com.google.android.material.textfield.TextInputLayout
-    style="@style/Widget.APS.ListField"
     android:id="@+id/secret_layout"
+    style="@style/Widget.APS.ListField"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:hint="@string/otp_import_manual_hint_secret"
-    android:paddingStart="?attr/dialogPreferredPadding"
-    android:paddingTop="16dp"
-    android:paddingEnd="?attr/dialogPreferredPadding"
-    app:hintEnabled="true"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toTopOf="parent">
+    android:hint="@string/otp_import_manual_hint_secret">
 
     <com.google.android.material.textfield.TextInputEditText
       android:id="@+id/secret"
       android:layout_width="match_parent"
-      android:layout_height="match_parent"
-      android:importantForAutofill="no"
+      android:layout_height="wrap_content"
       android:imeOptions="flagNoPersonalizedLearning"
+      android:importantForAutofill="no"
       android:inputType="textPassword" />
 
     <requestFocus />
@@ -35,23 +30,17 @@
   </com.google.android.material.textfield.TextInputLayout>
 
   <com.google.android.material.textfield.TextInputLayout
-    style="@style/Widget.APS.ListField"
     android:id="@+id/account_layout"
+    style="@style/Widget.APS.ListField"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:hint="@string/otp_import_manual_hint_account"
-    android:paddingStart="?attr/dialogPreferredPadding"
-    android:paddingTop="16dp"
-    android:paddingEnd="?attr/dialogPreferredPadding"
-    android:paddingBottom="16dp"
-    app:hintEnabled="true"
-    app:layout_constraintTop_toBottomOf="@id/secret_layout">
+    android:hint="@string/otp_import_manual_hint_account">
 
     <com.google.android.material.textfield.TextInputEditText
       android:id="@+id/account"
       android:layout_width="match_parent"
-      android:layout_height="match_parent" />
+      android:layout_height="wrap_content" />
 
   </com.google.android.material.textfield.TextInputLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</app.passwordstore.ui.util.ListBlock>

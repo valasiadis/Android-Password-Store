@@ -7,9 +7,7 @@ package app.passwordstore.ui.dialogs
 import android.app.Dialog
 import android.os.Bundle
 import android.view.View
-import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -58,11 +56,6 @@ class FolderCreationDialogFragment : DialogFragment() {
   }
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-    val builder = AppDialogBuilder(requireContext())
-    builder.setTitle(R.string.title_create_folder)
-    builder.setView(binding.root)
-    builder.setPositiveButton(getString(R.string.button_create), null)
-    builder.setNegativeButton(getString(R.string.dialog_cancel)) { _, _ -> dismiss() }
     binding.gpgKeyContainer.isVisible = requireArguments().getBoolean(SET_GPG_KEY_EXTRA)
     val chooseKeys = View.OnClickListener {
       // The dialog opens with the keyboard up for the name field; it has no business staying
@@ -81,22 +74,25 @@ class FolderCreationDialogFragment : DialogFragment() {
     binding.gpgKeyValue.setOnClickListener(chooseKeys)
     binding.gpgKeyContainer.setEndIconOnClickListener(chooseKeys)
     showChosenKeys()
-    val dialog = builder.create()
-    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
-    dialog.setOnShowListener {
-      dialog.getButton(AlertDialog.BUTTON_POSITIVE).apply {
-        isEnabled = false
-        setOnClickListener {
-          createDirectory(
-            requireArguments().getString(CURRENT_DIR_EXTRA) ?: throw NullPointerException()
-          )
-        }
+    // A sheet rather than a dialog, as every question that wants something typed is asked. Creating
+    // closes it only once the folder exists, so a name that cannot be used leaves it open.
+    val sheet =
+      InputSheet.create(
+        context = requireContext(),
+        title = R.string.title_create_folder,
+        content = binding.root,
+        primaryLabel = R.string.button_create,
+        dismissOnPrimary = false,
+      ) {
+        createDirectory(
+          requireArguments().getString(CURRENT_DIR_EXTRA) ?: throw NullPointerException()
+        )
       }
-      binding.folderNameText.doOnTextChanged { s, _, _, _ ->
-        s?.let { dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = it.length > 0 }
-      }
+    sheet.primary.isEnabled = false
+    binding.folderNameText.doOnTextChanged { s, _, _, _ ->
+      s?.let { sheet.primary.isEnabled = it.isNotEmpty() }
     }
-    return dialog
+    return sheet.dialog
   }
 
   private val gpgKeySelectAction =

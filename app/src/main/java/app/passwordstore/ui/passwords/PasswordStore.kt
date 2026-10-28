@@ -12,7 +12,6 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
-import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
@@ -38,6 +37,7 @@ import app.passwordstore.ui.crypto.PasswordCreationActivity
 import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.FolderCreationDialogFragment
+import app.passwordstore.ui.dialogs.InputSheet
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.folderselect.SelectFolderActivity
@@ -705,52 +705,52 @@ class PasswordStore : BaseGitActivity() {
       folderNameViewContainer.error = getString(error.resource)
     }
 
-    val dialog =
-      AppDialogBuilder(this)
-        .setTitle(R.string.title_rename_folder)
-        .setView(view)
-        .setPositiveButton(R.string.dialog_ok) { _, _ ->
-          val newCategory = File("${oldCategory.file.parent}/${newCategoryEditText.text}")
-          when {
-            !newCategory.isInsideRepository() ->
-              renameCategory(oldCategory, CategoryRenameError.DestinationOutsideRepo)
-            newCategoryEditText.text.isNullOrBlank() ->
-              renameCategory(oldCategory, CategoryRenameError.EmptyField)
-            newCategory.exists() -> renameCategory(oldCategory, CategoryRenameError.CategoryExists)
-            else ->
-              lifecycleScope.launch(dispatcherProvider.io()) {
-                moveFile(oldCategory.file, newCategory)
+    // A sheet rather than a dialog, as every question that wants something typed is asked. A name
+    // that cannot be used asks again, with what was wrong with it.
+    InputSheet.create(
+        context = this,
+        title = R.string.title_rename_folder,
+        content = view,
+        primaryLabel = R.string.dialog_ok,
+      ) {
+        val newCategory = File("${oldCategory.file.parent}/${newCategoryEditText.text}")
+        when {
+          !newCategory.isInsideRepository() ->
+            renameCategory(oldCategory, CategoryRenameError.DestinationOutsideRepo)
+          newCategoryEditText.text.isNullOrBlank() ->
+            renameCategory(oldCategory, CategoryRenameError.EmptyField)
+          newCategory.exists() -> renameCategory(oldCategory, CategoryRenameError.CategoryExists)
+          else ->
+            lifecycleScope.launch(dispatcherProvider.io()) {
+              moveFile(oldCategory.file, newCategory)
 
-                // associate the new category with the last category's timestamp in
-                // history
-                val timestamp = passwordHistory.getString(oldCategory.file.absolutePath.base64())
-                if (timestamp != null) {
-                  passwordHistory.edit {
-                    remove(oldCategory.file.absolutePath.base64())
-                    putString(newCategory.absolutePath.base64(), timestamp)
-                  }
+              // associate the new category with the last category's timestamp in
+              // history
+              val timestamp = passwordHistory.getString(oldCategory.file.absolutePath.base64())
+              if (timestamp != null) {
+                passwordHistory.edit {
+                  remove(oldCategory.file.absolutePath.base64())
+                  putString(newCategory.absolutePath.base64(), timestamp)
                 }
-
-                withContext(dispatcherProvider.main()) {
-                  commitChange(
-                    getString(
-                      R.string.git_commit_move_text,
-                      oldCategory.name,
-                      newCategory.name,
-                    )
-                  )
-                  updateFabSync()
-                }
-
-                refreshPasswordList()
               }
-          }
-        }
-        .setNegativeButton(R.string.dialog_cancel, null)
-        .create()
 
-    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
-    dialog.show()
+              withContext(dispatcherProvider.main()) {
+                commitChange(
+                  getString(
+                    R.string.git_commit_move_text,
+                    oldCategory.name,
+                    newCategory.name,
+                  )
+                )
+                updateFabSync()
+              }
+
+              refreshPasswordList()
+            }
+        }
+      }
+      .dialog
+      .show()
   }
 
   fun renameCategory(categories: List<PasswordItem>) {

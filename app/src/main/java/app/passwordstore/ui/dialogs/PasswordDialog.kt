@@ -33,10 +33,6 @@ class PasswordDialog : DialogFragment() {
   private var onCancelFinish: Boolean = true
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-    val builder = AppDialogBuilder(requireContext())
-    builder.setView(binding.root)
-    builder.setTitle(R.string.ssh_keygen_passphrase)
-
     userIds = requireArguments().getString(USER_IDS_EXTRA)
     userIds?.let {
       binding.userIdList.setText(userIds)
@@ -51,24 +47,28 @@ class PasswordDialog : DialogFragment() {
       isChecked = cacheEnabledChecked
       setOnCheckedChangeListener { _, isChecked -> cacheEnabledChecked = isChecked }
     }
-    builder.setPositiveButton(android.R.string.ok) { _, _ -> setPasswordAndDismiss() }
-    // A way out, as the PIN prompts have: the same as going back, which onCancel handles.
-    builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.cancel() }
-    val dialog = builder.create()
-    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
-    dialog.setOnShowListener {
-      if (isError) {
-        binding.passwordField.error = getString(R.string.pgp_wrong_passphrase_input)
+    // A sheet rather than a dialog, as every question that wants something typed is asked. The way
+    // out cancels, which onCancel takes from there, as going back always did.
+    val sheet =
+      InputSheet.create(
+        context = requireContext(),
+        title = R.string.ssh_keygen_passphrase,
+        content = binding.root,
+        primaryLabel = R.string.dialog_ok,
+        dismissOnPrimary = false,
+      ) {
+        setPasswordAndDismiss()
       }
-      binding.passwordEditText.apply {
-        doOnTextChanged { _, _, _, _ -> binding.passwordField.error = null }
-        setOnKeyListener { _, keyCode, _ ->
-          if (keyCode == KeyEvent.KEYCODE_ENTER) {
-            setPasswordAndDismiss()
-            return@setOnKeyListener true
-          }
-          false
+    val dialog = sheet.dialog
+    if (isError) binding.passwordField.error = getString(R.string.pgp_wrong_passphrase_input)
+    binding.passwordEditText.apply {
+      doOnTextChanged { _, _, _, _ -> binding.passwordField.error = null }
+      setOnKeyListener { _, keyCode, _ ->
+        if (keyCode == KeyEvent.KEYCODE_ENTER) {
+          setPasswordAndDismiss()
+          return@setOnKeyListener true
         }
+        false
       }
     }
     dialog.window?.setFlags(

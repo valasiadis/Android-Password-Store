@@ -34,31 +34,30 @@ class TextInputDialog : DialogFragment() {
   private var isError: Boolean = false
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-    val builder = AppDialogBuilder(requireContext())
-    builder.setView(binding.root)
-    builder.setTitle(arguments?.getString(BUNDLE_KEY_TITLE))
     arguments?.getString(BUNDLE_KEY_HINT)?.let { hint ->
       binding.textInputLayout.isHintEnabled = true
       binding.textInputLayout.isHintAnimationEnabled = true
       binding.textInputLayout.hint = hint
     }
-    builder.setPositiveButton(android.R.string.ok) { _, _ ->
-      setFragmentResult(
-        REQUEST_KEY,
-        Bundle().also { it.putString(BUNDLE_KEY_TEXT, binding.editText.text?.toString()) },
-      )
-      dismissAllowingStateLoss()
-    }
-    // A way out, as the PIN prompts have: the same as going back, which onCancel handles.
-    builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.cancel() }
-    val dialog = builder.create()
-    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
-    dialog.setOnShowListener {
-      if (isError) {
-        binding.textInputLayout.error = getString(R.string.pin_entry_wrong_input)
+    // A sheet rather than a dialog, as every question that wants something typed is asked. The way
+    // out cancels, which onCancel takes from there, as going back always did.
+    val sheet =
+      InputSheet.create(
+        context = requireContext(),
+        title = arguments?.getString(BUNDLE_KEY_TITLE),
+        content = binding.root,
+        primaryLabel = getString(R.string.dialog_ok),
+        dismissOnPrimary = false,
+      ) {
+        setFragmentResult(
+          REQUEST_KEY,
+          Bundle().also { it.putString(BUNDLE_KEY_TEXT, binding.editText.text?.toString()) },
+        )
+        dismissAllowingStateLoss()
       }
-      binding.editText.doOnTextChanged { _, _, _, _ -> binding.textInputLayout.error = null }
-    }
+    val dialog = sheet.dialog
+    if (isError) binding.textInputLayout.error = getString(R.string.pin_entry_wrong_input)
+    binding.editText.doOnTextChanged { _, _, _, _ -> binding.textInputLayout.error = null }
     dialog.window?.setFlags(
       WindowManager.LayoutParams.FLAG_SECURE,
       WindowManager.LayoutParams.FLAG_SECURE,

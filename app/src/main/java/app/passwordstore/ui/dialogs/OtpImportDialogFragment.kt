@@ -8,27 +8,29 @@ package app.passwordstore.ui.dialogs
 import android.app.Dialog
 import android.net.Uri
 import android.os.Bundle
-import android.view.WindowManager
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.setFragmentResult
+import app.passwordstore.R
 import app.passwordstore.databinding.FragmentManualOtpEntryBinding
 import app.passwordstore.ui.crypto.PasswordCreationActivity
 
 class OtpImportDialogFragment : DialogFragment() {
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-    val builder = AppDialogBuilder(requireContext())
     val binding = FragmentManualOtpEntryBinding.inflate(layoutInflater)
-    builder.setView(binding.root)
-    builder.setPositiveButton(android.R.string.ok) { _, _ ->
-      setFragmentResult(
-        PasswordCreationActivity.OTP_RESULT_REQUEST_KEY,
-        Bundle().also { it.putString(PasswordCreationActivity.RESULT, getTOTPUri(binding)) },
-      )
-    }
-    val dialog = builder.create()
-    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
-    return dialog
+    // A sheet rather than a dialog, as every question that wants something typed is asked.
+    return InputSheet.create(
+        context = requireContext(),
+        title = R.string.add_otp,
+        content = binding.root,
+        primaryLabel = R.string.dialog_ok,
+      ) {
+        setFragmentResult(
+          PasswordCreationActivity.OTP_RESULT_REQUEST_KEY,
+          Bundle().also { it.putString(PasswordCreationActivity.RESULT, getTOTPUri(binding)) },
+        )
+      }
+      .dialog
   }
 
   private fun getTOTPUri(binding: FragmentManualOtpEntryBinding): String {

@@ -8,14 +8,13 @@ package app.passwordstore.util.git.operation
 import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
-import android.view.WindowManager
 import androidx.annotation.StringRes
 import androidx.core.content.edit
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.FragmentActivity
 import app.passwordstore.R
 import app.passwordstore.crypto.PGPIdentifier.KeyId
-import app.passwordstore.ui.dialogs.AppDialogBuilder
+import app.passwordstore.ui.dialogs.InputSheet
 import app.passwordstore.ui.git.base.BaseGitActivity
 import app.passwordstore.util.auth.BiometricAuthenticator
 import app.passwordstore.util.auth.BiometricAuthenticator.Result as BiometricResult
@@ -202,33 +201,36 @@ class CredentialFinder(
           if (SshKey.pgpLongKeyId != 0L)
             "\n${callingActivity.resources.getString(R.string.pgp_id_label)} ${repository.getEmailFromKeyId(KeyId(SshKey.pgpLongKeyId))}"
           else ""
-      AppDialogBuilder(callingActivity)
-        .run {
-          setTitle(R.string.passphrase_dialog_title)
-          setMessage(message)
-          setView(dialogView)
-          setPositiveButton(R.string.dialog_ok) { _, _ ->
-            val passphrase =
-              editCredential.text?.let { CharArray(it.length) { i -> it[i] } } ?: charArrayOf()
-            rememberPassphrase = rememberCredentialCheckBox.isChecked
-            /* non-PGP authentication (server passwd, imported ssh key):
-             * we need to update cached passphrase on every attempt as we cannot verify correctness here */
-            if (rememberPassphrase && passphrase.isNotEmpty() && SshKey.pgpLongKeyId == 0L) {
-              AESEncryption.encrypt(passphrase, keyType = KeyType.PERSISTENT)?.let { encrypted ->
-                gitSecrets.edit { putString(credentialPref, String(encrypted)) }
-              }
+      // A sheet rather than a dialog, as every question that wants something typed is asked. It
+      // cannot be swiped away: the operation waits on it, so it is left only by its two buttons.
+      lateinit var sheet: InputSheet
+      sheet =
+        InputSheet.create(
+          context = callingActivity,
+          title = R.string.passphrase_dialog_title,
+          content = dialogView,
+          primaryLabel = R.string.dialog_ok,
+          message = message,
+          onSecondary = {
+            sheet.dialog.dismiss()
+            cont.resume(null)
+          },
+        ) {
+          val passphrase =
+            editCredential.text?.let { CharArray(it.length) { i -> it[i] } } ?: charArrayOf()
+          rememberPassphrase = rememberCredentialCheckBox.isChecked
+          /* non-PGP authentication (server passwd, imported ssh key):
+           * we need to update cached passphrase on every attempt as we cannot verify correctness here */
+          if (rememberPassphrase && passphrase.isNotEmpty() && SshKey.pgpLongKeyId == 0L) {
+            AESEncryption.encrypt(passphrase, keyType = KeyType.PERSISTENT)?.let { encrypted ->
+              gitSecrets.edit { putString(credentialPref, String(encrypted)) }
             }
-            cont.resume(passphrase)
           }
-          setCancelable(false)
-          setNegativeButton(R.string.dialog_cancel) { _, _ -> cont.resume(null) }
-          setOnDismissListener { editCredential.text?.clear() }
-          create()
+          cont.resume(passphrase)
         }
-        .run {
-          window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
-          show()
-        }
+      sheet.dialog.setCancelable(false)
+      sheet.dialog.setOnDismissListener { editCredential.text?.clear() }
+      sheet.dialog.show()
     } else {
       cont.resume(cachedPassphrase)
     }

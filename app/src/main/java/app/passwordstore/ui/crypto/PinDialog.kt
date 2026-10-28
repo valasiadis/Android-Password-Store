@@ -5,17 +5,17 @@
 
 package app.passwordstore.ui.crypto
 
+import android.app.Dialog
 import android.content.DialogInterface
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
-import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.setFragmentResult
 import app.passwordstore.R
 import app.passwordstore.databinding.DialogPinEntryBinding
-import app.passwordstore.ui.dialogs.AppDialogBuilder
+import app.passwordstore.ui.dialogs.InputSheet
 import app.passwordstore.util.extensions.unsafeLazy
 
 /** [DialogFragment] to request a PIN from the user and forward it along. */
@@ -29,45 +29,38 @@ class PinDialog : DialogFragment() {
     isCancelable = false // disable tapping BACK / fragment cancel
   }
 
-  override fun onCreateDialog(savedInstanceState: Bundle?): AlertDialog {
-    val builder = AppDialogBuilder(requireContext())
-    builder.setView(binding.root)
-
-    var titleText = requireArguments().getString(TITLE_TEXT_EXTRA)
-    builder.setTitle(titleText)
-
-    var descriptionText = requireArguments().getString(DESCRIPTION_TEXT_EXTRA)
-    binding.descriptionText.setText(descriptionText)
-
-    builder.setPositiveButton(android.R.string.ok) { _, _ -> setPinAndDismiss() }
-    builder.setNegativeButton(R.string.dialog_cancel) { d, _ -> d.cancel() }
-
-    val dialog = builder.create()
-
-    dialog.setCanceledOnTouchOutside(false)
-
-    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
-    dialog.setOnShowListener {
-      var pinLength = 0
-      if (isError) {
-        binding.pinField.error = getString(R.string.pin_entry_wrong_input)
+  override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+    binding.descriptionText.setText(requireArguments().getString(DESCRIPTION_TEXT_EXTRA))
+    // A sheet rather than a dialog, as every question that wants something typed is asked.
+    val sheet =
+      InputSheet.create(
+        context = requireContext(),
+        title = requireArguments().getString(TITLE_TEXT_EXTRA),
+        content = binding.root,
+        primaryLabel = getString(R.string.dialog_ok),
+        dismissOnPrimary = false,
+      ) {
+        setPinAndDismiss()
       }
-      dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
-      binding.pinEditText.apply {
-        doOnTextChanged { s, _, _, _ ->
-          s?.let {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = it.length >= 4
-            pinLength = it.length
-          }
-          binding.pinField.error = null
+    val dialog = sheet.dialog
+    dialog.setCanceledOnTouchOutside(false)
+    if (isError) binding.pinField.error = getString(R.string.pin_entry_wrong_input)
+    sheet.primary.isEnabled = false
+    var pinLength = 0
+    binding.pinEditText.apply {
+      doOnTextChanged { s, _, _, _ ->
+        s?.let {
+          sheet.primary.isEnabled = it.length >= 4
+          pinLength = it.length
         }
-        setOnKeyListener { _, keyCode, _ ->
-          if (keyCode == KeyEvent.KEYCODE_ENTER && pinLength >= 4) {
-            setPinAndDismiss()
-            return@setOnKeyListener true // return true to consume Enter
-          }
-          keyCode == KeyEvent.KEYCODE_BACK // return true to consume Back
+        binding.pinField.error = null
+      }
+      setOnKeyListener { _, keyCode, _ ->
+        if (keyCode == KeyEvent.KEYCODE_ENTER && pinLength >= 4) {
+          setPinAndDismiss()
+          return@setOnKeyListener true // return true to consume Enter
         }
+        keyCode == KeyEvent.KEYCODE_BACK // return true to consume Back
       }
     }
     dialog.window?.setFlags(

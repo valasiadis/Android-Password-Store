@@ -1,115 +1,82 @@
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:tools="http://schemas.android.com/tools"
+<!--
+  Making up a password, as blocks of rows: the one made, with a way to make another beside it; how
+  long it is; and what goes into it, each a switch, as the settings set what is on and what is off.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   android:layout_width="match_parent"
-  android:layout_height="match_parent">
+  android:layout_height="wrap_content"
+  android:orientation="vertical"
+  android:paddingHorizontal="?attr/dialogPreferredPadding"
+  android:paddingVertical="@dimen/activity_horizontal_margin">
 
-  <LinearLayout
+  <include
+    android:id="@+id/generated"
+    layout="@layout/pwgen_generated_row" />
+
+  <app.passwordstore.ui.util.ListBlock
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:paddingLeft="24dp"
-    android:paddingTop="20dp"
-    android:paddingRight="24dp"
-    android:paddingBottom="20dp"
-    tools:context=".MainActivityFragment">
+    android:layout_marginTop="@dimen/spacing_large">
 
-    <androidx.appcompat.widget.AppCompatTextView
-      android:id="@+id/passwordText"
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/length"
+      style="@style/Widget.APS.ListField"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:layout_marginBottom="8dp"
-      android:textAppearance="?android:attr/textAppearanceMedium"
-      android:textIsSelectable="true" />
+      android:hint="@string/pwgen_length">
 
-    <LinearLayout
-      android:layout_width="match_parent"
-      android:layout_height="match_parent"
-      android:baselineAligned="false"
-      android:orientation="horizontal"
-      android:weightSum="2">
-
-      <LinearLayout
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/lengthNumber"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:layout_height="wrap_content"
+        android:importantForAutofill="no"
+        android:inputType="number"
+        android:maxLength="3" />
 
-        <androidx.appcompat.widget.AppCompatTextView
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:layout_marginBottom="8dp"
-          android:text="@string/pwgen_include"
-          android:textAppearance="?android:attr/textAppearanceSmall" />
+    </com.google.android.material.textfield.TextInputLayout>
 
-        <CheckBox
-          android:id="@+id/numerals"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/pwgen_numerals" />
+  </app.passwordstore.ui.util.ListBlock>
 
+  <app.passwordstore.ui.util.ListBlock
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_large">
 
-        <CheckBox
-          android:id="@+id/symbols"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/pwgen_symbols" />
+    <com.google.android.material.materialswitch.MaterialSwitch
+      android:id="@+id/numerals"
+      style="@style/Widget.APS.ListSwitch"
+      android:text="@string/pwgen_numerals" />
 
-        <CheckBox
-          android:id="@+id/uppercase"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/pwgen_uppercase" />
+    <com.google.android.material.materialswitch.MaterialSwitch
+      android:id="@+id/symbols"
+      style="@style/Widget.APS.ListSwitch"
+      android:text="@string/pwgen_symbols" />
 
-        <CheckBox
-          android:id="@+id/lowercase"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/pwgen_lowercase" />
+    <com.google.android.material.materialswitch.MaterialSwitch
+      android:id="@+id/uppercase"
+      style="@style/Widget.APS.ListSwitch"
+      android:text="@string/pwgen_uppercase" />
 
-      </LinearLayout>
+    <com.google.android.material.materialswitch.MaterialSwitch
+      android:id="@+id/lowercase"
+      style="@style/Widget.APS.ListSwitch"
+      android:text="@string/pwgen_lowercase" />
 
-      <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical">
+    <com.google.android.material.materialswitch.MaterialSwitch
+      android:id="@+id/pronounceable"
+      style="@style/Widget.APS.ListSwitch"
+      android:text="@string/pwgen_pronounceable" />
 
-        <androidx.appcompat.widget.AppCompatTextView
-          android:id="@+id/length"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:layout_marginBottom="8dp"
-          android:labelFor="@id/lengthNumber"
-          android:text="@string/pwgen_length"
-          android:textAppearance="?android:attr/textAppearanceSmall" />
+    <com.google.android.material.materialswitch.MaterialSwitch
+      android:id="@+id/ambiguous"
+      style="@style/Widget.APS.ListSwitch"
+      android:text="@string/pwgen_ambiguous" />
 
-        <EditText
-          android:id="@+id/lengthNumber"
-          android:layout_width="match_parent"
-          android:layout_height="wrap_content"
-          android:layout_marginBottom="8dp"
-          android:autofillHints="notApplicable"
-          android:ems="10"
-          android:inputType="number" />
+  </app.passwordstore.ui.util.ListBlock>
 
-        <CheckBox
-          android:id="@+id/pronounceable"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/pwgen_pronounceable" />
-
-        <CheckBox
-          android:id="@+id/ambiguous"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/pwgen_ambiguous" />
-
-      </LinearLayout>
-    </LinearLayout>
-  </LinearLayout>
-</ScrollView>
+</LinearLayout>

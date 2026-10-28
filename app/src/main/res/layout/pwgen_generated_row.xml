@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright © 2014-2026 The Android Password Store Authors. All Rights Reserved.
+  ~ SPDX-License-Identifier: GPL-3.0-only
+  -->
+
+<!--
+  The password a generator made, as a row of its own block, in a typeface that tells 0 from O, with
+  a way to make another at its end. Shared by both generators.
+-->
+<app.passwordstore.ui.util.ListBlock xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content">
+
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="@dimen/password_row_height"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/spacing_large"
+    android:paddingEnd="@dimen/spacing_small">
+
+    <androidx.appcompat.widget.AppCompatTextView
+      android:id="@+id/password_text"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="1"
+      android:paddingVertical="@dimen/spacing_medium"
+      android:textAppearance="?attr/textAppearanceTitleMedium"
+      android:textColor="?attr/colorOnSurface"
+      android:textIsSelectable="true"
+      android:fontFamily="monospace"
+      tools:text="correct-horse-battery-staple" />
+
+    <androidx.appcompat.widget.AppCompatImageButton
+      android:id="@+id/regenerate"
+      android:layout_width="48dp"
+      android:layout_height="48dp"
+      android:layout_marginStart="@dimen/spacing_small"
+      android:background="?attr/selectableItemBackgroundBorderless"
+      android:contentDescription="@string/pwgen_generate"
+      android:src="@drawable/ic_refresh_24dp"
+      app:tint="?attr/colorOnSurfaceVariant" />
+
+  </LinearLayout>
+
+</app.passwordstore.ui.util.ListBlock>

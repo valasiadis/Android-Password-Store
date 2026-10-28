@@ -45,6 +45,8 @@ private constructor(
      * [primaryLabel] names the action and [onPrimary] does it; the sheet closes after it unless
      * [dismissOnPrimary] is false, for an action that checks what was typed and may keep the sheet
      * open. The way out cancels the sheet, as going back does, unless [onSecondary] says otherwise.
+     * The keyboard comes up with the sheet unless [showKeyboard] is false, for a sheet whose fields
+     * are there to be changed rather than filled in.
      */
     fun create(
       context: Context,
@@ -54,6 +56,7 @@ private constructor(
       message: CharSequence? = null,
       secondaryLabel: CharSequence = context.getString(R.string.dialog_cancel),
       dismissOnPrimary: Boolean = true,
+      showKeyboard: Boolean = true,
       onSecondary: (() -> Unit)? = null,
       onPrimary: () -> Unit,
     ): InputSheet {
@@ -80,7 +83,8 @@ private constructor(
       dialog.behavior.skipCollapsed = true
       dialog.window?.setSoftInputMode(
         WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
-          WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE
+          if (showKeyboard) WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE
+          else WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
       )
       return InputSheet(dialog, primary, secondary)
     }
@@ -92,6 +96,7 @@ private constructor(
       @StringRes primaryLabel: Int,
       message: CharSequence? = null,
       dismissOnPrimary: Boolean = true,
+      showKeyboard: Boolean = true,
       onSecondary: (() -> Unit)? = null,
       onPrimary: () -> Unit,
     ): InputSheet =
@@ -102,6 +107,7 @@ private constructor(
         primaryLabel = context.getString(primaryLabel),
         message = message,
         dismissOnPrimary = dismissOnPrimary,
+        showKeyboard = showKeyboard,
         onSecondary = onSecondary,
         onPrimary = onPrimary,
       )

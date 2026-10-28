@@ -4,12 +4,10 @@
  */
 package app.passwordstore.ui.dialogs
 
-import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Context
-import android.graphics.Typeface
 import android.os.Bundle
-import android.widget.CheckBox
+import android.widget.CompoundButton
 import android.widget.EditText
 import android.widget.Toast
 import androidx.annotation.IdRes
@@ -39,11 +37,7 @@ class PasswordGeneratorDialogFragment : DialogFragment() {
 
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
     val prefs = requireContext().getSharedPreferences("PasswordGenerator", Context.MODE_PRIVATE)
-    val builder = AppDialogBuilder(requireContext())
-
     val binding = FragmentPwgenBinding.inflate(layoutInflater)
-    builder.setView(binding.root)
-
     binding.numerals.isChecked = !prefs.getBoolean(PasswordOption.NoDigits.key, false)
     binding.symbols.isChecked = prefs.getBoolean(PasswordOption.AtLeastOneSymbol.key, false)
     binding.uppercase.isChecked = !prefs.getBoolean(PasswordOption.NoUppercaseLetters.key, false)
@@ -51,7 +45,6 @@ class PasswordGeneratorDialogFragment : DialogFragment() {
     binding.ambiguous.isChecked = !prefs.getBoolean(PasswordOption.NoAmbiguousCharacters.key, false)
     binding.pronounceable.isChecked = !prefs.getBoolean(PasswordOption.FullyRandom.key, true)
     binding.lengthNumber.setText(prefs.getInt(PreferenceKeys.LENGTH, 20).toString())
-    binding.passwordText.typeface = Typeface.MONOSPACE
 
     lifecycleScope.launch {
       merge(
@@ -63,32 +56,29 @@ class PasswordGeneratorDialogFragment : DialogFragment() {
           binding.pronounceable.checkedChanges().skipInitialValue(),
           binding.lengthNumber.afterTextChanges().skipInitialValue(),
         )
-        .collect { generate(binding.passwordText) }
+        .collect { generate(binding.generated.passwordText) }
     }
 
-    return builder
-      .run {
-        setTitle(R.string.pwgen_title)
-        setPositiveButton(R.string.dialog_ok) { _, _ ->
-          setFragmentResult(
-            PasswordCreationActivity.PASSWORD_RESULT_REQUEST_KEY,
-            Bundle().also {
-              it.putCharSequence(PasswordCreationActivity.RESULT, binding.passwordText.text)
-            },
-          )
-        }
-        setNeutralButton(R.string.dialog_cancel) { _, _ -> }
-        setNegativeButton(R.string.pwgen_generate, null)
-        create()
+    // A sheet rather than a dialog, as every question with fields is asked. Another password is
+    // made from the button beside the one shown, so the footer keeps to the way out and the way on.
+    binding.generated.regenerate.setOnClickListener { generate(binding.generated.passwordText) }
+    val sheet =
+      InputSheet.create(
+        context = requireContext(),
+        title = R.string.pwgen_title,
+        content = binding.root,
+        primaryLabel = R.string.dialog_ok,
+        showKeyboard = false,
+      ) {
+        setFragmentResult(
+          PasswordCreationActivity.PASSWORD_RESULT_REQUEST_KEY,
+          Bundle().also {
+            it.putCharSequence(PasswordCreationActivity.RESULT, binding.generated.passwordText.text)
+          },
+        )
       }
-      .apply {
-        setOnShowListener {
-          generate(binding.passwordText)
-          getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
-            generate(binding.passwordText)
-          }
-        }
-      }
+    sheet.dialog.setOnShowListener { generate(binding.generated.passwordText) }
+    return sheet.dialog
   }
 
   private fun generate(passwordField: AppCompatTextView) {
@@ -114,7 +104,7 @@ class PasswordGeneratorDialogFragment : DialogFragment() {
   }
 
   private fun isChecked(@IdRes id: Int): Boolean {
-    return requireDialog().findViewById<CheckBox>(id).isChecked
+    return requireDialog().findViewById<CompoundButton>(id).isChecked
   }
 
   private fun getSelectedOptions(): List<PasswordOption> {

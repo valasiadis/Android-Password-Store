@@ -32,7 +32,6 @@ import app.passwordstore.data.passfile.joinToCharArray
 import app.passwordstore.data.passfile.splitToCharArrayListAt
 import app.passwordstore.data.passfile.trimEnd
 import app.passwordstore.data.repo.PasswordRepository
-import app.passwordstore.databinding.OtpSourceSheetBinding
 import app.passwordstore.databinding.PasswordCreationActivityBinding
 import app.passwordstore.injection.prefs.PasswordHistory
 import app.passwordstore.ui.dialogs.AppDialogBuilder
@@ -40,6 +39,7 @@ import app.passwordstore.ui.dialogs.DicewarePasswordGeneratorDialogFragment
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.OtpImportDialogFragment
+import app.passwordstore.ui.dialogs.OtpSourceSheet
 import app.passwordstore.ui.dialogs.PasswordGeneratorDialogFragment
 import app.passwordstore.ui.dialogs.WarningDialog
 import app.passwordstore.ui.folderselect.SelectFolderActivity
@@ -63,7 +63,6 @@ import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.runCatching
 import com.github.michaelbull.result.unwrapError
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.LuminanceSource
 import com.google.zxing.RGBLuminanceSource
@@ -265,36 +264,28 @@ class PasswordCreationActivity : BasePGPActivity() {
         }
         val hasCamera = packageManager?.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) == true
         if (hasCamera) {
-          // Where the secret comes from, as a sheet of rows like every other "where from" the
-          // app asks, rather than a bare list in a dialog.
-          val sheet = BottomSheetDialog(this@PasswordCreationActivity)
-          val choices = OtpSourceSheetBinding.inflate(layoutInflater)
-          choices.otpSourceScan.setOnClickListener {
-            sheet.dismiss()
-            otpImportAction.launch(
-              IntentIntegrator(this@PasswordCreationActivity)
-                .setOrientationLocked(false)
-                .setBeepEnabled(false)
-                .setDesiredBarcodeFormats(QR_CODE)
-                .createScanIntent()
-            )
-          }
-          choices.otpSourceImage.setOnClickListener {
-            sheet.dismiss()
-            runCatching { imageImportAction.launch("image/*") }
-              .onErr { e ->
-                logcat(ERROR) { e.asLog() }
-                e.message?.let { message ->
-                  ErrorDialog.show(this@PasswordCreationActivity, message)
+          OtpSourceSheet.show(
+            this@PasswordCreationActivity,
+            onScan = {
+              otpImportAction.launch(
+                IntentIntegrator(this@PasswordCreationActivity)
+                  .setOrientationLocked(false)
+                  .setBeepEnabled(false)
+                  .setDesiredBarcodeFormats(QR_CODE)
+                  .createScanIntent()
+              )
+            },
+            onImage = {
+              runCatching { imageImportAction.launch("image/*") }
+                .onErr { e ->
+                  logcat(ERROR) { e.asLog() }
+                  e.message?.let { message ->
+                    ErrorDialog.show(this@PasswordCreationActivity, message)
+                  }
                 }
-              }
-          }
-          choices.otpSourceManual.setOnClickListener {
-            sheet.dismiss()
-            OtpImportDialogFragment().show(supportFragmentManager, "OtpImport")
-          }
-          sheet.setContentView(choices.root)
-          sheet.show()
+            },
+            onManual = { OtpImportDialogFragment().show(supportFragmentManager, "OtpImport") },
+          )
         } else {
           OtpImportDialogFragment().show(supportFragmentManager, "OtpImport")
         }

@@ -44,6 +44,7 @@ import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.ui.dialogs.ErrorDialog
 import app.passwordstore.ui.dialogs.Notice
 import app.passwordstore.ui.dialogs.OtpImportDialogFragment
+import app.passwordstore.ui.dialogs.OtpSourceSheet
 import app.passwordstore.ui.folderselect.SelectFolderActivity
 import app.passwordstore.ui.passwords.PasswordStore
 import app.passwordstore.util.auth.BiometricAuthenticator
@@ -251,36 +252,28 @@ class PasskeyCreationActivity : BasePGPActivity() {
         }
         val hasCamera = packageManager?.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) == true
         if (hasCamera) {
-          val items =
-            arrayOf(
-              getString(R.string.otp_import_qr_code),
-              getString(R.string.otp_import_from_file),
-              getString(R.string.otp_import_manual_entry),
-            )
-          AppDialogBuilder(this@PasskeyCreationActivity)
-            .setItems(items) { _, index ->
-              when (index) {
-                0 ->
-                  otpImportAction.launch(
-                    IntentIntegrator(this@PasskeyCreationActivity)
-                      .setOrientationLocked(false)
-                      .setBeepEnabled(false)
-                      .setDesiredBarcodeFormats(QR_CODE)
-                      .createScanIntent()
-                  )
-                1 -> {
-                  runCatching { imageImportAction.launch("image/*") }
-                    .onErr { e ->
-                      logcat(ERROR) { e.asLog() }
-                      e.message?.let { message ->
-                        ErrorDialog.show(this@PasskeyCreationActivity, message)
-                      }
-                    }
+          OtpSourceSheet.show(
+            this@PasskeyCreationActivity,
+            onScan = {
+              otpImportAction.launch(
+                IntentIntegrator(this@PasskeyCreationActivity)
+                  .setOrientationLocked(false)
+                  .setBeepEnabled(false)
+                  .setDesiredBarcodeFormats(QR_CODE)
+                  .createScanIntent()
+              )
+            },
+            onImage = {
+              runCatching { imageImportAction.launch("image/*") }
+                .onErr { e ->
+                  logcat(ERROR) { e.asLog() }
+                  e.message?.let { message ->
+                    ErrorDialog.show(this@PasskeyCreationActivity, message)
+                  }
                 }
-                2 -> OtpImportDialogFragment().show(supportFragmentManager, "OtpImport")
-              }
-            }
-            .show()
+            },
+            onManual = { OtpImportDialogFragment().show(supportFragmentManager, "OtpImport") },
+          )
         } else {
           OtpImportDialogFragment().show(supportFragmentManager, "OtpImport")
         }

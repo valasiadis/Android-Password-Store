@@ -217,6 +217,17 @@ class GitToolsSettings(private val activity: SettingsActivity) : SettingsProvide
   }
 
   private fun abortRebase() {
+    // Asked before the operation rather than inside it: an operation that decides not to run still
+    // reports success, and its success here is a dialog saying a branch was pushed.
+    val state = PasswordRepository.repository?.repositoryState
+    if (state?.isRebasing != true && state != RepositoryState.MERGING) {
+      AppDialogBuilder(activity)
+        .setTitle(R.string.git_abort_and_push_title)
+        .setMessage(R.string.git_break_out_of_detached_unneeded)
+        .setPositiveButton(R.string.dialog_ok, null)
+        .show()
+      return
+    }
     activity.lifecycleScope.launch {
       activity
         .launchGitOperation(GitOp.BREAK_OUT_OF_DETACHED)

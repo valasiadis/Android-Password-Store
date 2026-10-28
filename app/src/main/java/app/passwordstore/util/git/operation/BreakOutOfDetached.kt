@@ -5,9 +5,7 @@
 package app.passwordstore.util.git.operation
 
 import androidx.appcompat.app.AppCompatActivity
-import app.passwordstore.R
 import app.passwordstore.data.repo.PasswordRepository
-import app.passwordstore.ui.dialogs.AppDialogBuilder
 import app.passwordstore.util.extensions.unsafeLazy
 import org.eclipse.jgit.api.GitCommand
 import org.eclipse.jgit.api.RebaseCommand
@@ -50,18 +48,7 @@ class BreakOutOfDetached(callingActivity: AppCompatActivity) : GitOperation(call
     }
   }
 
-  override fun preExecute() =
-    if (!git.repository.repositoryState.isRebasing && !merging) {
-      AppDialogBuilder(callingActivity)
-        .setTitle(callingActivity.resources.getString(R.string.git_abort_and_push_title))
-        .setMessage(
-          callingActivity.resources.getString(R.string.git_break_out_of_detached_unneeded)
-        )
-        // Only says so: the screen it was asked from stays open, as it does after the operation.
-        .setPositiveButton(R.string.dialog_ok, null)
-        .show()
-      false
-    } else {
-      true
-    }
+  // Nothing to abort is said by the screen that offers the operation, before it is started; this
+  // only keeps the operation from running against a repository that is not stuck.
+  override fun preExecute() = git.repository.repositoryState.isRebasing || merging
 }

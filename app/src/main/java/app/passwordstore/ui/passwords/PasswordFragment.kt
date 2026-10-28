@@ -169,10 +169,17 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
             AuthMode.None -> BaseGitActivity.GitOp.PULL
             else -> BaseGitActivity.GitOp.SYNC
           }
+        // One pull, one operation: the gesture is off until this one is done, so pulling again
+        // because the server is slow neither starts another nor looks as if it might.
+        binding.swipeRefresher.isEnabled = false
         requireStore().apply {
           lifecycleScope.launch {
             launchGitOperation(operationId)
               .fold(success = { refreshPasswordList() }, failure = { promptOnErrorHandler(it) })
+            if (view != null) {
+              binding.swipeRefresher.isEnabled =
+                actionMode == null && !prefs.getBoolean(PreferenceKeys.DISABLE_SYNC_ACTION, false)
+            }
           }
         }
       }

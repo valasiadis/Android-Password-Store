@@ -12,7 +12,6 @@ import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
-import android.view.View
 import android.view.autofill.AutofillManager
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
@@ -22,6 +21,7 @@ import androidx.core.content.edit
 import androidx.core.text.bold
 import androidx.core.text.buildSpannedString
 import androidx.core.text.underline
+import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -36,7 +36,6 @@ import app.passwordstore.util.autofill.AutofillPreferences
 import app.passwordstore.util.coroutines.DispatcherProvider
 import app.passwordstore.util.extensions.enableEdgeToEdgeView
 import app.passwordstore.util.extensions.viewBinding
-import app.passwordstore.util.settings.DirectoryStructure
 import app.passwordstore.util.settings.PreferenceKeys
 import app.passwordstore.util.viewmodel.FilterMode
 import app.passwordstore.util.viewmodel.ListMode
@@ -95,7 +94,6 @@ class AutofillFilterView : AppCompatActivity() {
   }
 
   private lateinit var formOrigin: FormOrigin
-  private lateinit var directoryStructure: DirectoryStructure
   private val binding by viewBinding(ActivityOreoAutofillFilterBinding::inflate)
 
   private val model: SearchableRepositoryViewModel by viewModels()
@@ -156,8 +154,6 @@ class AutofillFilterView : AppCompatActivity() {
           return
         }
       }
-
-    directoryStructure = AutofillPreferences.directoryStructure(this)
 
     supportActionBar?.hide()
 
@@ -226,12 +222,15 @@ class AutofillFilterView : AppCompatActivity() {
       search.apply {
         val initialSearch = formOrigin.getPrettyIdentifier(applicationContext, untrusted = false)
         setText(initialSearch, TextView.BufferType.EDITABLE)
-        addTextChangedListener { updateSearch() }
+        searchClear.isVisible = initialSearch.isNotEmpty()
+        addTextChangedListener {
+          searchClear.isVisible = !it.isNullOrEmpty()
+          updateSearch()
+        }
       }
-      origin.text = buildSpannedString {
-        append(getString(R.string.oreo_autofill_select_and_fill_into) + " ")
-        bold { append(formOrigin.getPrettyIdentifier(applicationContext, untrusted = true)) }
-      }
+      searchClear.setOnClickListener { search.text?.clear() }
+      // The line above it says what this is for; this says where, in the size a heading has.
+      origin.text = formOrigin.getPrettyIdentifier(applicationContext, untrusted = true)
       lifecycleScope.launch { handleSearchResults() }
     }
   }
@@ -274,44 +273,30 @@ class AutofillFilterView : AppCompatActivity() {
                 if (trailingCount > 0) it.dropLast(trailingCount) + "…" else it
               }
 
-            val pathString =
-              file.parentFile?.let { parentFile -> "${parentFile}/${fileName}" } ?: fileName
-
+            // As the password list shows an entry: the folder it is in, small, above its name. What
+            // was searched for is picked out in both, so it is plain why the entry matched.
             val searchString = binding.search.text.toString()
-            val parts = pathString.split(searchString, ignoreCase = true)
-            val matches =
-              Regex(Regex.escape(searchString), RegexOption.IGNORE_CASE)
-                .findAll(pathString)
-                .map { it.value }
-                .toList()
-
-            val pathWithMatches = buildSpannedString {
-              append("/")
-              parts.getOrNull(0)?.let { append(it) }
-              matches.forEachIndexed { i, m ->
-                if (i == 0 || parts.getOrNull(i)?.isNotEmpty() ?: false)
-                  bold { underline { append(m) } }
-                else append(m)
-                parts.getOrNull(i + 1)?.let { append(it) }
-              }
-            }
-
-            val endPath =
-              directoryStructure.getPathStringWithAtMostTwoParentsFor(file).let {
-                if (trailingCount > 0) it.dropLast(trailingCount) + "…" else it
-              }
-
-            title.text = pathWithMatches
-
-            if (pathString.equals(endPath)) {
-              subtitle.visibility = View.GONE
-              title.setTextSize(14f)
-            } else {
-              subtitle.text = endPath
-            }
+            title.text = highlight(fileName, searchString)
+            val parent = file.parentFile?.path
+            subtitle.isVisible = parent != null
+            subtitle.text = parent?.let { highlight(it, searchString) }
           }
           .onItemClicked { _, item -> decryptAndFill(item) }
       layoutManager = LinearLayoutManager(context)
+    }
+  }
+
+  /** [text] with each place [query] occurs in it in bold and underlined. */
+  private fun highlight(text: String, query: String): CharSequence {
+    if (query.isEmpty()) return text
+    return buildSpannedString {
+      var from = 0
+      Regex(Regex.escape(query), RegexOption.IGNORE_CASE).findAll(text).forEach { match ->
+        append(text, from, match.range.first)
+        bold { underline { append(match.value) } }
+        from = match.range.last + 1
+      }
+      append(text, from, text.length)
     }
   }
 

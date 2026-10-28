@@ -3,72 +3,75 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
+<!--
+  An entry that can be filled in, drawn as the password list draws one: its mark in a circle of the
+  theme's colour, the folder it is in above its name, and the chevron that says tapping goes on.
+  No background here: as in the password list, the row's container comes from PasswordRowDecoration.
+-->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
-  android:layout_height="@dimen/list_item_height"
+  android:layout_height="@dimen/password_row_height"
   android:layout_marginHorizontal="@dimen/password_list_margin"
   tools:background="@drawable/password_row_background">
 
-  <!--
-    No background here: as in the password list, the row's container comes from
-    PasswordRowDecoration, which rounds the list's ends and keeps its rows a thin gap apart.
-  -->
-
-  <ImageView
+  <androidx.appcompat.widget.AppCompatImageView
     android:id="@+id/credentialIcon"
-    android:layout_width="24dp"
-    android:layout_height="24dp"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:src="@drawable/ic_person_black_24dp"
+    android:layout_width="@dimen/list_icon_circle"
+    android:layout_height="@dimen/list_icon_circle"
+    android:layout_marginStart="@dimen/spacing_large"
+    android:background="@drawable/list_icon_circle"
+    android:contentDescription="@null"
+    android:padding="@dimen/list_icon_circle_padding"
+    android:src="@drawable/ic_password_24px"
+    app:backgroundTint="?attr/colorPrimary"
     app:layout_constraintBottom_toBottomOf="parent"
-    app:layout_constraintEnd_toStartOf="@id/title"
-    app:layout_constraintHorizontal_bias="0.0"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintTop_toTopOf="parent"
-    app:tint="?attr/colorControlNormal" />
+    app:tint="?attr/colorOnPrimary" />
 
-  <TextView
-    android:id="@+id/title"
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/subtitle"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/spacing_large"
+    android:layout_marginStart="@dimen/list_icon_text_gap"
     android:ellipsize="start"
-    android:singleLine="true"
-    android:textSize="12sp"
-    app:layout_constraintBottom_toTopOf="@id/subtitle"
+    android:maxLines="1"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    android:textSize="13sp"
+    app:layout_constraintBottom_toTopOf="@id/title"
     app:layout_constraintEnd_toStartOf="@id/continueIcon"
     app:layout_constraintStart_toEndOf="@id/credentialIcon"
     app:layout_constraintTop_toTopOf="parent"
     app:layout_constraintVertical_chainStyle="packed"
-    tools:text="/example.com/" />
+    tools:text="work/example.com" />
 
-  <TextView
-    android:id="@+id/subtitle"
+  <androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/title"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/spacing_large"
+    android:layout_marginStart="@dimen/list_icon_text_gap"
     android:ellipsize="start"
-    android:singleLine="true"
-    android:textSize="14sp"
+    android:maxLines="1"
+    android:textColor="?attr/colorPrimary"
+    android:textSize="18sp"
     app:layout_constraintBottom_toBottomOf="parent"
-    app:layout_constraintEnd_toStartOf="@+id/continueIcon"
+    app:layout_constraintEnd_toStartOf="@id/continueIcon"
     app:layout_constraintStart_toEndOf="@id/credentialIcon"
-    app:layout_constraintTop_toBottomOf="@id/title"
+    app:layout_constraintTop_toBottomOf="@id/subtitle"
     tools:text="johndoe@example.com" />
 
-  <ImageView
+  <androidx.appcompat.widget.AppCompatImageView
     android:id="@+id/continueIcon"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
+    android:layout_marginEnd="@dimen/spacing_medium"
+    android:contentDescription="@null"
     android:src="@drawable/ic_keyboard_arrow_right_24dp"
-    app:tint="?attr/colorOnSurfaceVariant"
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintHorizontal_bias="1.0"
-    app:layout_constraintStart_toEndOf="@id/title"
-    app:layout_constraintTop_toTopOf="parent" />
+    app:layout_constraintTop_toTopOf="parent"
+    app:tint="?attr/colorOnSurfaceVariant" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

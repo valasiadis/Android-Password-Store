@@ -3,117 +3,133 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  Picking an entry to fill in, laid out as the password list is: what is being filled in said at the
+  top, the list's own search field with the search options beside it, and the entries that match as
+  one block of rows beneath.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
-  android:elevation="2dp"
+  android:orientation="vertical"
   tools:context="app.passwordstore.ui.autofill.AutofillFilterView">
 
-  <ImageView
-    android:id="@+id/cover"
-    android:layout_width="0dp"
-    android:layout_height="60dp"
-    android:background="@android:color/transparent"
-    android:contentDescription="@string/app_name"
-    android:src="@drawable/ic_launcher_foreground"
-    app:layout_constraintBottom_toTopOf="@id/origin"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toTopOf="parent"
-    app:layout_constraintVertical_bias="0.0" />
+  <androidx.appcompat.widget.AppCompatTextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_xlarge"
+    android:paddingHorizontal="?attr/dialogPreferredPadding"
+    android:text="@string/oreo_autofill_select_and_fill_into"
+    android:textAppearance="?attr/textAppearanceBodyMedium"
+    android:textColor="?attr/colorOnSurfaceVariant" />
 
-  <TextView
+  <androidx.appcompat.widget.AppCompatTextView
     android:id="@+id/origin"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:singleLine="false"
-    android:textAlignment="center"
-    app:layout_constraintBottom_toTopOf="@id/searchLayout"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/cover"
-    app:layout_constraintVertical_bias="0.0" />
+    android:ellipsize="middle"
+    android:maxLines="2"
+    android:paddingHorizontal="?attr/dialogPreferredPadding"
+    android:textAppearance="?attr/textAppearanceHeadlineSmall"
+    android:textColor="?attr/colorOnSurface"
+    tools:text="example.com" />
 
-  <com.google.android.material.textfield.TextInputLayout
-    android:id="@+id/searchLayout"
-    android:layout_width="0dp"
+  <LinearLayout
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginTop="@dimen/activity_vertical_margin"
-    android:layout_marginEnd="8dp"
-    app:endIconMode="clear_text"
-    app:layout_constraintBottom_toTopOf="@id/rvPasswordSwitcher"
-    app:layout_constraintEnd_toStartOf="@id/filterMenuButton"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintVertical_bias="0.5"
-    app:layout_constraintTop_toBottomOf="@id/origin">
+    android:layout_marginTop="@dimen/spacing_large"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/password_list_margin"
+    android:paddingEnd="@dimen/spacing_small">
 
-    <com.google.android.material.textfield.TextInputEditText
-      android:id="@+id/search"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:hint="@string/action_search"
-      android:imeOptions="actionDone"
-      android:inputType="text"
-      tools:text="example.com" />
-  </com.google.android.material.textfield.TextInputLayout>
+    <LinearLayout
+      android:layout_width="0dp"
+      android:layout_height="@dimen/search_bar_height"
+      android:layout_weight="1"
+      android:background="@drawable/search_bar_background"
+      android:gravity="center_vertical"
+      android:orientation="horizontal"
+      android:paddingHorizontal="@dimen/spacing_large">
 
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/filterMenuButton"
-    android:contentDescription="@string/oreo_autofill_search_options"
-    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/activity_vertical_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:insetLeft="0dp"
-    android:insetRight="0dp"
-    android:insetTop="0dp"
-    android:insetBottom="0dp"
-    android:minWidth="40dp"
-    android:minHeight="40dp"
-    app:cornerRadius="20dp"
-    android:paddingTop="0dp"
-    android:paddingBottom="0dp"
-    android:paddingStart="4.6dp"
-    android:paddingEnd="0dp"
-    app:icon="@drawable/ic_more_vert_24dp"
-    app:iconGravity="textStart"
-    app:iconSize="26dp"
-    app:layout_constraintVertical_bias="0.4"
-    app:layout_constraintBottom_toTopOf="@id/rvPasswordSwitcher"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/origin" />
+      <androidx.appcompat.widget.AppCompatImageView
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_search_24dp"
+        app:tint="?attr/colorOnSurfaceVariant" />
+
+      <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/search"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="@dimen/spacing_medium"
+        android:layout_weight="1"
+        android:background="@null"
+        android:hint="@string/action_search"
+        android:imeOptions="actionDone"
+        android:importantForAutofill="no"
+        android:inputType="textNoSuggestions"
+        android:textAppearance="?attr/textAppearanceBodyLarge"
+        android:textColor="?attr/colorOnSurface"
+        android:textColorHint="?attr/colorOnSurfaceVariant"
+        tools:text="example.com" />
+
+      <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/search_clear"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/search_clear"
+        android:src="@drawable/ic_close_24dp"
+        android:visibility="gone"
+        app:tint="?attr/colorOnSurfaceVariant"
+        tools:visibility="visible" />
+
+    </LinearLayout>
+
+    <androidx.appcompat.widget.AppCompatImageButton
+      android:id="@+id/filterMenuButton"
+      android:layout_width="48dp"
+      android:layout_height="48dp"
+      android:layout_marginStart="@dimen/spacing_small"
+      android:background="?attr/selectableItemBackgroundBorderless"
+      android:contentDescription="@string/oreo_autofill_search_options"
+      android:src="@drawable/ic_more_vert_24dp"
+      app:tint="?attr/colorOnSurfaceVariant" />
+
+  </LinearLayout>
 
   <ViewSwitcher
     android:id="@+id/rvPasswordSwitcher"
-    android:layout_width="0dp"
+    android:layout_width="match_parent"
     android:layout_height="0dp"
-    android:layout_marginTop="@dimen/activity_vertical_margin"
-    app:layout_constraintBottom_toBottomOf="parent"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/searchLayout">
+    android:layout_marginTop="@dimen/spacing_small"
+    android:layout_weight="1">
 
     <androidx.recyclerview.widget.RecyclerView
       android:id="@+id/rvPassword"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
-      android:scrollbars="vertical"
+      android:clipToPadding="false"
+      android:paddingTop="@dimen/spacing_small"
+      android:paddingBottom="@dimen/spacing_large"
+      android:scrollbars="none"
       tools:itemCount="5"
       tools:listitem="@layout/oreo_autofill_filter_row" />
 
-    <TextView
+    <androidx.appcompat.widget.AppCompatTextView
       android:id="@+id/rvPasswordEmpty"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
-      android:layout_marginStart="@dimen/activity_horizontal_margin"
-      android:layout_marginTop="@dimen/activity_vertical_margin"
+      android:gravity="center"
+      android:paddingHorizontal="@dimen/spacing_xlarge"
       android:text="@string/oreo_autofill_filter_no_results"
-      android:textSize="18sp" />
+      android:textAppearance="?attr/textAppearanceBodyLarge"
+      android:textColor="?attr/colorOnSurfaceVariant" />
 
   </ViewSwitcher>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

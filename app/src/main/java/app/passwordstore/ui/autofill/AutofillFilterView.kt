@@ -184,6 +184,7 @@ class AutofillFilterView : AppCompatActivity() {
       }
 
       AppDialogBuilder(this)
+        .setTitle(R.string.oreo_autofill_search_options)
         .setMultiChoiceItems(items, checked) { _, which, isChecked ->
           if (formOrigin is FormOrigin.Web) {
             when (which) {

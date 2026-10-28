@@ -127,7 +127,6 @@ class AutofillDecryptActivity : BasePGPActivity() {
     if (lastResult.second.isOk) {
       fillFrom(lastResult.first, lastResult.second.getOrThrow(), onSuccess)
     } else {
-      passphrases.values.forEach { it?.wipe() }
       if (
         results
           .filter { result ->
@@ -150,7 +149,6 @@ class AutofillDecryptActivity : BasePGPActivity() {
       ) {
         // The local keys turned out not to fit; the card is the remaining candidate.
         decryptWithSmartcard(passphrases, cardKeys, onSuccess)
-        return
       } else if (
         results.filter { it.second.getError() is NoDecryptionKeyAvailableException }.any()
       ) {
@@ -174,6 +172,10 @@ class AutofillDecryptActivity : BasePGPActivity() {
       results
         .filter { it.second.getError() is Throwable }
         .forEach { logcat { it.second.getError()?.asLog() ?: "unknown error" } }
+
+      // Only now: the card, tried above when the local keys did not fit, is handed its PIN from
+      // these, and a wiped one is still as long as the PIN, so the card would be sent zeros.
+      passphrases.values.forEach { it?.wipe() }
 
       if (!settings.getBoolean(PreferenceKeys.CACHE_PASSPHRASE, false)) {
         cachedPassphrases.values.forEach { it.wipe() }

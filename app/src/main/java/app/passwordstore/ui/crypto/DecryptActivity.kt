@@ -232,7 +232,6 @@ class DecryptActivity : BasePGPActivity() {
       }
       onSuccess(lastResult.first) // pass ID for which the entry was successfully decrypted
     } else {
-      passphrases.values.forEach { it?.wipe() }
       if (
         results
           .filter { result ->
@@ -273,6 +272,9 @@ class DecryptActivity : BasePGPActivity() {
           titleRes = R.string.error_title_open_entry,
         )
       }
+      // Only now: the card, tried above when the local keys did not fit, is handed its PIN from
+      // these, and a wiped one is still as long as the PIN, so the card would be sent zeros.
+      passphrases.values.forEach { it?.wipe() }
     }
     if (!settings.getBoolean(PreferenceKeys.CACHE_PASSPHRASE, false)) {
       cachedPassphrases.values.forEach { it.wipe() }

@@ -540,7 +540,6 @@ class PasswordStore : BaseGitActivity() {
       AppDialogBuilder(this)
         .setCancelable(false)
         .setTitle(R.string.error)
-        .setIcon(R.drawable.ic_crossmark_red_24dp)
         .setMessage(R.string.creation_dialog_text)
         .setPositiveButton(R.string.dialog_ok, null)
         .show()
@@ -815,7 +814,6 @@ class PasswordStore : BaseGitActivity() {
       withContext(dispatcherProvider.main()) {
         AppDialogBuilder(this@PasswordStore)
           .setTitle(R.string.password_move_error_title)
-          .setIcon(R.drawable.ic_crossmark_red_24dp)
           .setMessage(getString(R.string.password_move_error_message, source, destinationFile))
           .setCancelable(true)
           .setPositiveButton(android.R.string.ok, null)

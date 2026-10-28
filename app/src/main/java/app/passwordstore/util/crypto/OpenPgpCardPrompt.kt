@@ -787,7 +787,6 @@ class OpenPgpCardPrompt(
   suspend fun showError(@StringRes titleRes: Int, message: String) {
     withContext(dispatcherProvider.main()) {
       AppDialogBuilder(activity)
-        .setIcon(R.drawable.ic_crossmark_red_24dp)
         .setTitle(titleRes)
         .setMessage(message)
         .setPositiveButton(android.R.string.ok, null)

@@ -247,13 +247,12 @@ class PasskeyAuthenticationActivity : BasePGPActivity() {
                 }
             }
             else -> {
-              dialog
-                .setIcon(R.drawable.ic_crossmark_red_24dp)
-                .setTitle(R.string.passkey_authentication_error_title)
-                .setPositiveButton(android.R.string.ok) { _, _ ->
-                  setResult(RESULT_CANCELED)
-                  finish()
-                }
+              dialog.setTitle(R.string.passkey_authentication_error_title).setPositiveButton(
+                android.R.string.ok
+              ) { _, _ ->
+                setResult(RESULT_CANCELED)
+                finish()
+              }
             }
           }
 

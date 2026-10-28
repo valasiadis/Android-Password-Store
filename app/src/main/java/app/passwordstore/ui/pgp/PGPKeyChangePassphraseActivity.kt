@@ -267,7 +267,6 @@ class PGPKeyChangePassphraseActivity : AppCompatActivity() {
       logcat(ERROR) { error?.asLog() ?: "unknown error" }
       AppDialogBuilder(this)
         .setTitle(getString(R.string.pgp_key_change_passphrase_error))
-        .setIcon(R.drawable.ic_crossmark_red_24dp)
         .setMessage(error?.toString() ?: "unknown error")
         .setPositiveButton(android.R.string.ok) { _, _ ->
           setResult(RESULT_CANCELED)

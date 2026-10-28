@@ -431,7 +431,6 @@ class PasswordCreationActivity : BasePGPActivity() {
       AppDialogBuilder(this)
         .setCancelable(false)
         .setTitle(R.string.error)
-        .setIcon(R.drawable.ic_crossmark_red_24dp)
         .setMessage(R.string.creation_dialog_text)
         .setPositiveButton(R.string.dialog_ok) { _, _ ->
           setResult(RESULT_CANCELED)
@@ -834,7 +833,6 @@ class PasswordCreationActivity : BasePGPActivity() {
                 else -> e.message ?: e.toString()
               }
             AppDialogBuilder(this@PasswordCreationActivity)
-              .setIcon(R.drawable.ic_crossmark_red_24dp)
               .setTitle(getString(R.string.error))
               .setMessage(errMessage)
               .setCancelable(false)

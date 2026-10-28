@@ -33,7 +33,6 @@ object ErrorDialog {
       return
     }
     AppDialogBuilder(activity)
-      .setIcon(R.drawable.ic_crossmark_red_24dp)
       .setTitle(titleRes)
       .setMessage(message)
       .setPositiveButton(R.string.dialog_ok, null)

@@ -118,7 +118,6 @@ class PasswordFragment : Fragment(R.layout.password_recycler_view) {
         AppDialogBuilder(requireContext())
           .setCancelable(false)
           .setTitle(R.string.error)
-          .setIcon(R.drawable.ic_crossmark_red_24dp)
           .setMessage(R.string.creation_dialog_text)
           .setPositiveButton(R.string.dialog_ok, null)
           .show()

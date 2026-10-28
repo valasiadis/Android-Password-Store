@@ -151,7 +151,6 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
       if (!(sourceDirectory.findFile(".git")?.isDirectory() ?: false)) {
         AppDialogBuilder(activity)
           .setTitle(R.string.prefs_repo_invalid_source_dialog_title)
-          .setIcon(R.drawable.ic_crossmark_red_24dp)
           .setMessage(R.string.prefs_repo_invalid_source_dialog_summary)
           .setPositiveButton(R.string.dialog_ok) { dialog, _ -> dialog.dismiss() }
           .show()

@@ -8,4 +8,5 @@
   <item name="list_block_place" type="id" />
   <!-- Marks a settings row's icon as a radio mark, which stands bare rather than in a circle. -->
   <item name="list_radio_mark" type="id" />
+  <item name="progress_overlay_bar" type="id" />
 </resources>

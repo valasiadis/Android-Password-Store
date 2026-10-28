@@ -7,6 +7,7 @@ package app.passwordstore.ui.dialogs
 import android.app.Activity
 import android.view.View
 import androidx.annotation.StringRes
+import app.passwordstore.R
 import app.passwordstore.databinding.ViewProgressOverlayBinding
 
 /**
@@ -21,41 +22,61 @@ import app.passwordstore.databinding.ViewProgressOverlayBinding
  * stays usable and whatever dialogs the work itself raises — a passphrase prompt, a smartcard
  * prompt — appear over it rather than fighting it.
  */
-class ProgressOverlay
-private constructor(
-  private val binding: ViewProgressOverlayBinding,
-  /** False for a wait inside one already said, which leaves taking it down to the outer one. */
-  private val owned: Boolean,
-) {
+class ProgressOverlay private constructor(private val bar: Bar, private val entry: Bar.Entry) {
 
   /** Says something else while the same piece of work moves on to its next part. */
   fun setMessage(message: CharSequence) {
-    binding.progressMessage.text = message
+    entry.message = message
+    bar.showLatest()
   }
 
+  /**
+   * Ends this wait. The bar stays up while any other wait shown in it is still going, and goes back
+   * to saying what the latest of those is; it comes down only with the last of them.
+   */
   fun dismiss() {
-    if (owned) removeFromTop(binding.root)
+    if (!bar.entries.remove(entry)) return
+    if (bar.entries.isEmpty()) removeFromTop(bar.binding.root) else bar.showLatest()
+  }
+
+  /**
+   * The one bar at the top of an activity, and every wait currently said in it. Work that overlaps
+   * — a Git command inside an operation, an export started while a sync runs — shares it rather
+   * than stacking bars, and no piece of it takes the bar down while another is still running.
+   */
+  private class Bar(val binding: ViewProgressOverlayBinding) {
+    class Entry(var message: CharSequence)
+
+    val entries = mutableListOf<Entry>()
+
+    fun showLatest() {
+      entries.lastOrNull()?.let { binding.progressMessage.text = it.message }
+    }
   }
 
   companion object {
 
-    /**
-     * Says [message] at the top of [activity]. A wait that starts inside another — a Git command
-     * run as part of an operation already said — says its message in the same bar rather than
-     * stacking a second one under it, and leaves the bar up when it ends.
-     */
+    /** Says [message] at the top of [activity], in the bar already there if there is one. */
     fun show(activity: Activity, message: CharSequence): ProgressOverlay {
-      topBarParent(activity).findViewWithTag<View>(TAG)?.let { shown ->
-        val outer = ViewProgressOverlayBinding.bind(shown)
-        outer.progressMessage.text = message
-        return ProgressOverlay(outer, owned = false)
-      }
-      val binding =
-        ViewProgressOverlayBinding.inflate(activity.layoutInflater, topBarParent(activity), false)
-      binding.progressMessage.text = message
-      binding.root.tag = TAG
-      placeAtTopOf(activity, binding.root)
-      return ProgressOverlay(binding, owned = true)
+      val bar =
+        (topBarParent(activity).findViewWithTag<View>(TAG)?.getTag(R.id.progress_overlay_bar)
+          as? Bar)
+          ?: Bar(
+              ViewProgressOverlayBinding.inflate(
+                activity.layoutInflater,
+                topBarParent(activity),
+                false,
+              )
+            )
+            .also { bar ->
+              bar.binding.root.tag = TAG
+              bar.binding.root.setTag(R.id.progress_overlay_bar, bar)
+              placeAtTopOf(activity, bar.binding.root)
+            }
+      val entry = Bar.Entry(message)
+      bar.entries += entry
+      bar.showLatest()
+      return ProgressOverlay(bar, entry)
     }
 
     fun show(activity: Activity, @StringRes message: Int): ProgressOverlay =

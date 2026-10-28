@@ -77,6 +77,15 @@
   <style name="APSThemeM3.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
     <item name="alertDialogStyle">@style/APSThemeM3.MaterialAlertDialogStyle</item>
     <item name="buttonBarNegativeButtonStyle">@style/APSThemeM3.DialogButton.Quiet</item>
+    <item name="buttonBarPositiveButtonStyle">@style/APSThemeM3.DialogButton.Action</item>
+  </style>
+
+  <!--
+    A dialog's action, filled, as the setup flow fills its "Next" and every sheet its action: the
+    one button that goes on stands apart from the ones that do not, in every question the app asks.
+  -->
+  <style name="APSThemeM3.DialogButton.Action" parent="Widget.Material3.Button">
+    <item name="android:layout_marginStart">@dimen/spacing_small</item>
   </style>
 
   <!--
@@ -96,16 +105,16 @@
   <!--
     For a dialog whose action cannot be taken back — deleting a key, a repository, a lock; going
     ahead with a passphrase too weak to protect anything. Material 3 has no "warning" role; error
-    is what it gives destructive actions, so the action stands in that colour, here once rather
-    than in each dialog that offers one.
+    is what it gives destructive actions, so the action is filled with that colour, here once
+    rather than in each dialog that offers one.
   -->
   <style name="APSThemeM3.MaterialAlertDialog.Destructive">
     <item name="buttonBarPositiveButtonStyle">@style/APSThemeM3.DialogButton.Destructive</item>
   </style>
 
-  <style name="APSThemeM3.DialogButton.Destructive" parent="Widget.Material3.Button.TextButton.Dialog">
-    <item name="android:textColor">@color/dialog_destructive_button_text</item>
-    <item name="rippleColor">@color/dialog_destructive_button_ripple</item>
+  <style name="APSThemeM3.DialogButton.Destructive" parent="APSThemeM3.DialogButton.Action">
+    <item name="backgroundTint">?attr/colorError</item>
+    <item name="android:textColor">?attr/colorOnError</item>
   </style>
 
   <style name="APSThemeM3.MaterialAlertDialog.Choices">

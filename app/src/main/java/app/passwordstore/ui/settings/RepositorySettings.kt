@@ -105,20 +105,23 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
 
       val workManager = WorkManager.getInstance(activity.applicationContext)
 
-      val progressDialog =
-        AppDialogBuilder(activity)
-          .setTitle(R.string.prefs_export_passwords_dialog_title)
-          .setMessage(R.string.prefs_export_passwords_dialog_message)
-          .setCancelable(false)
-          .create()
+      // Said in the bar at the top, as every other wait is, rather than in a dialog that has
+      // nothing to press and stands in the way of the screen until the work is done.
+      var progress: ProgressOverlay? = null
 
       workManager.getWorkInfoByIdLiveData(workId).observe(activity) { workInfo ->
         logcat { "Repository export: ${workInfo?.state}" }
         when (workInfo?.state) {
-          WorkInfo.State.RUNNING -> progressDialog.show()
+          WorkInfo.State.RUNNING ->
+            if (progress == null)
+              progress =
+                ProgressOverlay.show(activity, R.string.prefs_export_passwords_dialog_title)
           WorkInfo.State.SUCCEEDED,
           WorkInfo.State.FAILED,
-          WorkInfo.State.CANCELLED -> progressDialog.dismiss()
+          WorkInfo.State.CANCELLED -> {
+            progress?.dismiss()
+            progress = null
+          }
           else -> {} // ENQUEUED, BLOCKED states - keep current state
         }
       }
@@ -162,20 +165,23 @@ class RepositorySettings(private val activity: SettingsActivity) : SettingsProvi
 
         val workManager = WorkManager.getInstance(activity.applicationContext)
 
-        val progressDialog =
-          AppDialogBuilder(activity)
-            .setTitle(R.string.prefs_import_passwords_dialog_title)
-            .setMessage(R.string.prefs_export_passwords_dialog_message)
-            .setCancelable(false)
-            .create()
+        // Said in the bar at the top, as every other wait is, rather than in a dialog that has
+        // nothing to press and stands in the way of the screen until the work is done.
+        var progress: ProgressOverlay? = null
 
         workManager.getWorkInfoByIdLiveData(workId).observe(activity) { workInfo ->
           logcat { "Repository import: ${workInfo?.state}" }
           when (workInfo?.state) {
-            WorkInfo.State.RUNNING -> progressDialog.show()
+            WorkInfo.State.RUNNING ->
+              if (progress == null)
+                progress =
+                  ProgressOverlay.show(activity, R.string.prefs_import_passwords_dialog_title)
             WorkInfo.State.SUCCEEDED,
             WorkInfo.State.FAILED,
-            WorkInfo.State.CANCELLED -> progressDialog.dismiss()
+            WorkInfo.State.CANCELLED -> {
+              progress?.dismiss()
+              progress = null
+            }
             else -> {} // ENQUEUED, BLOCKED states - keep current state
           }
         }

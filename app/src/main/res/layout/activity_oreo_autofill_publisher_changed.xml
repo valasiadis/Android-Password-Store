@@ -3,172 +3,134 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:app="http://schemas.android.com/apk/res-auto"
+<!--
+  An app that may be pretending to be another, said as the app's other warnings are: the warning
+  mark and what is wrong at the top, the app in question as a block of rows, what to do about it,
+  and the answers at the foot — staying safe filled, the way back to autofill in the warning's
+  colour, and the details for whoever wants them.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="wrap_content"
-  android:animateLayoutChanges="true"
-  android:elevation="2dp"
-  android:paddingBottom="16dp"
-  android:scrollbars="vertical"
   tools:context="app.passwordstore.ui.autofill.AutofillPublisherChangedActivity">
 
-  <ImageView
-    android:id="@+id/cover"
-    android:layout_width="60dp"
-    android:layout_height="60dp"
-    android:background="@android:color/transparent"
-    android:contentDescription="@string/app_name"
-    android:src="@drawable/ic_launcher_foreground"
-    app:layout_constraintBottom_toTopOf="@id/warningSign"
-    app:layout_constraintEnd_toStartOf="@id/app_name"
-    app:layout_constraintHorizontal_chainStyle="packed"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toTopOf="parent" />
-
-  <TextView
-    android:id="@+id/app_name"
-    android:layout_width="wrap_content"
+  <LinearLayout
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:text="@string/app_name"
-    android:textSize="18sp"
-    android:textStyle="bold"
-    app:layout_constraintBottom_toBottomOf="@id/cover"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toEndOf="@id/cover"
-    app:layout_constraintTop_toTopOf="@id/cover" />
+    android:animateLayoutChanges="true"
+    android:orientation="vertical"
+    android:paddingHorizontal="?attr/dialogPreferredPadding"
+    android:paddingTop="@dimen/spacing_xlarge"
+    android:paddingBottom="@dimen/spacing_large">
 
-  <ImageView
-    android:id="@+id/warningSign"
-    android:layout_width="40dp"
-    android:layout_height="40dp"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:contentDescription="@string/oreo_autofill_warning_publisher_warning_sign_description"
-    android:src="@drawable/ic_warning_red_24dp"
-    app:layout_constraintBottom_toBottomOf="@id/warningHeader"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toTopOf="@id/warningHeader" />
+    <androidx.appcompat.widget.AppCompatImageView
+      android:id="@+id/warningSign"
+      android:layout_width="32dp"
+      android:layout_height="32dp"
+      android:layout_gravity="center_horizontal"
+      android:contentDescription="@string/oreo_autofill_warning_publisher_warning_sign_description"
+      android:src="@drawable/ic_warning_red_24dp" />
 
-  <TextView
-    android:id="@+id/warningHeader"
-    android:layout_width="0dp"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="8dp"
-    android:layout_marginTop="@dimen/activity_vertical_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:text="@string/oreo_autofill_warning_publisher_header"
-    android:textSize="12sp"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toEndOf="@id/warningSign"
-    app:layout_constraintTop_toBottomOf="@id/cover" />
+    <androidx.appcompat.widget.AppCompatTextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="@dimen/spacing_large"
+      android:gravity="center_horizontal"
+      android:text="@string/oreo_autofill_warning_publisher_dataset_title"
+      android:textAppearance="?attr/textAppearanceHeadlineSmall"
+      android:textColor="?attr/colorOnSurface" />
 
-  <TextView
-    android:id="@+id/warningAppName"
-    android:layout_width="0dp"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginTop="@dimen/activity_vertical_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:gravity="center_horizontal"
-    android:textSize="12sp"
-    app:layout_constraintBottom_toTopOf="@id/warningAppInstallDate"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/warningHeader"
-    tools:text="Example Banking" />
+    <androidx.appcompat.widget.AppCompatTextView
+      android:id="@+id/warningHeader"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="@dimen/spacing_large"
+      android:text="@string/oreo_autofill_warning_publisher_header"
+      android:textAppearance="?attr/textAppearanceBodyMedium"
+      android:textColor="?attr/colorOnSurfaceVariant" />
 
-  <TextView
-    android:id="@+id/warningAppInstallDate"
-    android:layout_width="0dp"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:gravity="center_horizontal"
-    android:textSize="12sp"
-    app:layout_constraintBottom_toTopOf="@id/warningAppFooter"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/warningAppName"
-    tools:text="Installed: 5 days ago" />
+    <app.passwordstore.ui.util.ListBlock
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="@dimen/spacing_large">
 
-  <TextView
-    android:id="@+id/warningAppFooter"
-    android:layout_width="0dp"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginTop="@dimen/activity_vertical_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:text="@string/oreo_autofill_warning_publisher_footer"
-    android:textSize="12sp"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/warningAppInstallDate" />
+      <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="@dimen/password_row_height"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/spacing_large"
+        android:paddingVertical="@dimen/spacing_medium">
 
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/okButton"
-    style="?attr/materialButtonOutlinedStyle"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginTop="@dimen/activity_vertical_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:minWidth="240dp"
-    android:text="@string/oreo_autofill_warning_publisher_changed_disable_autofill_button"
-    android:textSize="12sp"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/warningAppFooter" />
+        <androidx.appcompat.widget.AppCompatTextView
+          android:id="@+id/warningAppName"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:textAppearance="?attr/textAppearanceTitleMedium"
+          android:textColor="?attr/colorOnSurface"
+          tools:text="“Example Banking”" />
 
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/advancedButton"
-    style="?attr/materialButtonOutlinedStyle"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:minWidth="240dp"
-    android:text="@string/oreo_autofill_warning_publisher_advanced_info_button"
-    android:textSize="12sp"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/okButton"
-    tools:visibility="visible" />
+        <androidx.appcompat.widget.AppCompatTextView
+          android:id="@+id/warningAppInstallDate"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:textAppearance="?attr/textAppearanceBodyMedium"
+          android:textColor="?attr/colorOnSurfaceVariant"
+          tools:text="Installed: 5 days ago" />
 
-  <com.google.android.material.button.MaterialButton
-    android:id="@+id/resetButton"
-    style="?attr/materialButtonOutlinedStyle"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:minWidth="240dp"
-    android:text="@string/oreo_autofill_warning_publisher_reenable_button"
-    android:textSize="12sp"
-    android:visibility="gone"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/advancedButton"
-    tools:visibility="visible" />
+      </LinearLayout>
 
-  <TextView
-    android:id="@+id/warningAppAdvancedInfo"
-    android:layout_width="0dp"
-    android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/activity_horizontal_margin"
-    android:layout_marginTop="16dp"
-    android:layout_marginEnd="@dimen/activity_horizontal_margin"
-    android:fontFamily="@font/jetbrainsmono_nl_regular"
-    android:gravity="center_horizontal"
-    android:textIsSelectable="true"
-    android:textSize="10sp"
-    android:visibility="gone"
-    app:layout_constraintBottom_toBottomOf="parent"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/resetButton"
-    tools:ignore="SmallSp"
-    tools:text="Package: com.example.banking\n\nHash:\n8P1sW0EPJcslw7UzRsiXL64w+O50Ed+RBICtay1g24M="
-    tools:visibility="visible" />
+      <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/warningAppAdvancedInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/jetbrainsmono_nl_regular"
+        android:paddingHorizontal="@dimen/spacing_large"
+        android:paddingVertical="@dimen/spacing_medium"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textIsSelectable="true"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:text="Package:\ncom.example.banking\n\nHash:\n8P1sW0EPJcslw7UzRsiXL64w+O50Ed+RBICtay1g24M="
+        tools:visibility="visible" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </app.passwordstore.ui.util.ListBlock>
+
+    <androidx.appcompat.widget.AppCompatTextView
+      android:id="@+id/warningAppFooter"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="@dimen/spacing_large"
+      android:text="@string/oreo_autofill_warning_publisher_footer"
+      android:textAppearance="?attr/textAppearanceBodyMedium"
+      android:textColor="?attr/colorOnSurface" />
+
+    <com.google.android.material.button.MaterialButton
+      android:id="@+id/okButton"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="@dimen/spacing_xlarge"
+      android:text="@string/oreo_autofill_warning_publisher_changed_disable_autofill_button" />
+
+    <com.google.android.material.button.MaterialButton
+      android:id="@+id/resetButton"
+      style="@style/APSThemeM3.DialogButton.Destructive"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="0dp"
+      android:text="@string/oreo_autofill_warning_publisher_reenable_button"
+      android:visibility="gone"
+      tools:visibility="visible" />
+
+    <com.google.android.material.button.MaterialButton
+      android:id="@+id/advancedButton"
+      style="?attr/borderlessButtonStyle"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="@string/oreo_autofill_warning_publisher_advanced_info_button" />
+
+  </LinearLayout>
+
+</ScrollView>

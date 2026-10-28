@@ -816,6 +816,7 @@ class PasswordCreationActivity : BasePGPActivity() {
           AppDialogBuilder(this@PasswordCreationActivity)
             .setCancelable(false)
             .setPositiveButton(android.R.string.ok) { _, _ -> leave() }
+            .setIcon(R.drawable.ic_warning_red_24dp)
             .setTitle(R.string.password_creation_file_encryption_partial_success_title)
             .setMessage(encryptionOutcomeMessage(succeededUserEmails, failedUserEmails))
             .show()

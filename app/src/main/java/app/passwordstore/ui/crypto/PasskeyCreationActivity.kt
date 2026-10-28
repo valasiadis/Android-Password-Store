@@ -678,7 +678,9 @@ class PasskeyCreationActivity : BasePGPActivity() {
                     .setCancelable(false)
                     .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
                 if (!failedUserEmails.isEmpty()) {
-                  dialog.setTitle(R.string.password_creation_file_encryption_partial_success_title)
+                  dialog
+                    .setIcon(R.drawable.ic_warning_red_24dp)
+                    .setTitle(R.string.password_creation_file_encryption_partial_success_title)
                 } else {
                   val title =
                     if (editing)

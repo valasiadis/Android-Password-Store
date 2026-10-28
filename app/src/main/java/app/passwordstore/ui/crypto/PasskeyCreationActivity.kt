@@ -592,7 +592,10 @@ class PasskeyCreationActivity : BasePGPActivity() {
             if (!destinationFolder.exists()) { // should not happen
               ErrorDialog.show(
                 this@PasskeyCreationActivity,
-                "Failed to create directory ${editRelativePath.trimEnd('/')}",
+                getString(
+                  R.string.password_creation_directory_failed,
+                  editRelativePath.trimEnd('/'),
+                ),
               )
               return@runCatching
             }

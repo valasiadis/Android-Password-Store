@@ -431,6 +431,7 @@
   <!-- Password creation/edit -->
   <string name="password_creation_edit_file_encryption_success_title">Entry edited</string>
   <string name="password_creation_new_file_encryption_success_title">New Entry</string>
+  <string name="password_creation_directory_failed">The folder %1$s could not be created.</string>
   <string name="password_creation_file_encryption_partial_success_title">Encryption partially failed</string>
   <string name="password_creation_file_encryption_succeeded_ids_message">Entry successfully encrypted for %1$s</string>
   <string name="password_creation_file_encryption_failed_ids_message">\n\nEncryption failed for%1$s</string>

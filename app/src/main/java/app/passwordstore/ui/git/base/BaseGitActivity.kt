@@ -41,6 +41,7 @@ import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.AndroidEntryPoint
 import java.net.InetSocketAddress
 import java.net.SocketTimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.net.SocketFactory
 import kotlinx.coroutines.CompletableDeferred
@@ -111,6 +112,10 @@ abstract class BaseGitActivity : AppCompatActivity() {
   }
 
   suspend fun launchGitOperation(operation: GitOp): Result<Unit, Throwable> {
+    // One operation at a time. A pull gesture repeated because nothing seemed to happen would
+    // otherwise start a second operation on the same repository while the first still holds it,
+    // and both fail. The repeat is let go quietly: the one already running answers it.
+    if (!operationRunning.compareAndSet(false, true)) return Err(OperationAlreadyRunning())
     // Said from the moment the operation is asked for, not only once its commands start: finding
     // the key, unlocking it and reaching the server come first and can take a while, and a screen
     // that looks idle meanwhile is one that gets pulled again.
@@ -119,6 +124,7 @@ abstract class BaseGitActivity : AppCompatActivity() {
       launchGitOperationNow(operation)
     } finally {
       progress.dismiss()
+      operationRunning.set(false)
     }
   }
 
@@ -299,6 +305,7 @@ abstract class BaseGitActivity : AppCompatActivity() {
         cause is SSHException && cause.disconnectReason == DisconnectReason.AUTH_CANCELLED_BY_USER
       )
         return true
+      if (cause is OperationAlreadyRunning) return true
       cause = cause.cause
     }
     return false
@@ -324,5 +331,14 @@ abstract class BaseGitActivity : AppCompatActivity() {
       rootCause = rootCause.cause ?: break
     }
     return rootCause
+  }
+
+  /** Asked for while another operation is still running; answered by that one, not reported. */
+  private class OperationAlreadyRunning :
+    IllegalStateException("A Git operation is already running")
+
+  private companion object {
+    /** Shared by every screen, since they all work on the one repository. */
+    val operationRunning = AtomicBoolean(false)
   }
 }

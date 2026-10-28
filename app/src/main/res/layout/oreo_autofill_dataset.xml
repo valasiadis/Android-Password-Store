@@ -3,52 +3,59 @@
   ~ SPDX-License-Identifier: GPL-3.0-only
   -->
 
+<!--
+  A suggestion in another app's autofill dropdown. Drawn by that app from these remote views, so it
+  keeps to what remote views allow and leaves the text colours to the dropdown it appears in; what
+  it takes from the app is the row's proportions — room around it, the mark beside it, the name
+  above what it is for — so the suggestions read as the password list's rows do.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:tools="http://schemas.android.com/tools"
-  android:layout_width="wrap_content"
+  android:layout_width="match_parent"
   android:layout_height="wrap_content"
   android:gravity="center_vertical"
+  android:minHeight="56dp"
   android:orientation="horizontal"
-  android:paddingLeft="10dp"
-  android:paddingTop="5dp"
-  android:paddingRight="10dp"
-  android:paddingBottom="5dp">
+  android:paddingHorizontal="16dp"
+  android:paddingVertical="8dp">
 
   <ImageView
     android:id="@+id/icon"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_gravity="center"
-    android:layout_marginTop="5dp"
-    android:layout_marginEnd="10dp"
-    android:layout_marginBottom="5dp"
-    android:adjustViewBounds="true"
-    android:maxWidth="20dp"
-    android:maxHeight="20dp"
+    android:layout_width="24dp"
+    android:layout_height="24dp"
+    android:layout_marginEnd="16dp"
+    android:importantForAccessibility="no"
+    android:scaleType="fitCenter"
     android:tint="@color/md_theme_light_primary"
     tools:ignore="UseAppTint"
-    tools:src="@mipmap/ic_launcher" />
+    tools:src="@drawable/ic_password_24px" />
 
   <LinearLayout
-    android:layout_width="wrap_content"
+    android:layout_width="0dp"
     android:layout_height="wrap_content"
+    android:layout_weight="1"
     android:orientation="vertical">
 
     <TextView
       android:id="@+id/title"
-      android:layout_width="wrap_content"
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:ellipsize="start"
+      android:fontFamily="sans-serif-medium"
       android:singleLine="true"
-      android:textStyle="bold"
+      android:textSize="16sp"
       tools:text="example.org" />
 
     <TextView
       android:id="@+id/summary"
-      android:layout_width="wrap_content"
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
+      android:alpha="0.7"
       android:ellipsize="start"
       android:singleLine="true"
+      android:textSize="14sp"
       tools:text="john@doe.org" />
+
   </LinearLayout>
+
 </LinearLayout>
